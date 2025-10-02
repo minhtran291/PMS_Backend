@@ -1,4 +1,4 @@
-﻿namespace PMS.API.Services.AuthService
+﻿namespace PMS.API.Services.Auth
 {
     public interface IRegisterService
     {

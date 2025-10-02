@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PMS.Data.Repositories.StaffProfileRepository
+namespace PMS.Data.Repositories.Profile
 {
-    public interface IStaffProfileRepository : IRepositoryBase<StaffProfile>
+    public interface IProfileRepository : IRepositoryBase<Core.Domain.Entities.Profile>
     {
     }
 }
