@@ -8,8 +8,7 @@
 
   <ItemGroup>
     <Folder Include="DTO\Auth\" />
-    <Folder Include="DTO\Content\" />
-    <Folder Include="DTO\Request\" />
+    <Folder Include="DTO\Auth\" />
   </ItemGroup>
 
   <ItemGroup>

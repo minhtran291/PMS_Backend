@@ -18,10 +18,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\PMS.Core\PMS.Core.csproj" />
     <ProjectReference Include="..\PMS.Data\PMS.Data.csproj" />
   </ItemGroup>

@@ -12,5 +12,7 @@ namespace PMS.Data.Repositories.CustomerProfileRepository
     public class CustomerProfileRepository : RepositoryBase<CustomerProfile>, ICustomerProfileRepository
     {
         public CustomerProfileRepository(PMSContext context) : base(context) { }
+
+
     }
 }

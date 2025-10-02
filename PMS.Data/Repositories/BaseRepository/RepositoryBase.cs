@@ -88,5 +88,11 @@ namespace PMS.Data.Repositories.Base
         {
             _dbSet.UpdateRange(entities);
         }
+
+        public async Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
+        {
+            return await _dbSet.FirstOrDefaultAsync(predicate);
+
+        }
     }
 }

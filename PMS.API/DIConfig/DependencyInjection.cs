@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using PMS.API.Automapper;
 using PMS.API.Services.AuthService;
+using PMS.API.Services.UserService;
 using PMS.Core.ConfigOptions;
 using System.Text;
 
@@ -20,6 +21,7 @@ namespace PMS.API.DIConfig
             services.AddScoped<ILoginService, LoginService>();
             services.AddScoped<IRegisterService, RegisterService>();
             services.AddScoped<ITokenService, TokenService>();
+            services.AddScoped<IUserService, UserService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
