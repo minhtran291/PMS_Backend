@@ -7,10 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PMS.Data.Repositories.StaffProfileRepository
+namespace PMS.Data.Repositories.CustomerProfile
 {
-    public class StaffProfileRepository : RepositoryBase<StaffProfile>, IStaffProfileRepository
+    public class CustomerProfileRepository(PMSContext context) : RepositoryBase<Core.Domain.Entities.CustomerProfile>(context), ICustomerProfileRepository
     {
-        public StaffProfileRepository(PMSContext context) : base(context) { }
     }
 }

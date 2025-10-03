@@ -11,10 +11,8 @@ using System.Threading.Tasks;
 
 namespace PMS.Data.DatabaseConfig
 {
-    public class PMSContext : IdentityDbContext<User>
+    public class PMSContext(DbContextOptions<PMSContext> options) : IdentityDbContext<User>(options)
     {
-        public PMSContext(DbContextOptions<PMSContext> options) : base(options) { }
-
         public virtual DbSet<Profile> Profiles { get; set; }
         public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
         public virtual DbSet<StaffProfile> StaffProfiles { get; set; }

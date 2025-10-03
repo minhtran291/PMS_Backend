@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PMS.Data.Repositories.ProfileRepository
+namespace PMS.Data.Repositories.CustomerProfile
 {
-    public interface IProfileRepository : IRepositoryBase<Profile>
+    public interface ICustomerProfileRepository : IRepositoryBase<Core.Domain.Entities.CustomerProfile>
     {
     }
 }

@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.9.34728.123
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PMS.API", "PMS.API\PMS.API.csproj", "{2C79FA85-4653-4033-9913-9831490B4157}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PMS.API", "PMS.API\PMS.API.csproj", "{2C79FA85-4653-4033-9913-9831490B4157}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PMS.Core", "PMS.Core\PMS.Core.csproj", "{2839B34C-27CC-4D16-8E3D-F7B19DE6745B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PMS.Core", "PMS.Core\PMS.Core.csproj", "{2839B34C-27CC-4D16-8E3D-F7B19DE6745B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PMS.Data", "PMS.Data\PMS.Data.csproj", "{E9D8D947-2BA2-4F65-88E1-7862D7DD9E7E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PMS.Data", "PMS.Data\PMS.Data.csproj", "{E9D8D947-2BA2-4F65-88E1-7862D7DD9E7E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

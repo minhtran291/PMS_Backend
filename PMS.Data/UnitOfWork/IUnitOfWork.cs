@@ -1,7 +1,7 @@
-﻿using PMS.Data.Repositories.CustomerProfileRepository;
-using PMS.Data.Repositories.ProfileRepository;
-using PMS.Data.Repositories.StaffProfileRepository;
-using PMS.Data.Repositories.UserRepository;
+﻿using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.Profile;
+using PMS.Data.Repositories.StaffProfile;
+using PMS.Data.Repositories.User;
 using System;
 using System.Collections.Generic;
 using System.Linq;
