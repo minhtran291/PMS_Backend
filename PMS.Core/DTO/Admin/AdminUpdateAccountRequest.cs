@@ -9,7 +9,6 @@ namespace PMS.Core.DTO.Admin
 {
     public class AdminUpdateAccountRequest
     {
-        public string UserId { get; set; } = null!;
 
         // Update User 
         public string? PhoneNumber { get; set; }

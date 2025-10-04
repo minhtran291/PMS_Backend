@@ -149,9 +149,9 @@ namespace PMS.API.Services.Admin
             await _repo.SaveChangesAsync(ct);
         }
 
-        public async Task UpdateAccountAsync(AdminUpdateAccountRequest request, CancellationToken ct = default)
+        public async Task UpdateAccountAsync(string userId, AdminUpdateAccountRequest request, CancellationToken ct = default)
         {
-            var u = await _repo.GetUserWithProfilesAsync(request.UserId, ct)
+            var u = await _repo.GetUserWithProfilesAsync(userId, ct)
                 ?? throw new KeyNotFoundException("User không tồn tại.");
 
             using var tx = await _context.Database.BeginTransactionAsync(ct);

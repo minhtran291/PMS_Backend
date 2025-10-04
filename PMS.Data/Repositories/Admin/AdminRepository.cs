@@ -56,10 +56,14 @@ namespace PMS.Data.Repositories.Admin
 
         public async Task<DUser?> GetUserWithProfilesAsync(string userId, CancellationToken ct = default)
         {
-            return await _context.Users
-                .Include(u => u.Profile).ThenInclude(p => p.StaffProfile)
-                .Include(u => u.Profile).ThenInclude(p => p.CustomerProfile)
-                .FirstOrDefaultAsync(u => u.Id == userId, ct);
+            var q = _context.Users
+        .Include(u => u.Profile).ThenInclude(p => p.StaffProfile)
+        .Include(u => u.Profile).ThenInclude(p => p.CustomerProfile);
+
+            if (int.TryParse(userId, out var profileId))
+                return await q.FirstOrDefaultAsync(u => u.Profile.Id == profileId, ct);
+
+            return await q.FirstOrDefaultAsync(u => u.Id == userId, ct);
         }
 
         public IQueryable<DUser> QueryUsers()

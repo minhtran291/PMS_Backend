@@ -23,7 +23,7 @@ namespace PMS.API.DIConfig
             services.AddScoped<IRegisterService, RegisterService>();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IAdminService, AdminService>
+            services.AddScoped<IAdminService, AdminService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
