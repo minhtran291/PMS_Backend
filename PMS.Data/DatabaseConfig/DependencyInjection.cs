@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.Core.Domain.Identity;
+using PMS.Data.Repositories.Admin;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.Profile;
 using PMS.Data.Repositories.StaffProfile;
@@ -33,6 +34,7 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<ICustomerProfileRepository, CustomerProfileRepository>();
             services.AddScoped<IStaffProfileRepository, StaffProfileRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
+            services.AddScoped<IAdminRepository, AdminRepository>();
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)
