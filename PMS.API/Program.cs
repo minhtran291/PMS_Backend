@@ -32,6 +32,9 @@ namespace PMS.API
             // Services
             builder.Services.AddServices();
 
+            // External Services
+            builder.Services.AddExternalServices();
+
             // Controller + JSON settings
             builder.Services.AddControllers().AddNewtonsoftJson(options =>
             {
