@@ -1,13 +1,16 @@
-﻿using PMS.Data.DatabaseConfig;
-using PMS.Data.Repositories.CustomerProfile;
-using PMS.Data.Repositories.Profile;
-using PMS.Data.Repositories.StaffProfile;
-using PMS.Data.Repositories.User;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PMS.Core.Domain.Entities;
+using PMS.Data.DatabaseConfig;
+using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.ProductCategoryRepository;
+using PMS.Data.Repositories.ProductRepository;
+using PMS.Data.Repositories.Profile;
+using PMS.Data.Repositories.StaffProfile;
+using PMS.Data.Repositories.User;
 
 namespace PMS.Data.UnitOfWork
 {
@@ -15,7 +18,9 @@ namespace PMS.Data.UnitOfWork
         IUserRepository users,
         IProfileRepository profile,
         ICustomerProfileRepository customerProfile,
-        IStaffProfileRepository staffProfile) : IUnitOfWork
+        IStaffProfileRepository staffProfile,
+        IProductRepository product,
+        IProductCategoryRepository category) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
 
@@ -23,6 +28,8 @@ namespace PMS.Data.UnitOfWork
         public IProfileRepository Profile { get; private set; } = profile;
         public ICustomerProfileRepository CustomerProfile { get; private set; } = customerProfile;
         public IStaffProfileRepository StaffProfile { get; private set; } = staffProfile;
+        public IProductRepository Product { get; private set; } = product;
+        public IProductCategoryRepository Category { get; private set; } = category;
 
         public async Task CommitAsync()
         {

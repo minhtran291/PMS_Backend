@@ -16,6 +16,8 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<Profile> Profiles { get; set; }
         public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
         public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
+        public virtual DbSet<Product> Products { get; set; }
+        public virtual DbSet<Category> Categories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -70,6 +72,54 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasOne(sp => sp.Profile)
                     .WithOne(p => p.StaffProfile)
                     .HasForeignKey<StaffProfile>(sp => sp.ProfileId);
+            });
+
+            builder.Entity<Category>(entity =>
+            {
+                entity.HasKey(c => c.CategoryID);
+
+                entity.Property(c => c.CategoryID)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(c => c.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+            });
+
+            builder.Entity<Product>(entity =>
+            {
+                entity.HasKey(p => p.ProductID);
+
+                entity.Property(p => p.ProductName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(p => p.ProductDescription)
+                    .HasMaxLength(300);
+
+                entity.Property(p => p.InputPrice)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(p => p.MinQuantity)
+                      .IsRequired();
+
+                entity.Property(p => p.Unit)
+                      .IsRequired();
+
+                entity.Property(p => p.MaxQuantity)
+                    .IsRequired();
+
+                entity.Property(p => p.TotalCurrentQuantity)
+                    .IsRequired();
+
+                entity.Property(p => p.Status)
+                    .IsRequired();
+
+                entity.HasOne(p => p.Category)
+                    .WithMany(c => c.Products)
+                    .HasForeignKey(p => p.CategoryID)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

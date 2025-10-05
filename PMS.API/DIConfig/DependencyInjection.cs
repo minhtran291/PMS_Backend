@@ -1,12 +1,14 @@
-﻿using AutoMapper;
+﻿using System.Text;
+using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using PMS.API.Automapper;
 using PMS.API.Services.Auth;
+using PMS.API.Services.CategoryService;
 using PMS.API.Services.ExternalService;
+using PMS.API.Services.ProductService;
 using PMS.API.Services.User;
 using PMS.Core.ConfigOptions;
-using System.Text;
 
 namespace PMS.API.DIConfig
 {
@@ -22,6 +24,8 @@ namespace PMS.API.DIConfig
             services.AddScoped<ILoginService, LoginService>();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IProductService, ProductService>();
+            services.AddScoped<ICategoryService, CategoryService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)

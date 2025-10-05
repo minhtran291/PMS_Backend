@@ -1,18 +1,20 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.Core.Domain.Identity;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.ProductCategoryRepository;
+using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.Profile;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.User;
 using PMS.Data.UnitOfWork;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PMS.Data.DatabaseConfig
 {
@@ -32,6 +34,8 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<IProfileRepository, ProfileRepository>();
             services.AddScoped<ICustomerProfileRepository, CustomerProfileRepository>();
             services.AddScoped<IStaffProfileRepository, StaffProfileRepository>();
+            services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
         }
 
