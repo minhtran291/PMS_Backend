@@ -1,4 +1,5 @@
-﻿using PMS.Data.DatabaseConfig;
+﻿using Microsoft.EntityFrameworkCore.Storage;
+using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.Profile;
 using PMS.Data.Repositories.StaffProfile;
@@ -18,18 +19,15 @@ namespace PMS.Data.UnitOfWork
         IStaffProfileRepository staffProfile) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
+        private IDbContextTransaction? _transaction;
 
         public IUserRepository Users { get; private set; } = users;
         public IProfileRepository Profile { get; private set; } = profile;
         public ICustomerProfileRepository CustomerProfile { get; private set; } = customerProfile;
         public IStaffProfileRepository StaffProfile { get; private set; } = staffProfile;
 
-        public async Task CommitAsync()
-        {
-            await _context.SaveChangesAsync();
-        }
 
-        public async Task<int> CompleteAsync()
+        public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();
         }
@@ -37,6 +35,31 @@ namespace PMS.Data.UnitOfWork
         public void Dispose()
         {
             _context.Dispose();
+        }
+
+        public async Task BeginTransactionAsync()
+        {
+            _transaction ??= await _context.Database.BeginTransactionAsync();
+        }
+
+        public async Task CommitTransactionAsync()
+        {
+            if (_transaction != null)
+            {
+                await _transaction.CommitAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
+        }
+
+        public async Task RollbackTransactionAsync()
+        {
+            if (_transaction != null)
+            {
+                await _transaction.RollbackAsync();
+                await _transaction.DisposeAsync();
+                _transaction = null;
+            }
         }
     }
 }
