@@ -1,4 +1,5 @@
-﻿using PMS.Core.Domain.Identity;
+
+using PMS.Core.Domain.Identity;
 using PMS.Core.DTO.Admin;
 
 namespace PMS.API.Automapper
@@ -7,7 +8,7 @@ namespace PMS.API.Automapper
     {
         public ApplicationMapper() 
         {
-            
+
         }
     }
 }

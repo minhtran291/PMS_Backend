@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PMS.API.Services.Admin;
 using PMS.Core.Domain.Constant;
@@ -9,6 +10,7 @@ namespace PMS.API.Controllers
     [Route("api/[controller]")]
     [ApiController]
     public class AdminController : ControllerBase
+
     {
         private readonly IAdminService _adminService;
 
