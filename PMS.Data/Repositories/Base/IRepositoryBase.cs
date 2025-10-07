@@ -19,9 +19,5 @@ namespace PMS.Data.Repositories.Base
         void RemoveRange(IEnumerable<T> entities);
         
         IQueryable<T> Query();
-
-        Task BeginTransactionAsync();
-        Task CommitTransactionAsync();
-        Task RollbackTransactionAsync();
     }
 }

@@ -6,6 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PMS.Core.Domain.Identity;
+using Microsoft.EntityFrameworkCore;
+using PMS.Core.Domain.Entities;
 
 namespace PMS.Data
 {
@@ -20,6 +23,53 @@ namespace PMS.Data
                 {
                     await roleManager.CreateAsync(new IdentityRole(role));
                 }
+            }
+
+            if (!context.Users.Any(u => u.UserName == "admin"))
+            {
+                var passwordHasher = new PasswordHasher<User>();
+
+                var user = new User
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserName = "admin",
+                    Email = "pmsadmin@gmail.com",
+                    NormalizedEmail = "PMSADMIN@GMAIL.COM",
+                    NormalizedUserName = "ADMIN",
+                    UserStatus = Core.Domain.Enums.UserStatus.Active,
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    LockoutEnabled = false,
+                    CreateAt = DateTime.Now
+                };
+
+                user.PasswordHash = passwordHasher.HashPassword(user, "Pmsadmin!");
+                _ = await context.Users.AddAsync(user);
+                await context.SaveChangesAsync();
+
+                var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.ADMIN);
+
+                if (adminRole != null)
+                {
+                    await context.UserRoles.AddAsync(new IdentityUserRole<string>()
+                    {
+                        RoleId = adminRole.Id,
+                        UserId = user.Id,
+                    });
+                }
+                await context.SaveChangesAsync();
+
+                var profile = new Profile
+                {
+                    UserId = user.Id,
+                    Avatar = "https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg",
+                    Address = "Ha Noi",
+                    Gender = Core.Domain.Enums.Gender.Male
+                };
+
+                await context.Profiles.AddAsync(profile);
+
+                await context.SaveChangesAsync();
             }
         }
     }
