@@ -7,10 +7,10 @@ namespace PMS.API.Services.Admin
 {
     public interface IAdminService
     {
-        Task<string> CreateAccountAsync(AdminCreateAccountRequest request, CancellationToken ct = default);
-        Task<List<AdminAccountListItem>> GetAccountsAsync(string? keyword, CancellationToken ct = default);
-        Task<AdminAccountDetail?> GetAccountDetailAsync(string userId, CancellationToken ct = default);
-        Task UpdateAccountAsync(string userId, AdminUpdateAccountRequest request, CancellationToken ct = default);
-        Task SuspendAccountAsync(string userId, CancellationToken ct = default);
+        Task CreateAccountAsync(CreateAccountRequest request);
+        Task<List<AccountList>> GetAccountListAsync(string? keyword);
+        Task<AccountDetails> GetAccountDetailAsync(string userId);
+        Task UpdateAccountAsync(UpdateAccountRequest request);
+        Task SuspendAccountAsync(string userId);
     }
 }

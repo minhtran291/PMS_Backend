@@ -14,6 +14,7 @@ namespace PMS.Core.Domain.Constant
         public const string WAREHOUSE_STAFF = "WAREHOUSE_STAFF";
         public const string MANAGER = "MANAGER";
         public const string ADMIN = "ADMIN";
+        public const string ACCOUNTANT = "ACCOUNTANT";
 
         public static readonly string[] ALL =
         [
@@ -22,7 +23,8 @@ namespace PMS.Core.Domain.Constant
             PURCHASES_STAFF,
             WAREHOUSE_STAFF,
             MANAGER,
-            ADMIN
+            ADMIN,
+            ACCOUNTANT
        ];
     }
 }

@@ -15,7 +15,6 @@ namespace PMS.Data.Repositories.Base
     {
         private readonly DbSet<T> _dbSet;
         protected readonly PMSContext _context;
-        private IDbContextTransaction _transaction;
 
         public RepositoryBase(PMSContext context)
         {
@@ -31,19 +30,6 @@ namespace PMS.Data.Repositories.Base
         public void AddRange(IEnumerable<T> entities)
         {
             _dbSet.AddRange(entities);
-        }
-
-        public async Task BeginTransactionAsync()
-        {
-            _transaction ??= await _context.Database.BeginTransactionAsync();
-        }
-
-        public async Task CommitTransactionAsync()
-        {
-            if (_transaction != null)
-            {
-                await _transaction.CommitAsync();
-            }
         }
 
         public async Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate)
@@ -69,14 +55,6 @@ namespace PMS.Data.Repositories.Base
         public void RemoveRange(IEnumerable<T> entities)
         {
             _dbSet.RemoveRange(entities);
-        }
-
-        public async Task RollbackTransactionAsync()
-        {
-            if (_transaction != null)
-            {
-                await _transaction.RollbackAsync();
-            }
         }
 
         public void Update(T entity)

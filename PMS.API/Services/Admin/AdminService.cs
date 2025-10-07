@@ -1,74 +1,68 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Identity;
+using AutoMapper;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
 using PMS.Core.DTO.Admin;
-using PMS.Data.DatabaseConfig;
-using PMS.Data.Repositories.Admin;
-using DProfile = PMS.Core.Domain.Entities.Profile;
-using DStaffProfile = PMS.Core.Domain.Entities.StaffProfile;
-using DUser = PMS.Core.Domain.Identity.User;
+using PMS.API.Services.Base;
+using PMS.Data.UnitOfWork;
+using Microsoft.EntityFrameworkCore;
+using PMS.Core.Domain.Constant;
 
 namespace PMS.API.Services.Admin
 {
-    public class AdminService : IAdminService
+    public class AdminService(IUnitOfWork unitOfWork,
+        IMapper mapper,
+        ILogger<AdminService> logger) : Service(unitOfWork, mapper), IAdminService
     {
-        private readonly PMSContext _context;
-        private readonly IAdminRepository _repo;
-        private readonly UserManager<DUser> _userManager;
-        private readonly IMapper _mapper;
+        private readonly ILogger<AdminService> _logger = logger;
 
-        public AdminService(PMSContext context, 
-            IAdminRepository repo,
-            UserManager<DUser> userManager,
-            IMapper mapper)
+        public async Task CreateAccountAsync(CreateAccountRequest request)
         {
-            _context = context;
-            _repo = repo;
-            _userManager = userManager;
-            _mapper = mapper;
-        }
+            var validateEmail = await _unitOfWork.Users.UserManager.FindByEmailAsync(request.Email);
 
-        public async Task<string> CreateAccountAsync(AdminCreateAccountRequest request, CancellationToken ct = default)
-        {
-            // Tạo User bằng Identity (để hashing password & validate)
-            var existed = await _repo.GetUserByEmailAsync(request.Email, ct);
-            if (existed != null)
-                throw new InvalidOperationException("Email đã tồn tại.");
+            if (validateEmail != null)
+                throw new Exception("Email đã được sử dụng");
 
-            var user = new DUser
-            {
-                UserName = request.Email,
-                Email = request.Email,
-                PhoneNumber = request.PhoneNumber,
-                UserStatus = UserStatus.Active,
-                CreateAt = DateTime.UtcNow
-            };
+            var validatePhone = await _unitOfWork.Users.Query().FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
 
-            using var tx = await _context.Database.BeginTransactionAsync(ct);
+            if (validatePhone != null)
+                throw new Exception("Số điện thoại đã được sử dụng");
+
             try
             {
-                var createResult = await _userManager.CreateAsync(user, request.Password);
+                await _unitOfWork.BeginTransactionAsync();
+
+                var user = new Core.Domain.Identity.User
+                {
+                    UserName = request.UserName,
+                    Email = request.Email,
+                    PhoneNumber = request.PhoneNumber,
+                    CreateAt = DateTime.Now,
+                    UserStatus = UserStatus.Active,
+                    EmailConfirmed = true
+                };
+
+                var createResult = await _unitOfWork.Users.UserManager.CreateAsync(user, request.Password);
                 if (!createResult.Succeeded)
                 {
-                    var msg = string.Join("; ", createResult.Errors.Select(e => $"{e.Code}: {e.Description}"));
-                    throw new InvalidOperationException($"Không thể tạo tài khoản: {msg}");
+                    var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
+                    _logger.LogError("Tao nguoi dung that bai: {Errors}", errors);
+                    throw new Exception("Có lỗi xảy ra");
                 }
 
                 // Tạo Profile
-                var profile = new DProfile
+                var profile = new Core.Domain.Entities.Profile
                 {
                     UserId = user.Id,
                     FullName = request.FullName,
-                    Avatar = request.Avatar,
-                    Gender = request.Gender,
-                    Address = request.Address
+                    Address = request.Address,
+                    Avatar = "https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg",
+                    Gender = request.Gender
                 };
-                await _repo.AddProfileAsync(profile, ct);
-                await _repo.SaveChangesAsync(ct);
+                await _unitOfWork.Profile.AddAsync(profile);
+                await _unitOfWork.CommitAsync();
 
                 // Tạo StaffProfile
-                var staff = new StaffProfile
+                var staffProfile = new StaffProfile
                 {
                     ProfileId = profile.Id,
                     EmployeeCode = string.IsNullOrWhiteSpace(request.EmployeeCode)
@@ -77,59 +71,105 @@ namespace PMS.API.Services.Admin
                     Department = request.Department,
                     Notes = request.Notes
                 };
-                await _repo.AddStaffProfileAsync(staff, ct);
+                await _unitOfWork.StaffProfile.AddAsync(staffProfile);
 
-                await _repo.SaveChangesAsync(ct);
-                await tx.CommitAsync(ct);
+                var role = request.StaffRole switch
+                {
+                    StaffRole.SalesStaff => UserRoles.SALES_STAFF,
+                    StaffRole.PurchasesStaff => UserRoles.PURCHASES_STAFF,
+                    StaffRole.WarehouseStaff => UserRoles.WAREHOUSE_STAFF,
+                    _ => throw new Exception("Role không hợp lệ")
+                };
 
-                return user.Id;
+                var roleResult = await _unitOfWork.Users.UserManager.AddToRoleAsync(user, role);
+
+                if (!roleResult.Succeeded)
+                {
+                    var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+                    _logger.LogError("Gan role that bai: {Errors}", errors);
+                    throw new Exception("Có lỗi xảy ra");
+                }
+
+                await _unitOfWork.CommitAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                await tx.RollbackAsync(ct);
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Tao nhan vien that bai");
                 throw;
             }
         }
 
-        public async Task<AdminAccountDetail?> GetAccountDetailAsync(string userId, CancellationToken ct = default)
+        public async Task<AccountDetails> GetAccountDetailAsync(string userId)
         {
-            var u = await _repo.GetUserWithProfilesAsync(userId, ct);
-            if (u == null) return null;
+            var user = await _unitOfWork.Users.Query()
+                .Include(u => u.Profile)
+                    .ThenInclude(p => p.StaffProfile)
+                .Include(u => u.Profile)
+                    .ThenInclude(p => p.CustomerProfile)
+                .FirstOrDefaultAsync(u => u.Id == userId)
+                    ?? throw new Exception("Không tìm thấy người dùng");
 
-            return new AdminAccountDetail
+            var roles = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
+
+            return new AccountDetails
             {
-                UserId = u.Id,
-                Email = u.Email!,
-                PhoneNumber = u.PhoneNumber,
-                UserStatus = u.UserStatus,
-                CreateAt = u.CreateAt,
+                UserId = user.Id,
+                Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber,
+                UserStatus = user.UserStatus,
+                CreateAt = user.CreateAt,
 
-                ProfileId = u.Profile.Id,
-                FullName = u.Profile.FullName,
-                Avatar = u.Profile.Avatar,
-                Gender = u.Profile.Gender,
-                Address = u.Profile.Address,
+                ProfileId = user.Profile.Id,
+                FullName = user.Profile.FullName,
+                Avatar = user.Profile.Avatar,
+                Gender = user.Profile.Gender,
+                Address = user.Profile.Address,
 
-                StaffProfileId = u.Profile.StaffProfile?.Id,
-                EmployeeCode = u.Profile.StaffProfile?.EmployeeCode,
-                Department = u.Profile.StaffProfile?.Department,
-                Notes = u.Profile.StaffProfile?.Notes,
+                StaffProfileId = user.Profile.StaffProfile?.Id,
+                EmployeeCode = user.Profile.StaffProfile?.EmployeeCode,
+                Department = user.Profile.StaffProfile?.Department,
+                Notes = user.Profile.StaffProfile?.Notes,
 
-                CustomerProfileId = u.Profile.CustomerProfile?.Id,
-                Mst = u.Profile.CustomerProfile?.Mst,
-                ImageCnkd = u.Profile.CustomerProfile?.ImageCnkd,
-                ImageByt = u.Profile.CustomerProfile?.ImageByt,
-                Mshkd = u.Profile.CustomerProfile?.Mshkd
+                CustomerProfileId = user.Profile.CustomerProfile?.Id,
+                Mst = user.Profile.CustomerProfile?.Mst,
+                ImageCnkd = user.Profile.CustomerProfile?.ImageCnkd,
+                ImageByt = user.Profile.CustomerProfile?.ImageByt,
+                Mshkd = user.Profile.CustomerProfile?.Mshkd
             };
         }
 
-        public async Task<List<AdminAccountListItem>> GetAccountsAsync(string? keyword, CancellationToken ct = default)
+        public async Task<List<AccountList>> GetAccountListAsync(string? keyword)
         {
-            var users = await _repo.GetUsersAsync(keyword, ct);
-            return users.Select(u => new AdminAccountListItem
+            var users = _unitOfWork.Users.Query()
+                    .Include(u => u.Profile).ThenInclude(p => p.StaffProfile)
+                    .Include(u => u.Profile).ThenInclude(p => p.CustomerProfile)
+                    .AsQueryable();
+
+            if (!string.IsNullOrEmpty(keyword))
+            {
+                var handleKeyword = keyword.Trim().ToLower();
+
+                users = users.Where(u =>
+                    (u.Email != null && u.Email.ToLower().Contains(handleKeyword)) ||
+                    (u.PhoneNumber != null && u.PhoneNumber.ToLower().Contains(handleKeyword)) ||
+                    (u.Profile.FullName != null && u.Profile.FullName.ToLower().Contains(handleKeyword)) ||
+                    (u.Profile.StaffProfile != null &&
+                     u.Profile.StaffProfile.Department != null &&
+                     u.Profile.StaffProfile.Department.ToLower().Contains(handleKeyword)));
+            }
+
+            var result = await users.OrderByDescending(u => u.CreateAt).ToListAsync();
+
+            if (result == null || result.Count == 0)
+                throw new Exception("Không có dữ liệu");
+
+            return result.Select(u => new AccountList
             {
                 UserId = u.Id,
-                Email = u.Email!,
+                Email = u.Email,
                 PhoneNumber = u.PhoneNumber,
                 UserStatus = u.UserStatus,
                 CreateAt = u.CreateAt,
@@ -140,75 +180,74 @@ namespace PMS.API.Services.Admin
             }).ToList();
         }
 
-        public async Task SuspendAccountAsync(string userId, CancellationToken ct = default)
+        public async Task SuspendAccountAsync(string userId)
         {
-            var u = await _repo.GetUserWithProfilesAsync(userId, ct)
-                ?? throw new KeyNotFoundException("User không tồn tại.");
+            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId)
+                ?? throw new Exception("User không tồn tại.");
 
-            u.UserStatus = UserStatus.Block;
-            await _repo.SaveChangesAsync(ct);
+            user.UserStatus = UserStatus.Block;
+
+            await _unitOfWork.Users.UserManager.UpdateAsync(user);
+
+            await _unitOfWork.CommitAsync();
         }
 
-        public async Task UpdateAccountAsync(string userId, AdminUpdateAccountRequest request, CancellationToken ct = default)
+        public async Task UpdateAccountAsync(UpdateAccountRequest request)
         {
-            var u = await _repo.GetUserWithProfilesAsync(userId, ct)
-                ?? throw new KeyNotFoundException("User không tồn tại.");
+            var user = await _unitOfWork.Users.Query()
+                .Include(u => u.Profile)
+                    .ThenInclude(u => u.StaffProfile)
+                .FirstOrDefaultAsync(u => u.Id == request.UserId)
+                    ?? throw new Exception("Người dùng không tồn tại.");
 
-            using var tx = await _context.Database.BeginTransactionAsync(ct);
             try
             {
+                await _unitOfWork.BeginTransactionAsync();
+
                 // Update User
                 if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
-                    u.PhoneNumber = request.PhoneNumber;
+                    user.PhoneNumber = request.PhoneNumber;
+
                 if (request.UserStatus.HasValue)
-                    u.UserStatus = request.UserStatus.Value;
+                    user.UserStatus = request.UserStatus.Value;
 
                 // Update Profile
-                var p = u.Profile;
-                if (p == null)
-                    throw new InvalidOperationException("User chưa có Profile.");
+                var profile = user.Profile;
+                if (profile == null)
+                {
+                    _logger.LogWarning("Update profile loi, user chua co profile");
+                    throw new Exception("Có lỗi xảy ra");
+                }
 
-                if (request.FullName != null) p.FullName = request.FullName;
-                if (request.Avatar != null) p.Avatar = request.Avatar;
-                if (request.Gender.HasValue) p.Gender = request.Gender.Value;
-                if (request.Address != null) p.Address = request.Address;
+                if (request.FullName != null) profile.FullName = request.FullName;
+                if (request.Avatar != null) profile.Avatar = request.Avatar;
+                if (request.Gender.HasValue) profile.Gender = request.Gender.Value;
+                if (request.Address != null) profile.Address = request.Address;
 
-                await _repo.UpdateProfileAsync(p);
+                _unitOfWork.Profile.Update(profile);
 
                 // Update / Upsert StaffProfile
-                if (u.Profile.StaffProfile == null)
+                var staffProfile = user.Profile.StaffProfile;
+                if (staffProfile == null)
                 {
-                    // nếu admin muốn thêm staff profile mới
-                    if (request.EmployeeCode != null || request.Department != null || request.Notes != null)
-                    {
-                        var sp = new StaffProfile
-                        {
-                            ProfileId = p.Id,
-                            EmployeeCode = string.IsNullOrWhiteSpace(request.EmployeeCode)
-                                ? GenerateEmployeeCode()
-                                : request.EmployeeCode,
-                            Department = request.Department,
-                            Notes = request.Notes
-                        };
-                        await _repo.AddStaffProfileAsync(sp, ct);
-                    }
-                }
-                else
-                {
-                    var sp = u.Profile.StaffProfile;
-                    if (request.EmployeeCode != null) sp.EmployeeCode = request.EmployeeCode;
-                    if (request.Department != null) sp.Department = request.Department;
-                    if (request.Notes != null) sp.Notes = request.Notes;
-
-                    await _repo.UpdateStaffProfileAsync(sp);
+                    _logger.LogWarning("Update profile loi, khong co staff profile");
+                    throw new Exception("Có lỗi xảy ra");
                 }
 
-                await _repo.SaveChangesAsync(ct);
-                await tx.CommitAsync(ct);
+                if (request.EmployeeCode != null) staffProfile.EmployeeCode = request.EmployeeCode;
+                if (request.Department != null) staffProfile.Department = request.Department;
+                if (request.Notes != null) staffProfile.Notes = request.Notes;
+
+                _unitOfWork.StaffProfile.Update(staffProfile);
+
+                await _unitOfWork.CommitAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                await tx.RollbackAsync(ct);
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Admin update account loi: ");
                 throw;
             }
         }

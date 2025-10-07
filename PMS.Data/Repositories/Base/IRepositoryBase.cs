@@ -11,7 +11,6 @@ namespace PMS.Data.Repositories.Base
     {
         Task<IEnumerable<T>> GetAllAsync();
         Task<IEnumerable<T>> FindAsync(Expression<Func<T, bool>> predicate);
-        
         Task AddAsync(T entity);
         void Update(T entity);
         void AddRange(IEnumerable<T> entities);
@@ -20,9 +19,5 @@ namespace PMS.Data.Repositories.Base
         void RemoveRange(IEnumerable<T> entities);
         
         IQueryable<T> Query();
-
-        Task BeginTransactionAsync();
-        Task CommitTransactionAsync();
-        Task RollbackTransactionAsync();
     }
 }

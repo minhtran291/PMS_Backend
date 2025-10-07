@@ -16,7 +16,10 @@ namespace PMS.Data.UnitOfWork
         IProfileRepository Profile { get; }
         ICustomerProfileRepository CustomerProfile { get; }
         IStaffProfileRepository StaffProfile { get; }
-        Task<int> CompleteAsync();
-        Task CommitAsync();
+        Task<int> CommitAsync();
+        Task BeginTransactionAsync();
+        Task CommitTransactionAsync();
+        Task RollbackTransactionAsync();
+        void Dispose();
     }
 }

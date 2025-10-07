@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using PMS.API.Automapper;
 using PMS.API.Services.Admin;
 using PMS.API.Services.Auth;
+using PMS.API.Services.ExternalService;
 using PMS.API.Services.User;
 using PMS.Core.ConfigOptions;
 using System.Text;
@@ -20,7 +21,6 @@ namespace PMS.API.DIConfig
         public static void AddServices(this IServiceCollection services)
         {
             services.AddScoped<ILoginService, LoginService>();
-            services.AddScoped<IRegisterService, RegisterService>();
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAdminService, AdminService>();
@@ -62,9 +62,9 @@ namespace PMS.API.DIConfig
             services.AddAuthorization();
         }
 
-        public static void AddSwagger(this IServiceCollection services)
+        public static void AddExternalServices(this IServiceCollection services)
         {
-
+            services.AddScoped<IEmailService, EmailService>();
         }
     }
 }

@@ -8,5 +8,7 @@ namespace PMS.Core.Domain.Constant
 {
     public class EmailSubject
     {
+        public const string CONFIRM_EMAIL = "Xác nhận tài khoản";
+        public const string RESET_PASSWORD = "Đặt lại mật khẩu";
     }
 }

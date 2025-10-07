@@ -67,9 +67,9 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(sp => sp.Id)
                     .ValueGeneratedOnAdd();
 
-                entity.HasOne(cp => cp.Profile)
+                entity.HasOne(sp => sp.Profile)
                     .WithOne(p => p.StaffProfile)
-                    .HasForeignKey<StaffProfile>(cp => cp.ProfileId);
+                    .HasForeignKey<StaffProfile>(sp => sp.ProfileId);
             });
         }
     }
