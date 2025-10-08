@@ -253,5 +253,16 @@ namespace PMS.API.Services.Admin
         }
         private static string GenerateEmployeeCode()
            => $"EMP{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+
+        public async Task ActiveAccountAsync(string userID)
+        {
+            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userID)
+                ?? throw new Exception("");
+
+            user.UserStatus = UserStatus.Active;
+
+            await _unitOfWork.Users.UserManager.UpdateAsync(user);
+            await _unitOfWork.CommitAsync();
+        }
     }
 }

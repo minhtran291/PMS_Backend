@@ -12,5 +12,6 @@ namespace PMS.API.Services.Admin
         Task<AccountDetails> GetAccountDetailAsync(string userId);
         Task UpdateAccountAsync(UpdateAccountRequest request);
         Task SuspendAccountAsync(string userId);
+        Task ActiveAccountAsync(string userID);
     }
 }
