@@ -5,6 +5,7 @@ using PMS.API.Automapper;
 using PMS.API.Services.Admin;
 using PMS.API.Services.Auth;
 using PMS.API.Services.ExternalService;
+using PMS.API.Services.Supplier;
 using PMS.API.Services.User;
 using PMS.Core.ConfigOptions;
 using System.Text;
@@ -24,6 +25,7 @@ namespace PMS.API.DIConfig
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<ISupplierService, SupplierService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
