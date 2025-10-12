@@ -65,6 +65,8 @@ namespace PMS.API.Controllers
         [HttpPut("update")]
         public async Task<IActionResult> Update([FromQuery] int id, [FromBody] UpdateSupplierRequestDTO dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
             try
             {
                 if (!ModelState.IsValid) return ValidationProblem(ModelState);

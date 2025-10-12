@@ -20,17 +20,19 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost("create-staff-account")]
-        public async Task<IActionResult> Create([FromBody]CreateAccountRequest request)
+        public async Task<IActionResult> Create([FromBody] CreateAccountRequest request)
         {
-            try
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _adminService.CreateAccountAsync(request);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _adminService.CreateAccountAsync(request);
-                return Ok("Tạo mới tài khoản thành công");
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         [HttpGet("get-account-list")]
@@ -41,7 +43,7 @@ namespace PMS.API.Controllers
                 var list = await _adminService.GetAccountListAsync(keyword);
                 return Ok(list);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
@@ -50,58 +52,56 @@ namespace PMS.API.Controllers
         [HttpGet("get-account-details")]
         public async Task<IActionResult> Detail(string userId)
         {
-            try
+            var result = await _adminService.GetAccountDetailAsync(userId);
+
+            return StatusCode(result.StatusCode, new
             {
-                var dto = await _adminService.GetAccountDetailAsync(userId);
-                return dto == null ? NotFound() : Ok(dto);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         [HttpPut("update-staff-account")]
         public async Task<IActionResult> Update([FromBody] UpdateAccountRequest request)
         {
-            try
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _adminService.UpdateAccountAsync(request);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _adminService.UpdateAccountAsync(request);
-                return Ok("Update thành công");
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         [HttpPost("suspend-account")]
         public async Task<IActionResult> Suspend(string userId)
         {
-            try
+            var result = await _adminService.SuspendAccountAsync(userId);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _adminService.SuspendAccountAsync(userId);
-                return Ok();
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         [HttpPost("active-account")]
         public async Task<IActionResult> Active(string userID)
         {
-            try
+            var result = await _adminService.ActiveAccountAsync(userID);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _adminService.ActiveAccountAsync(userID);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"{ex.Message}");
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
     }
 }

@@ -1,16 +1,18 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
-using PMS.Core.Domain.Entities;
-using PMS.Data.DatabaseConfig;
-using PMS.Data.Repositories.CustomerProfile;
-using PMS.Data.Repositories.Profile;
-using PMS.Data.Repositories.StaffProfile;
-using PMS.Data.Repositories.Supplier;
-using PMS.Data.Repositories.User;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Storage;
+using PMS.Core.Domain.Entities;
+using PMS.Data.DatabaseConfig;
+using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.ProductCategoryRepository;
+using PMS.Data.Repositories.ProductRepository;
+using PMS.Data.Repositories.Profile;
+using PMS.Data.Repositories.StaffProfile;
+using PMS.Data.Repositories.Supplier;
+using PMS.Data.Repositories.User;
 
 namespace PMS.Data.UnitOfWork
 {
@@ -19,7 +21,9 @@ namespace PMS.Data.UnitOfWork
         IProfileRepository profile,
         ICustomerProfileRepository customerProfile,
         ISupplierRepository supplier,
-        IStaffProfileRepository staffProfile) : IUnitOfWork
+        IStaffProfileRepository staffProfile,
+        IProductRepository product,
+        IProductCategoryRepository category) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -30,6 +34,9 @@ namespace PMS.Data.UnitOfWork
         public IStaffProfileRepository StaffProfile { get; private set; } = staffProfile;
 
         public ISupplierRepository Supplier { get; private set; } = supplier;
+        //
+        public IProductRepository Product { get; private set; } = product;
+        public IProductCategoryRepository Category { get; private set; } = category;
 
         public async Task<int> CommitAsync()
         {

@@ -19,6 +19,8 @@ namespace PMS.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
             try
             {
                 var tokenResponse = await _loginService.Login(request);

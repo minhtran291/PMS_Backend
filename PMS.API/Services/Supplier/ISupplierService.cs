@@ -1,4 +1,5 @@
-﻿using PMS.Core.DTO.Supplier;
+﻿using PMS.Core.Domain.Constant;
+using PMS.Core.DTO.Supplier;
 
 namespace PMS.API.Services.Supplier
 {
