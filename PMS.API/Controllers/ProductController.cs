@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.API.Services.Product;
+using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.DTO.Content;
 
@@ -25,6 +27,7 @@ namespace PMS.API.Controllers
         /// <param name="status">Trạng thái mới (true: kích hoạt, false: vô hiệu hóa)</param>
         /// <returns>Thông báo thành công hoặc lỗi</returns>
         [HttpPut("{productId}/status")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> SetProductStatus(int productId, [FromBody] bool status)
         {
             var result = await _productService.SetProductStatusAsync(productId, status);
@@ -60,6 +63,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <returns>List<ProductUpdate></returns>
         [HttpGet("active")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetActiveProducts()
         {
             var result = await _productService.GetAllProductsWithStatusAsync();
@@ -95,6 +99,7 @@ namespace PMS.API.Controllers
         /// <param name="product"></param>
         /// <returns><Product></returns>
         [HttpPost("create")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> AddProduct([FromBody] ProductDTO product)
         {
             var result = await _productService.AddProductAsync(product);
@@ -114,6 +119,7 @@ namespace PMS.API.Controllers
         /// <param name="productUpdate"></param>
         /// <returns>void</returns>
         [HttpPut("update/{productId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> UpdateProduct(int productId, [FromBody] ProductUpdateDTO productUpdate)
         {
             var result = await _productService.UpdateProductAsync(productId, productUpdate);
