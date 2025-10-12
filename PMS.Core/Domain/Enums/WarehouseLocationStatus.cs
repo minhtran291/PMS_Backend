@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 
 namespace PMS.Core.Domain.Enums
 {
-    public enum Gender : byte
+    public enum WarehouseLocationStatus : byte
     {
-        Male,
-        FeMale,
-        Other
+        Inactive = 0,
+        Active = 1
     }
 }

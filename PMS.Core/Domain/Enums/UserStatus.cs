@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace PMS.Core.Domain.Enums
 {
-    public enum UserStatus
+    public enum UserStatus : byte
     {
         Block,
         Inactive,

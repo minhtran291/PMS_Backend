@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace PMS.Core.Domain.Enums
 {
-    public enum StaffRole
+    public enum StaffRole : byte
     {
         SalesStaff = 0,
         PurchasesStaff = 1,

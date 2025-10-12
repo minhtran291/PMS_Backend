@@ -6,6 +6,8 @@ using PMS.Data.Repositories.Profile;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
+using PMS.Data.Repositories.Warehouse;
+using PMS.Data.Repositories.WarehouseLocation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +21,9 @@ namespace PMS.Data.UnitOfWork
         IProfileRepository profile,
         ICustomerProfileRepository customerProfile,
         ISupplierRepository supplier,
-        IStaffProfileRepository staffProfile) : IUnitOfWork
+        IStaffProfileRepository staffProfile, 
+        IWarehouseRepository warehouse, 
+        IWarehouseLocationRepository warehouseLocation) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -28,8 +32,9 @@ namespace PMS.Data.UnitOfWork
         public IProfileRepository Profile { get; private set; } = profile;
         public ICustomerProfileRepository CustomerProfile { get; private set; } = customerProfile;
         public IStaffProfileRepository StaffProfile { get; private set; } = staffProfile;
-
         public ISupplierRepository Supplier { get; private set; } = supplier;
+        public IWarehouseRepository Warehouse { get; private set; } = warehouse;
+        public IWarehouseLocationRepository WarehouseLocation { get; private set; } = warehouseLocation;
 
         public async Task<int> CommitAsync()
         {

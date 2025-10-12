@@ -7,6 +7,8 @@ using PMS.API.Services.Auth;
 using PMS.API.Services.ExternalService;
 using PMS.API.Services.Supplier;
 using PMS.API.Services.User;
+using PMS.API.Services.Warehouse;
+using PMS.API.Services.WarehouseLocation;
 using PMS.Core.ConfigOptions;
 using System.Text;
 
@@ -26,6 +28,8 @@ namespace PMS.API.DIConfig
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<ISupplierService, SupplierService>();
+            services.AddScoped<IWarehouseService, WarehouseService>();
+            services.AddScoped<IWarehouseLocationService, WarehouseLocationService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
