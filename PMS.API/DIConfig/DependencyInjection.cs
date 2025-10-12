@@ -4,7 +4,9 @@ using Microsoft.IdentityModel.Tokens;
 using PMS.API.Automapper;
 using PMS.API.Services.Admin;
 using PMS.API.Services.Auth;
+using PMS.API.Services.CategoryService;
 using PMS.API.Services.ExternalService;
+using PMS.API.Services.Product;
 using PMS.API.Services.Supplier;
 using PMS.API.Services.User;
 using PMS.API.Services.Warehouse;
@@ -28,9 +30,11 @@ namespace PMS.API.DIConfig
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<ISupplierService, SupplierService>();
+            services.AddScoped<IProductService, ProductService>();
+            services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IWarehouseService, WarehouseService>();
             services.AddScoped<IWarehouseLocationService, WarehouseLocationService>();
-        }
+}
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
         {

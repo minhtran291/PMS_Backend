@@ -17,9 +17,10 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
         public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
         public virtual DbSet<Supplier> Suppliers {  get; set; }
+        public virtual DbSet<Product> Products { get; set; }
+        public virtual DbSet<Category> Categories { get; set; }
         public virtual DbSet<Warehouse> Warehouses { get; set; }
         public virtual DbSet<WarehouseLocation> WarehouseLocations { get; set; }
-
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -115,7 +116,7 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasKey(p => p.Id);
 
                 entity.Property(p => p.Id)
-                    .ValueGeneratedOnAdd();
+                .ValueGeneratedOnAdd();
 
                 entity.Property(p => p.Name)
                     .IsRequired()
@@ -194,6 +195,55 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasOne(wl => wl.Warehouse)
                     .WithMany(w => w.WarehouseLocations)
                     .HasForeignKey(wl => wl.WarehouseId);
+            });
+
+            builder.Entity<Product>(entity =>
+            {
+                entity.HasKey(p => p.ProductID);
+
+                entity.Property(p => p.ProductID)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(p => p.ProductName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(p => p.ProductDescription)
+                    .HasMaxLength(300);
+
+                entity.Property(p => p.MinQuantity)
+                      .IsRequired();
+
+                entity.Property(p => p.Unit)
+                      .IsRequired();
+
+                entity.Property(p => p.MaxQuantity)
+                    .IsRequired();
+
+                entity.Property(p => p.TotalCurrentQuantity)
+                    .IsRequired();
+
+                entity.Property(p => p.Status)
+                    .IsRequired();
+
+                entity.Property(p => p.Image);
+
+                entity.HasOne(p => p.Category)
+                    .WithMany(c => c.Products)
+                    .HasForeignKey(p => p.CategoryID)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Category>(entity =>
+            {
+                entity.HasKey(c => c.CategoryID);
+
+                entity.Property(c => c.CategoryID)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(c => c.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
             });
         }
     }

@@ -27,90 +27,99 @@ namespace PMS.API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> RegisterNewUser([FromBody] RegisterUser customer)
         {
-            try
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _userService.RegisterUserAsync(customer);
+
+         
+            return result.StatusCode switch
             {
-                await _userService.RegisterUserAsync(customer);
-                return Ok("Đăng ký tài khoản thành công");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                200 => Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                }),
+                500 => StatusCode(500, new
+                {
+                    success = false,
+                    message = result.Message
+                }),
+                
+                _ => Ok(new
+                {
+                    success = false,
+                    message = result.Message
+                }),
+            };
         }
 
         //https://localhost:7213/api/User/confirm-email
         [HttpGet("confirm-email")]
-        public async Task<ActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
+        public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
         {
-            try
+            var result = await _userService.ConfirmEmailAsync(userId, token);
+
+            return result.StatusCode switch
             {
-                await _userService.ConfirmEmailAsync(userId, token);
-                return Ok("Xác thực tài khoản thành công");
-            }
-            catch (SecurityTokenExpiredException)
-            {
-                return Unauthorized(new { error = "Token đã hết hạn" });
-            }
-            catch (SecurityTokenInvalidSignatureException)
-            {
-                return Unauthorized(new { error = "Chữ ký token không hợp lệ" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                200 => Ok(new { success = true, message = result.Message, data = result.Data }),
+                400 => BadRequest(new { success = false, message = result.Message }),
+                404 => NotFound(new { success = false, message = result.Message }),
+                _ => BadRequest(new { success = false, message = result.Message })
+            };
         }
 
         //https://localhost:7213/api/User/forgot-password
         [HttpPost("forgot-password")]
-        public async Task<ActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
-            try
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _userService.SendEmailResetPasswordAsync(request.Email);
+
+            // Map StatusCode sang HTTP status code phù hợp
+            return result.StatusCode switch
             {
-                await _userService.SendEmailResetPasswordAsync(request.Email);
-                return Ok("Link đặt lại mật khẩu đã được gửi đến email của bạn");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                200 => Ok(new { success = true, message = result.Message, data = result.Data }),
+                404 => NotFound(new { success = false, message = result.Message }),
+                _ => BadRequest(new { success = false, message = result.Message }),
+            };
         }
 
         //https://localhost:7213/api/User/reset-password
         [HttpPost("reset-password")]
-        public async Task<ActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
-            try
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _userService.ResetPasswordAsync(request);
+
+            return result.StatusCode switch
             {
-                await _userService.ResetPasswordAsync(request);
-                return Ok("Mật khẩu đã được đặt lại thành công");
-            }
-            catch (SecurityTokenExpiredException)
-            {
-                return Unauthorized(new { error = "Token đã hết hạn" });
-            }
-            catch (SecurityTokenInvalidSignatureException)
-            {
-                return Unauthorized(new { error = "Chữ ký token không hợp lệ" });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                200 => Ok(new { success = true, message = result.Message, data = result.Data }),
+                404 => NotFound(new { success = false, message = result.Message }),
+                500 => BadRequest(new { success = false, message = result.Message }),
+                _ => BadRequest(new { success = false, message = result.Message })
+            };
         }
 
         [HttpPost("resend-confirm-email")]
-        public async Task<IActionResult> ResendConfirmEmail(ResendConfirmEmailRequest email)
+        public async Task<IActionResult> ResendConfirmEmail([FromBody] ResendConfirmEmailRequest request)
         {
-            try
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _userService.ReSendEmailConfirmAsync(request);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _userService.ReSendEmailConfirmAsync(email);
-                return Ok();
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
     }
 }

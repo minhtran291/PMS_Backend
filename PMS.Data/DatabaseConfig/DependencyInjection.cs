@@ -1,9 +1,16 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.Core.Domain.Identity;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.ProductCategoryRepository;
+using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.Profile;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
@@ -11,11 +18,6 @@ using PMS.Data.Repositories.User;
 using PMS.Data.Repositories.Warehouse;
 using PMS.Data.Repositories.WarehouseLocation;
 using PMS.Data.UnitOfWork;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PMS.Data.DatabaseConfig
 {
@@ -39,6 +41,9 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<IWarehouseRepository, WarehouseRepository>();
             services.AddScoped<IWarehouseLocationRepository, WarehouseLocationRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
+            //
+            services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)

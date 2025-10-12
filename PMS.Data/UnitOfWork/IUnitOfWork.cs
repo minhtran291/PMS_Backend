@@ -1,15 +1,17 @@
-﻿using PMS.Data.Repositories.CustomerProfile;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.ProductCategoryRepository;
+using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.Profile;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
 using PMS.Data.Repositories.Warehouse;
 using PMS.Data.Repositories.WarehouseLocation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PMS.Data.UnitOfWork
 {
@@ -20,6 +22,8 @@ namespace PMS.Data.UnitOfWork
         ICustomerProfileRepository CustomerProfile { get; }
         IStaffProfileRepository StaffProfile { get; }
         ISupplierRepository Supplier { get; }
+        IProductRepository Product { get; }
+        IProductCategoryRepository Category { get; }
         IWarehouseRepository Warehouse { get; }
         IWarehouseLocationRepository WarehouseLocation { get; }
         Task<int> CommitAsync();

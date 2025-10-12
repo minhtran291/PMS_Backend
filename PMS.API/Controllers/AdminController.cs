@@ -1,4 +1,5 @@
 
+using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PMS.API.Services.Admin;
@@ -18,21 +19,23 @@ namespace PMS.API.Controllers
         {
             _adminService = adminService;
         }
-
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("create-staff-account")]
-        public async Task<IActionResult> Create([FromBody]CreateAccountRequest request)
+        public async Task<IActionResult> Create([FromBody] CreateAccountRequest request)
         {
-            try
-            {
-                await _adminService.CreateAccountAsync(request);
-                return Ok("Tạo mới tài khoản thành công");
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
+            var result = await _adminService.CreateAccountAsync(request);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpGet("get-account-list")]
         public async Task<IActionResult> List(string? keyword)
         {
@@ -41,67 +44,65 @@ namespace PMS.API.Controllers
                 var list = await _adminService.GetAccountListAsync(keyword);
                 return Ok(list);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return BadRequest(ex.Message);
             }
         }
-
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpGet("get-account-details")]
         public async Task<IActionResult> Detail(string userId)
         {
-            try
-            {
-                var dto = await _adminService.GetAccountDetailAsync(userId);
-                return dto == null ? NotFound() : Ok(dto);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+            var result = await _adminService.GetAccountDetailAsync(userId);
 
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPut("update-staff-account")]
         public async Task<IActionResult> Update([FromBody] UpdateAccountRequest request)
         {
-            try
-            {
-                await _adminService.UpdateAccountAsync(request);
-                return Ok("Update thành công");
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            
-        }
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
+            var result = await _adminService.UpdateAccountAsync(request);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("suspend-account")]
         public async Task<IActionResult> Suspend(string userId)
         {
-            try
-            {
-                await _adminService.SuspendAccountAsync(userId);
-                return Ok();
-            }
-            catch(Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+            var result = await _adminService.SuspendAccountAsync(userId);
 
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("active-account")]
         public async Task<IActionResult> Active(string userID)
         {
-            try
+            var result = await _adminService.ActiveAccountAsync(userID);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _adminService.ActiveAccountAsync(userID);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest($"{ex.Message}");
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
     }
 }
