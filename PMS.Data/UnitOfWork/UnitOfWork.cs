@@ -1,8 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage;
+using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.Profile;
 using PMS.Data.Repositories.StaffProfile;
+using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
 using System;
 using System.Collections.Generic;
@@ -16,6 +18,7 @@ namespace PMS.Data.UnitOfWork
         IUserRepository users,
         IProfileRepository profile,
         ICustomerProfileRepository customerProfile,
+        ISupplierRepository supplier,
         IStaffProfileRepository staffProfile) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
@@ -26,6 +29,7 @@ namespace PMS.Data.UnitOfWork
         public ICustomerProfileRepository CustomerProfile { get; private set; } = customerProfile;
         public IStaffProfileRepository StaffProfile { get; private set; } = staffProfile;
 
+        public ISupplierRepository Supplier { get; private set; } = supplier;
 
         public async Task<int> CommitAsync()
         {

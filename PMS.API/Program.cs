@@ -84,7 +84,8 @@ namespace PMS.API
                     }
                 });
             });
-
+            // Ma hoa so tai khoan ngan hang
+            builder.Services.AddDataProtection();
             var app = builder.Build();
 
             await app.MigrateDatabase();

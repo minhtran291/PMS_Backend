@@ -1,5 +1,6 @@
 ﻿using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.Base;
+using PMS.Core.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
