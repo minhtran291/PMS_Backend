@@ -89,5 +89,19 @@ namespace PMS.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpPost("active-account")]
+        public async Task<IActionResult> Active(string userID)
+        {
+            try
+            {
+                await _adminService.ActiveAccountAsync(userID);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest($"{ex.Message}");
+            }
+        }
     }
 }

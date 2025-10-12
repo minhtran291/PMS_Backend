@@ -16,6 +16,7 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<Profile> Profiles { get; set; }
         public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
         public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
+        public virtual DbSet<Supplier> Suppliers {  get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -70,6 +71,13 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasOne(sp => sp.Profile)
                     .WithOne(p => p.StaffProfile)
                     .HasForeignKey<StaffProfile>(sp => sp.ProfileId);
+            });
+
+            builder.Entity<Supplier>(entity =>
+            {
+                entity.HasKey(p => p.Id);
+                entity.Property(p => p.Id)
+                .ValueGeneratedOnAdd();
             });
         }
     }
