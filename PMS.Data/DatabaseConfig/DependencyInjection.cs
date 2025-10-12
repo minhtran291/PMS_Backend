@@ -15,6 +15,8 @@ using PMS.Data.Repositories.Profile;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
+using PMS.Data.Repositories.Warehouse;
+using PMS.Data.Repositories.WarehouseLocation;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.Data.DatabaseConfig
@@ -36,6 +38,8 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<ICustomerProfileRepository, CustomerProfileRepository>();
             services.AddScoped<IStaffProfileRepository, StaffProfileRepository>();
             services.AddScoped<ISupplierRepository, SupplierRepository>();
+            services.AddScoped<IWarehouseRepository, WarehouseRepository>();
+            services.AddScoped<IWarehouseLocationRepository, WarehouseLocationRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
             //
             services.AddScoped<IProductRepository, ProductRepository>();

@@ -11,6 +11,5 @@ namespace PMS.API.Services.Supplier
         Task<SupplierResponseDTO> UpdateAsync(int id, UpdateSupplierRequestDTO dto);
         Task EnableSupplier(string supplierId);
         Task DisableSupplier(string supplierId);
-
     }
 }
