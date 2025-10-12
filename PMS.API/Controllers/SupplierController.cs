@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.API.Services.Supplier;
+using PMS.Core.Domain.Constant;
 using PMS.Core.DTO.Supplier;
 
 namespace PMS.API.Controllers
@@ -18,6 +20,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost("create")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> Create([FromBody] CreateSupplierRequestDTO dto)
         {
             try
@@ -34,6 +37,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpGet("list")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? keyword = null)
         {
             try
@@ -49,6 +53,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpGet("detail")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetById([FromQuery] int id)
         {
             try
@@ -63,6 +68,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpPut("update")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> Update([FromQuery] int id, [FromBody] UpdateSupplierRequestDTO dto)
         {
             if (!ModelState.IsValid)
@@ -80,6 +86,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost("enable")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> Enable([FromQuery] string supplierId)
         {
             try
@@ -94,6 +101,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost("disable")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> Disable([FromQuery] string supplierId)
         {
             try

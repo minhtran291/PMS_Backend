@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.API.Services.CategoryService;
+using PMS.Core.Domain.Constant;
 using PMS.Core.DTO.Content;
 
 namespace PMS.API.Controllers
@@ -21,6 +23,7 @@ namespace PMS.API.Controllers
         /// Tạo thể loại mới
         /// </summary>
         [HttpPost("create")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> CreateCategory([FromBody] CategoryDTO category)
         {
             var result = await _categoryService.AddAsync(category);
@@ -37,6 +40,7 @@ namespace PMS.API.Controllers
         /// Lấy tất cả thể loại
         /// </summary>
         [HttpGet("all")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetAllCategories()
         {
             var result = await _categoryService.GetAllAsync();
@@ -54,6 +58,7 @@ namespace PMS.API.Controllers
         /// Lấy thể loại theo ID
         /// </summary>
         [HttpGet("getbyid/{id}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetCategory(int id)
         {
             var result = await _categoryService.GetByIdAsync(id);
