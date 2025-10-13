@@ -1,7 +1,5 @@
 ﻿using PMS.Core.Domain.Constant;
-using PMS.Core.Domain.Identity;
-using PMS.Core.DTO.Content;
-using PMS.Core.DTO.Request;
+using PMS.Application.DTOs.Auth;
 
 namespace PMS.Application.Services.User
 {
