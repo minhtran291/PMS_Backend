@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PMS.API.Services.Auth;
-using PMS.Core.DTO.Auth;
+using PMS.Application.Services.Auth;
+using PMS.Application.DTOs.Auth;
 
 namespace PMS.API.Controllers
 {

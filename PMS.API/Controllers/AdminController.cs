@@ -2,9 +2,9 @@
 using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PMS.API.Services.Admin;
+using PMS.Application.Services.Admin;
 using PMS.Core.Domain.Constant;
-using PMS.Core.DTO.Admin;
+using PMS.Application.DTOs.Admin;
 
 namespace PMS.API.Controllers
 {
