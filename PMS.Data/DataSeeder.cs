@@ -37,6 +37,10 @@ namespace PMS.Data
                     NormalizedEmail = "PMSADMIN@GMAIL.COM",
                     NormalizedUserName = "ADMIN",
                     UserStatus = Core.Domain.Enums.UserStatus.Active,
+                    FullName = "PMS Admin",
+                    Avatar = "https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg",
+                    Address = "Ha Noi",
+                    Gender = true,
                     EmailConfirmed = true,
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
@@ -57,18 +61,6 @@ namespace PMS.Data
                         UserId = user.Id,
                     });
                 }
-                await context.SaveChangesAsync();
-
-                var profile = new Profile
-                {
-                    UserId = user.Id,
-                    Avatar = "https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg",
-                    Address = "Ha Noi",
-                    Gender = Core.Domain.Enums.Gender.Male
-                };
-
-                await context.Profiles.AddAsync(profile);
-
                 await context.SaveChangesAsync();
             }
         }

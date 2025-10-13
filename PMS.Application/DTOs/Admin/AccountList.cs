@@ -11,7 +11,7 @@ namespace PMS.Application.DTOs.Admin
         public DateTime CreateAt { get; set; }
 
         public string? FullName { get; set; }
-        public Gender Gender { get; set; }
+        public bool? Gender { get; set; }
         public string? Department { get; set; }
         public bool IsStaff => !string.IsNullOrEmpty(Department);
         public bool IsCustomer { get; set; }

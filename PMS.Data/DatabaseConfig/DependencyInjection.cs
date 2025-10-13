@@ -11,8 +11,7 @@ using PMS.Core.Domain.Identity;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
-using PMS.Data.Repositories.Profile;
-using PMS.Data.Repositories.StaffProfile;
+using PMS.Data.Repositories.SalesStaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
 using PMS.Data.Repositories.Warehouse;
@@ -34,9 +33,8 @@ namespace PMS.Data.DatabaseConfig
         public static void AddRepositories(this IServiceCollection services)
         {
             services.AddScoped<IUserRepository, UserRepository>();
-            services.AddScoped<IProfileRepository, ProfileRepository>();
             services.AddScoped<ICustomerProfileRepository, CustomerProfileRepository>();
-            services.AddScoped<IStaffProfileRepository, StaffProfileRepository>();
+            services.AddScoped<ISalesStaffProfileRepository, SalesStaffProfileRepository>();
             services.AddScoped<ISupplierRepository, SupplierRepository>();
             services.AddScoped<IWarehouseRepository, WarehouseRepository>();
             services.AddScoped<IWarehouseLocationRepository, WarehouseLocationRepository>();
