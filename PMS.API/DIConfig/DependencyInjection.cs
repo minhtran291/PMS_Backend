@@ -1,49 +1,11 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using PMS.API.Automapper;
-using PMS.API.Services.Admin;
-using PMS.API.Services.Auth;
-using PMS.API.Services.CategoryService;
-using PMS.API.Services.ExternalService;
-using PMS.API.Services.Product;
-using PMS.API.Services.Supplier;
-using PMS.API.Services.User;
-using PMS.API.Services.Warehouse;
-using PMS.API.Services.WarehouseLocation;
-using PMS.Core.ConfigOptions;
 using System.Text;
 
 namespace PMS.API.DIConfig
 {
     public static class DependencyInjection
     {
-        public static void AddApplicationAutoMapper(this IServiceCollection services)
-        {
-            services.AddAutoMapper(typeof(ApplicationMapper));
-        }
-
-        public static void AddServices(this IServiceCollection services)
-        {
-            services.AddScoped<ILoginService, LoginService>();
-            services.AddScoped<ITokenService, TokenService>();
-            services.AddScoped<IUserService, UserService>();
-            services.AddScoped<IAdminService, AdminService>();
-            services.AddScoped<ISupplierService, SupplierService>();
-            services.AddScoped<IProductService, ProductService>();
-            services.AddScoped<ICategoryService, CategoryService>();
-            services.AddScoped<IWarehouseService, WarehouseService>();
-            services.AddScoped<IWarehouseLocationService, WarehouseLocationService>();
-}
-
-        public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
-        {
-            var emailConfig = configuration.GetSection("Email");
-            var jwtConfig = configuration.GetSection("Jwt");
-            services.Configure<EmailConfig>(emailConfig);
-            services.Configure<JwtConfig>(jwtConfig);
-        }
-
         public static void AddJwt(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddAuthentication(options =>
@@ -70,11 +32,6 @@ namespace PMS.API.DIConfig
             });
 
             services.AddAuthorization();
-        }
-
-        public static void AddExternalServices(this IServiceCollection services)
-        {
-            services.AddScoped<IEmailService, EmailService>();
         }
     }
 }

@@ -1,6 +1,5 @@
 
 using PMS.Core.Domain.Identity;
-using PMS.Core.DTO.Admin;
 
 namespace PMS.Application.Automapper
 {
