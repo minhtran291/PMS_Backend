@@ -58,7 +58,9 @@ namespace PMS.Application.Services.User
                 Email = customer.Email,
                 PhoneNumber = customer.PhoneNumber,
                 CreateAt = DateTime.Now,
-                UserStatus = UserStatus.Active
+                UserStatus = UserStatus.Active,
+                Address = customer.Address,
+                Avatar = "https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg",
             };
 
             var createResult = await _unitOfWork.Users.UserManager.CreateAsync(user, customer.ConfirmPassword);
@@ -74,18 +76,9 @@ namespace PMS.Application.Services.User
                 };
             }
 
-            var profile = new Core.Domain.Entities.Profile
-            {
-                UserId = user.Id,
-                Address = customer.Address,
-                Avatar = "https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg",
-                Gender = Gender.Other,
-            };
-            await _unitOfWork.Profile.AddAsync(profile);
-
             var customerProfile = new Core.Domain.Entities.CustomerProfile
             {
-                ProfileId = profile.Id
+                UserId = user.Id
             };
             await _unitOfWork.CustomerProfile.AddAsync(customerProfile);
 

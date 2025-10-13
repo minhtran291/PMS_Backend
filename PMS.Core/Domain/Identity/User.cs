@@ -14,7 +14,13 @@ namespace PMS.Core.Domain.Identity
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpriryTime { get; set; }
         public UserStatus UserStatus { get; set; }
-        public virtual Profile Profile { get; set; } = null!;
+        public string? FullName { get; set; }
+        public string? Avatar { get; set; }
+        public string? Address { get; set; }
+        public bool? Gender { get; set; }
         public DateTime CreateAt { get; set; }
+        
+        public virtual SalesStaffProfile? SalesStaffProfile {  get; set; }
+        public virtual CustomerProfile? CustomerProfile { get; set; }
     }
 }

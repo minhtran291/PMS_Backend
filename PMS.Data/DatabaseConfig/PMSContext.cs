@@ -13,14 +13,19 @@ namespace PMS.Data.DatabaseConfig
 {
     public class PMSContext(DbContextOptions<PMSContext> options) : IdentityDbContext<User>(options)
     {
-        public virtual DbSet<Profile> Profiles { get; set; }
         public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
-        public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
-        public virtual DbSet<Supplier> Suppliers {  get; set; }
+        public virtual DbSet<SalesStaffProfile> SalesStaffProfiles { get; set; }
+        public virtual DbSet<Supplier> Suppliers { get; set; }
         public virtual DbSet<Product> Products { get; set; }
         public virtual DbSet<Category> Categories { get; set; }
         public virtual DbSet<Warehouse> Warehouses { get; set; }
         public virtual DbSet<WarehouseLocation> WarehouseLocations { get; set; }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseLazyLoadingProxies();
+        }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -35,10 +40,12 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired();
 
                 entity.Property(u => u.UserName)
-                    .IsRequired();
+                    .IsRequired()
+                    .IsUnicode(false);
 
                 entity.Property(u => u.Email)
-                    .IsRequired();
+                    .IsRequired()
+                    .IsUnicode(false);
 
                 entity.Property(u => u.RefreshToken)
                     .HasMaxLength(128);
@@ -47,6 +54,19 @@ namespace PMS.Data.DatabaseConfig
                     .HasConversion<byte>()
                     .HasColumnType("TINYINT")
                     .IsRequired();
+
+                entity.Property(u => u.FullName)
+                    .HasMaxLength(128);
+
+                entity.Property(u => u.Avatar)
+                    .HasMaxLength(256);
+
+                entity.Property(u => u.Address)
+                    .HasMaxLength(256);
+
+                entity.Property(u => u.Gender)
+                    .HasColumnType("bit")
+                    .IsRequired(false);
 
                 entity.Property(u => u.PasswordHash)
                     .HasMaxLength(256);
@@ -58,8 +78,9 @@ namespace PMS.Data.DatabaseConfig
                     .HasMaxLength(100);
 
                 entity.Property(u => u.PhoneNumber)
+                    .HasMaxLength(16)
                     .IsRequired()
-                    .HasMaxLength(16);
+                    .IsUnicode(false);
             });
 
             builder.Entity<IdentityRole>(entity =>
@@ -75,18 +96,6 @@ namespace PMS.Data.DatabaseConfig
                 entity.ToTable("UserRole");
             });
 
-            builder.Entity<Profile>(entity =>
-            {
-                entity.HasKey(p => p.Id);
-
-                entity.Property(p => p.Id)
-                    .ValueGeneratedOnAdd();
-
-                entity.HasOne(p => p.User)
-                    .WithOne(u => u.Profile)
-                    .HasForeignKey<Profile>(p => p.UserId);
-            });
-
             builder.Entity<CustomerProfile>(entity =>
             {
                 entity.HasKey(cp => cp.Id);
@@ -94,21 +103,21 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(cp => cp.Id)
                     .ValueGeneratedOnAdd();
 
-                entity.HasOne(cp => cp.Profile)
-                    .WithOne(p => p.CustomerProfile)
-                    .HasForeignKey<CustomerProfile>(cp => cp.ProfileId);
+                entity.HasOne(cp => cp.User)
+                    .WithOne(u => u.CustomerProfile)
+                    .HasForeignKey<CustomerProfile>(cp => cp.UserId);
             });
 
-            builder.Entity<StaffProfile>(entity =>
+            builder.Entity<SalesStaffProfile>(entity =>
             {
-                entity.HasKey(sp => sp.Id);
+                entity.HasKey(ss => ss.Id);
 
-                entity.Property(sp => sp.Id)
+                entity.Property(ss => ss.Id)
                     .ValueGeneratedOnAdd();
 
-                entity.HasOne(sp => sp.Profile)
-                    .WithOne(p => p.StaffProfile)
-                    .HasForeignKey<StaffProfile>(sp => sp.ProfileId);
+                entity.HasOne(ss => ss.User)
+                    .WithOne(u => u.SalesStaffProfile)
+                    .HasForeignKey<SalesStaffProfile>(ss => ss.UserId);
             });
 
             builder.Entity<Supplier>(entity =>
