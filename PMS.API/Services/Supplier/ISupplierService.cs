@@ -1,4 +1,5 @@
-﻿using PMS.Core.DTO.Supplier;
+﻿using PMS.Core.Domain.Constant;
+using PMS.Core.DTO.Supplier;
 
 namespace PMS.API.Services.Supplier
 {
@@ -10,6 +11,5 @@ namespace PMS.API.Services.Supplier
         Task<SupplierResponseDTO> UpdateAsync(int id, UpdateSupplierRequestDTO dto);
         Task EnableSupplier(string supplierId);
         Task DisableSupplier(string supplierId);
-
     }
 }

@@ -15,18 +15,27 @@ namespace PMS.API.Services.Admin
     {
         private readonly ILogger<AdminService> _logger = logger;
 
-        public async Task CreateAccountAsync(CreateAccountRequest request)
+        public async Task<ServiceResult<bool>> CreateAccountAsync(CreateAccountRequest request)
         {
             var validateEmail = await _unitOfWork.Users.UserManager.FindByEmailAsync(request.Email);
 
             if (validateEmail != null)
-                throw new Exception("Email đã được sử dụng");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Email đã được sử dụng",
+                    Data = false
+                };
 
             var validatePhone = await _unitOfWork.Users.Query().FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber);
 
             if (validatePhone != null)
-                throw new Exception("Số điện thoại đã được sử dụng");
-
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Số điện thoại đã được sử dụng",
+                    Data = false
+                };
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
@@ -46,7 +55,12 @@ namespace PMS.API.Services.Admin
                 {
                     var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
                     _logger.LogError("Tao nguoi dung that bai: {Errors}", errors);
-                    throw new Exception("Có lỗi xảy ra");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 500,
+                        Message = "Có lỗi xảy ra",
+                        Data = false
+                    };
                 }
 
                 // Tạo Profile
@@ -79,6 +93,7 @@ namespace PMS.API.Services.Admin
                     StaffRole.PurchasesStaff => UserRoles.PURCHASES_STAFF,
                     StaffRole.WarehouseStaff => UserRoles.WAREHOUSE_STAFF,
                     _ => throw new Exception("Role không hợp lệ")
+
                 };
 
                 var roleResult = await _unitOfWork.Users.UserManager.AddToRoleAsync(user, role);
@@ -87,12 +102,25 @@ namespace PMS.API.Services.Admin
                 {
                     var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
                     _logger.LogError("Gan role that bai: {Errors}", errors);
-                    throw new Exception("Có lỗi xảy ra");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 500,
+                        Message = "Có lỗi xảy ra",
+                        Data = false
+                    };
                 }
 
                 await _unitOfWork.CommitAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
+
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Tạo thành công.",
+                    Data = true
+                };
             }
             catch (Exception ex)
             {
@@ -102,19 +130,27 @@ namespace PMS.API.Services.Admin
             }
         }
 
-        public async Task<AccountDetails> GetAccountDetailAsync(string userId)
+        public async Task<ServiceResult<AccountDetails>> GetAccountDetailAsync(string userId)
         {
             var user = await _unitOfWork.Users.Query()
                 .Include(u => u.Profile)
                     .ThenInclude(p => p.StaffProfile)
                 .Include(u => u.Profile)
                     .ThenInclude(p => p.CustomerProfile)
-                .FirstOrDefaultAsync(u => u.Id == userId)
-                    ?? throw new Exception("Không tìm thấy người dùng");
+                .FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null)
+            {
+                return new ServiceResult<AccountDetails>
+                {
+                    StatusCode = 404,
+                    Message = "Không tìm thấy người dùng",
+                    Data = null
+                };
+            }
 
             var roles = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
 
-            return new AccountDetails
+            var data = new AccountDetails
             {
                 UserId = user.Id,
                 Email = user.Email ?? string.Empty,
@@ -138,6 +174,13 @@ namespace PMS.API.Services.Admin
                 ImageCnkd = user.Profile.CustomerProfile?.ImageCnkd,
                 ImageByt = user.Profile.CustomerProfile?.ImageByt,
                 Mshkd = user.Profile.CustomerProfile?.Mshkd
+            };
+
+            return new ServiceResult<AccountDetails>
+            {
+                StatusCode = 200,
+                Message = "Lấy thông tin tài khoản thành công",
+                Data = data
             };
         }
 
@@ -180,25 +223,47 @@ namespace PMS.API.Services.Admin
             }).ToList();
         }
 
-        public async Task SuspendAccountAsync(string userId)
+        public async Task<ServiceResult<bool>> SuspendAccountAsync(string userId)
         {
-            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId)
-                ?? throw new Exception("User không tồn tại.");
+            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Message = "không tìm thấy user",
+                    Data = false
+                };
+            }
 
             user.UserStatus = UserStatus.Block;
 
             await _unitOfWork.Users.UserManager.UpdateAsync(user);
 
             await _unitOfWork.CommitAsync();
+            return new ServiceResult<bool>
+            {
+                StatusCode = 200,
+                Message = "cập nhật thành công",
+                Data = true
+            };
         }
 
-        public async Task UpdateAccountAsync(UpdateAccountRequest request)
+        public async Task<ServiceResult<bool>> UpdateAccountAsync(UpdateAccountRequest request)
         {
             var user = await _unitOfWork.Users.Query()
                 .Include(u => u.Profile)
                     .ThenInclude(u => u.StaffProfile)
-                .FirstOrDefaultAsync(u => u.Id == request.UserId)
-                    ?? throw new Exception("Người dùng không tồn tại.");
+                .FirstOrDefaultAsync(u => u.Id == request.UserId);
+            if (user == null)
+            {
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Message = "không tìm thấy user",
+                    Data = false
+                };
+            }
 
             try
             {
@@ -216,7 +281,12 @@ namespace PMS.API.Services.Admin
                 if (profile == null)
                 {
                     _logger.LogWarning("Update profile loi, user chua co profile");
-                    throw new Exception("Có lỗi xảy ra");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 500,
+                        Message = "có lỗi xảy ra",
+                        Data = false
+                    };
                 }
 
                 if (request.FullName != null) profile.FullName = request.FullName;
@@ -231,7 +301,12 @@ namespace PMS.API.Services.Admin
                 if (staffProfile == null)
                 {
                     _logger.LogWarning("Update profile loi, khong co staff profile");
-                    throw new Exception("Có lỗi xảy ra");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 500,
+                        Message = "có lỗi xảy ra",
+                        Data = false
+                    };
                 }
 
                 if (request.EmployeeCode != null) staffProfile.EmployeeCode = request.EmployeeCode;
@@ -243,6 +318,12 @@ namespace PMS.API.Services.Admin
                 await _unitOfWork.CommitAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Thành công",
+                    Data = false
+                };
             }
             catch (Exception ex)
             {
@@ -254,15 +335,29 @@ namespace PMS.API.Services.Admin
         private static string GenerateEmployeeCode()
            => $"EMP{DateTime.UtcNow:yyyyMMddHHmmssfff}";
 
-        public async Task ActiveAccountAsync(string userID)
+        public async Task <ServiceResult<bool>> ActiveAccountAsync(string userID)
         {
-            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userID)
-                ?? throw new Exception("");
+            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userID);
+               if(user == null)
+            {
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Message = "không tìm thấy user",
+                    Data = false
+                };
+            }
 
             user.UserStatus = UserStatus.Active;
 
             await _unitOfWork.Users.UserManager.UpdateAsync(user);
             await _unitOfWork.CommitAsync();
+            return new ServiceResult<bool>
+            {
+                StatusCode = 200,
+                Message = "kích hoạt thành công",
+                Data = true
+            };
         }
     }
 }

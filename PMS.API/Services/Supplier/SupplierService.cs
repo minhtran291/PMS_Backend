@@ -32,7 +32,7 @@ namespace PMS.API.Services.Supplier
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
                 Address = dto.Address,
-                Status = string.IsNullOrWhiteSpace(dto.Status) ? "Active" : dto.Status,
+                Status = Core.Domain.Enums.SupplierStatus.Active,
                 BankAccountNumber = _protector.Protect(dto.BankAccountNumber),
                 MyDebt = dto.MyDebt
             };
@@ -47,7 +47,7 @@ namespace PMS.API.Services.Supplier
             if (!int.TryParse(supplierId, out var id)) throw new ArgumentException("supplierId không hợp lệ");
             var e = await _unitOfWork.Supplier.Query()
            .FirstOrDefaultAsync(x => x.Id == id) ?? throw new Exception("Không tìm thấy nhà cung cấp");
-            e.Status = "Inactive";
+            e.Status = Core.Domain.Enums.SupplierStatus.Inactive;
             _unitOfWork.Supplier.Update(e);
             await _unitOfWork.CommitAsync();
         }
@@ -57,7 +57,7 @@ namespace PMS.API.Services.Supplier
             if (!int.TryParse(supplierId, out var id)) throw new ArgumentException("supplierId không hợp lệ");
             var e = await _unitOfWork.Supplier.Query()
            .FirstOrDefaultAsync(x => x.Id == id) ?? throw new Exception("Không tìm thấy nhà cung cấp");
-            e.Status = "Active";
+            e.Status = Core.Domain.Enums.SupplierStatus.Active;
             _unitOfWork.Supplier.Update(e);
             await _unitOfWork.CommitAsync();
         }
@@ -78,8 +78,7 @@ namespace PMS.API.Services.Supplier
             {
                 var k = keyword.Trim();
                 q = q.Where(s => s.Name.Contains(k) || s.Email.Contains(k) ||
-                                 s.PhoneNumber.Contains(k) || s.Address.Contains(k) ||
-                                 s.Status.Contains(k));
+                                 s.PhoneNumber.Contains(k) || s.Address.Contains(k));
             }
 
             var list = await q.OrderByDescending(s => s.Id)
@@ -108,7 +107,7 @@ namespace PMS.API.Services.Supplier
             if (dto.Email != null) e.Email = dto.Email;
             if (dto.PhoneNumber != null) e.PhoneNumber = dto.PhoneNumber;
             if (dto.Address != null) e.Address = dto.Address;
-            if (dto.Status != null) e.Status = dto.Status;
+            e.Status = dto.Status;
             if (dto.MyDebt != null) e.MyDebt = dto.MyDebt;
             if (dto.BankAccountNumber != null) e.BankAccountNumber = _protector.Protect(dto.BankAccountNumber);
 

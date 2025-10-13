@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PMS.API.Services.Auth;
-using PMS.Core.DTO.Auth;
+using PMS.Application.Services.Auth;
+using PMS.Application.DTOs.Auth;
 
 namespace PMS.API.Controllers
 {
@@ -19,6 +19,8 @@ namespace PMS.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
             try
             {
                 var tokenResponse = await _loginService.Login(request);

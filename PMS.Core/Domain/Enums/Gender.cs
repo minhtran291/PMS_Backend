@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace PMS.Core.Domain.Enums
 {
-    public enum Gender
+    public enum Gender : byte
     {
         Male,
         FeMale,

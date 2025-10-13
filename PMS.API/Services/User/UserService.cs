@@ -10,9 +10,9 @@ using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Services.User
 {
-    public class UserService(IUnitOfWork unitOfWork, 
-        IMapper mapper, 
-        IEmailService emailService, 
+    public class UserService(IUnitOfWork unitOfWork,
+        IMapper mapper,
+        IEmailService emailService,
         ILogger<UserService> logger) : Service(unitOfWork, mapper), IUserService
     {
         private readonly IEmailService _emailService = emailService;
@@ -28,17 +28,29 @@ namespace PMS.API.Services.User
             return await _unitOfWork.Users.UserManager.GetRolesAsync(user);
         }
 
-        public async Task RegisterUserAsync(RegisterUser customer)
+        public async Task<ServiceResult<bool>> RegisterUserAsync(RegisterUser customer)
         {
             var validateEmail = await _unitOfWork.Users.UserManager.FindByEmailAsync(customer.Email);
 
             if (validateEmail != null)
-                throw new Exception("Email đã được sử dụng");
+            {
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Trùng email",
+                    Data = false
+                };
+            }
 
             var validatePhone = await _unitOfWork.Users.Query().FirstOrDefaultAsync(u => u.PhoneNumber == customer.PhoneNumber);
 
             if (validatePhone != null)
-                throw new Exception("Số điện thoại đã được sử dụng");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Trùng số điện thoại",
+                    Data = false
+                };
 
             var user = new Core.Domain.Identity.User
             {
@@ -54,7 +66,12 @@ namespace PMS.API.Services.User
             {
                 var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
                 _logger.LogError("Tao nguoi dung that bai: {Errors}", errors);
-                throw new Exception("Có lỗi xảy ra");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "có lỗi xảy ra",
+                    Data = false
+                };
             }
 
             var profile = new Core.Domain.Entities.Profile
@@ -77,13 +94,25 @@ namespace PMS.API.Services.User
             {
                 var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
                 _logger.LogError("Gan role that bai: {Errors}", errors);
-                throw new Exception("Có lỗi xảy ra");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "có lỗi xảy ra",
+                    Data = false
+                };
             }
 
             await _unitOfWork.CommitAsync();
 
             await SendEmailConfirmAsync(user);
             _logger.LogInformation("Gui email xac nhan cho email: {Email}", user.Email);
+            return new ServiceResult<bool>
+            {
+                StatusCode = 200,
+                Message = "Thành công vui lòng kiểm tra email",
+                Data = true
+            };
+
         }
 
         public async Task SendEmailConfirmAsync(Core.Domain.Identity.User user)
@@ -100,10 +129,18 @@ namespace PMS.API.Services.User
             await _emailService.SendMailAsync(EmailSubject.CONFIRM_EMAIL, body, user.Email);
         }
 
-        public async Task ReSendEmailConfirmAsync(ResendConfirmEmailRequest request)
+        public async Task<ServiceResult<bool>> ReSendEmailConfirmAsync(ResendConfirmEmailRequest request)
         {
-            var user = await _unitOfWork.Users.UserManager.FindByEmailAsync(request.EmailOrUsername) 
-                ?? throw new Exception("Không nhận được email để gửi");
+            var user = await _unitOfWork.Users.UserManager.FindByEmailAsync(request.EmailOrUsername);
+            if (user == null)
+            {
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Message = "sai email",
+                    Data = false
+                };
+            }
 
             // cap nhat security stamp de vo hieu hoa cac token cu
             await _unitOfWork.Users.UserManager.UpdateSecurityStampAsync(user);
@@ -111,33 +148,78 @@ namespace PMS.API.Services.User
             await _unitOfWork.CommitAsync();
 
             await SendEmailConfirmAsync(user);
+            return new ServiceResult<bool>
+            {
+                StatusCode = 200,
+                Message = "thành công vui lòng kiểm tra email",
+                Data = true
+            };
         }
 
-        public async Task ConfirmEmailAsync(string userId, string token)
+        public async Task<ServiceResult<bool>> ConfirmEmailAsync(string userId, string token)
         {
-            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId)
-                ?? throw new Exception("không tìm thấy người dùng");
+            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Message = "Không tìm thấy người dùng",
+                    Data = false
+                };
+            }
 
             if (user.EmailConfirmed == true)
-                throw new Exception("Tài khoản đã được xác nhận");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Tài khoản đã được xác nhận trước đó",
+                    Data = false
+                };
 
             var confirmEmail = await _unitOfWork.Users.UserManager.ConfirmEmailAsync(user, token);
 
             if (!confirmEmail.Succeeded)
-                throw new Exception("Token không hợp lệ");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 400,
+                    Message = "Token không hợp lệ",
+                    Data = false
+                };
 
             await _unitOfWork.CommitAsync();
+            return new ServiceResult<bool>
+            {
+                StatusCode = 200,
+                Message = "Thành công",
+                Data = false
+            };
         }
 
-        public async Task SendEmailResetPasswordAsync(string email)
+        public async Task<ServiceResult<bool>> SendEmailResetPasswordAsync(string email)
         {
-            var isExisted = await _unitOfWork.Users.UserManager.FindByEmailAsync(email) 
-                ?? throw new Exception("Không tìm thấy Email");
+            var isExisted = await _unitOfWork.Users.UserManager.FindByEmailAsync(email);
+            if (isExisted == null)
+            {
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Message = "Không tìm thấy email",
+                    Data = false
+                };
+            }
 
             var isConfirmed = await _unitOfWork.Users.UserManager.IsEmailConfirmedAsync(isExisted);
 
             if (!isConfirmed)
-                throw new Exception("Tài khoản chưa được xác nhận");
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Tài khoản chưa được xác nhận",
+                    Data = false
+                };
 
             // vo hieu hoa cac token trc
             await _unitOfWork.Users.UserManager.UpdateSecurityStampAsync(isExisted);
@@ -152,16 +234,27 @@ namespace PMS.API.Services.User
             var body = EmailBody.RESET_PASSWORD(isExisted.Email, link);
 
             await _emailService.SendMailAsync(EmailSubject.RESET_PASSWORD, body, isExisted.Email);
+            return new ServiceResult<bool>
+            {
+                StatusCode = 200,
+                Message = "Thành công vui lòng kiểm tra mail",
+                Data = true
+            };
         }
 
-        public async Task ResetPasswordAsync(ResetPasswordRequest request)
+        public async Task<ServiceResult<bool>> ResetPasswordAsync(ResetPasswordRequest request)
         {
             var user = await _unitOfWork.Users.UserManager.FindByIdAsync(request.UserId);
 
             if (user == null)
             {
                 _logger.LogWarning("Khong tim thay user id cua nguoi dung");
-                throw new Exception("Không tìm thấy người dùng");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Message = "Không tìm thấy người dùng",
+                    Data = false
+                };
             }
 
             var result = await _unitOfWork.Users.UserManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
@@ -170,12 +263,23 @@ namespace PMS.API.Services.User
             {
                 var errors = string.Join("; ", result.Errors.Select(e => e.Description));
                 _logger.LogWarning("Dat lai mat khau loi: {Erros}", errors);
-                throw new Exception("Đặt lại mật khẩu thất bại");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "đặt lại mật khẩu thất bại",
+                    Data = false
+                };
             }
 
             await _unitOfWork.Users.UserManager.UpdateSecurityStampAsync(user);
 
             await _unitOfWork.CommitAsync();
+            return new ServiceResult<bool>
+            {
+                StatusCode = 200,
+                Message = "thành công",
+                Data = true
+            };
         }
     }
 }

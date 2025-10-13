@@ -17,7 +17,10 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
         public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
         public virtual DbSet<Supplier> Suppliers {  get; set; }
-
+        public virtual DbSet<Product> Products { get; set; }
+        public virtual DbSet<Category> Categories { get; set; }
+        public virtual DbSet<Warehouse> Warehouses { get; set; }
+        public virtual DbSet<WarehouseLocation> WarehouseLocations { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -25,11 +28,46 @@ namespace PMS.Data.DatabaseConfig
             builder.Entity<User>(entity =>
             {
                 entity.ToTable("Users");
+
+                entity.HasKey(u => u.Id);
+
+                entity.Property(u => u.Id)
+                    .IsRequired();
+
+                entity.Property(u => u.UserName)
+                    .IsRequired();
+
+                entity.Property(u => u.Email)
+                    .IsRequired();
+
+                entity.Property(u => u.RefreshToken)
+                    .HasMaxLength(128);
+
+                entity.Property(u => u.UserStatus)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(u => u.PasswordHash)
+                    .HasMaxLength(256);
+
+                entity.Property(u => u.SecurityStamp)
+                    .HasMaxLength(100);
+
+                entity.Property(u => u.ConcurrencyStamp)
+                    .HasMaxLength(100);
+
+                entity.Property(u => u.PhoneNumber)
+                    .IsRequired()
+                    .HasMaxLength(16);
             });
 
             builder.Entity<IdentityRole>(entity =>
             {
                 entity.ToTable("Roles");
+
+                entity.Property(r => r.ConcurrencyStamp)
+                    .HasMaxLength(100);
             });
 
             builder.Entity<IdentityUserRole<string>>(entity =>
@@ -76,8 +114,136 @@ namespace PMS.Data.DatabaseConfig
             builder.Entity<Supplier>(entity =>
             {
                 entity.HasKey(p => p.Id);
+
                 entity.Property(p => p.Id)
                 .ValueGeneratedOnAdd();
+
+                entity.Property(p => p.Name)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(p => p.Email)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(p => p.PhoneNumber)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(p => p.Address)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(p => p.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(p => p.BankAccountNumber)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(p => p.MyDebt)
+                    .IsRequired()
+                    .HasMaxLength(50);
+            });
+
+            builder.Entity<Warehouse>(entity =>
+            {
+                entity.HasKey(w => w.Id);
+
+                entity.Property(w => w.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(w => w.Name)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(w => w.Address)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(w => w.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT");
+            });
+
+            builder.Entity<WarehouseLocation>(entity =>
+            {
+                entity.HasKey(wl => wl.Id);
+
+                entity.Property(wl => wl.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.WarehouseId)
+                    .IsRequired();
+
+                entity.Property(e => e.RowNo)
+                    .IsRequired();
+
+                entity.Property(e => e.ColumnNo)
+                      .IsRequired();
+
+                entity.Property(e => e.LevelNo)
+                      .IsRequired();
+
+                entity.Property(e => e.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.HasOne(wl => wl.Warehouse)
+                    .WithMany(w => w.WarehouseLocations)
+                    .HasForeignKey(wl => wl.WarehouseId);
+            });
+
+            builder.Entity<Product>(entity =>
+            {
+                entity.HasKey(p => p.ProductID);
+
+                entity.Property(p => p.ProductID)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(p => p.ProductName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(p => p.ProductDescription)
+                    .HasMaxLength(300);
+
+                entity.Property(p => p.MinQuantity)
+                      .IsRequired();
+
+                entity.Property(p => p.Unit)
+                      .IsRequired();
+
+                entity.Property(p => p.MaxQuantity)
+                    .IsRequired();
+
+                entity.Property(p => p.TotalCurrentQuantity)
+                    .IsRequired();
+
+                entity.Property(p => p.Status)
+                    .IsRequired();
+
+                entity.Property(p => p.Image);
+
+                entity.HasOne(p => p.Category)
+                    .WithMany(c => c.Products)
+                    .HasForeignKey(p => p.CategoryID)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Category>(entity =>
+            {
+                entity.HasKey(c => c.CategoryID);
+
+                entity.Property(c => c.CategoryID)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(c => c.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
             });
         }
     }

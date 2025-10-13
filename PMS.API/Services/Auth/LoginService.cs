@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
-using PMS.API.Services.Base;
 using PMS.API.Services.User;
 using PMS.Core.DTO.Auth;
 using PMS.Data.UnitOfWork;
+using PMS.Application.Services.Base;
 
 namespace PMS.API.Services.Auth
 {
