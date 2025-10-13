@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PMS.API.Services.Warehouse;
-using PMS.Core.DTO.Warehouse;
+using PMS.Application.Services.Warehouse;
+using PMS.Application.DTOs.Warehouse;
 
 namespace PMS.API.Controllers
 {

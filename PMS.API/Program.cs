@@ -1,7 +1,8 @@
 
 using Microsoft.OpenApi.Models;
 using PMS.API.DIConfig;
-using PMS.API.Filters;
+using PMS.Application.Filters;
+using PMS.Application.DIConfig;
 using PMS.Data.DatabaseConfig;
 
 namespace PMS.API
