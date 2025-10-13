@@ -5,9 +5,8 @@ using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Enums;
-using PMS.Core.DTO.Content;
-using PMS.Core.DTO.Request;
 using PMS.Data.UnitOfWork;
+using PMS.Application.DTOs.Auth;
 
 namespace PMS.Application.Services.User
 {
