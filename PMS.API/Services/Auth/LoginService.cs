@@ -1,8 +1,8 @@
 ﻿using AutoMapper;
-using PMS.API.Services.Base;
 using PMS.API.Services.User;
 using PMS.Core.DTO.Auth;
 using PMS.Data.UnitOfWork;
+using PMS.Application.Services.Base;
 
 namespace PMS.API.Services.Auth
 {
@@ -49,7 +49,7 @@ namespace PMS.API.Services.Auth
             }
 
             var authClaims = _tokenService.CreateClaimForAccessToken(account, roles);
-            var accessToken = _tokenService.GenerateToken(authClaims, 5);
+            var accessToken = _tokenService.GenerateToken(authClaims, 1);
             var newRefreshToken = _tokenService.GenerateRefreshToken();
 
             account.RefreshToken = newRefreshToken;
