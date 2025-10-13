@@ -1,10 +1,11 @@
 ﻿using AutoMapper;
-using PMS.API.Services.User;
-using PMS.Core.DTO.Auth;
+using PMS.Application.Services.User;
+using PMS.Application.DTOs.Auth;
 using PMS.Data.UnitOfWork;
 using PMS.Application.Services.Base;
+using Microsoft.Extensions.Logging;
 
-namespace PMS.API.Services.Auth
+namespace PMS.Application.Services.Auth
 {
     public class LoginService(IUnitOfWork unitOfWork, 
         IMapper mapper, 
