@@ -9,7 +9,7 @@ namespace PMS.Core.Domain.Entities
     public class RequestSalesQuotation
     {
         public int Id { get; set; }
-        public int CustomerId { get; set; }
+        public int CustomerId {  get; set; }
         public string RequestCode { get; set; } = string.Empty;
         public DateTime RequestDate { get; set; }
         public bool Sent { get; set; }

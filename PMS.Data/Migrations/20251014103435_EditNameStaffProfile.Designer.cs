@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PMS.Data.DatabaseConfig;
 
@@ -11,9 +12,11 @@ using PMS.Data.DatabaseConfig;
 namespace PMS.Data.Migrations
 {
     [DbContext(typeof(PMSContext))]
-    partial class PMSContextModelSnapshot : ModelSnapshot
+    [Migration("20251014103435_EditNameStaffProfile")]
+    partial class EditNameStaffProfile
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -210,50 +213,6 @@ namespace PMS.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("CustomerProfiles");
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.Notification", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("ReceiverId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("SenderId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("TINYINT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ReceiverId");
-
-                    b.HasIndex("SenderId");
-
-                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
@@ -597,25 +556,6 @@ namespace PMS.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.Notification", b =>
-                {
-                    b.HasOne("PMS.Core.Domain.Identity.User", "Receiver")
-                        .WithMany("ReceivedNotifications")
-                        .HasForeignKey("ReceiverId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("PMS.Core.Domain.Identity.User", "Sender")
-                        .WithMany("SentNotifications")
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Receiver");
-
-                    b.Navigation("Sender");
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Entities.Category", "Category")
@@ -662,10 +602,6 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Identity.User", b =>
                 {
                     b.Navigation("CustomerProfile");
-
-                    b.Navigation("ReceivedNotifications");
-
-                    b.Navigation("SentNotifications");
 
                     b.Navigation("StaffProfile");
                 });
