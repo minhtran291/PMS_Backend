@@ -32,5 +32,6 @@ namespace PMS.Core.Domain.Entities
         public required bool Status { get; set; } = false;
 
         public virtual Category Category { get; set; } = null!;
+        public virtual ICollection<RequestSalesQuotationDetails> RequestSalesQuotationDetails { get; set; } = [];
     }
 }

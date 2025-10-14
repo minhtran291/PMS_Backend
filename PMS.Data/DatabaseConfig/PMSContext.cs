@@ -21,6 +21,8 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<Warehouse> Warehouses { get; set; }
         public virtual DbSet<WarehouseLocation> WarehouseLocations { get; set; }
         public virtual DbSet<Notification> Notifications { get; set; }
+        public virtual DbSet<RequestSalesQuotation> RequestSalesQuotations { get; set; }
+        public virtual DbSet<RequestSalesQuotationDetails> RequestSalesQuotationDetails { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -262,8 +264,6 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<Notification>(entity =>
             {
-                
-
                 entity.HasKey(n => n.Id);
 
                 entity.Property(n => n.Id)
@@ -296,7 +296,6 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired()
                     .HasColumnType("datetime");
 
-
                 entity.HasOne(n => n.Sender)
                     .WithMany(u => u.SentNotifications)
                     .HasForeignKey(n => n.SenderId)
@@ -306,6 +305,32 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(u => u.ReceivedNotifications)
                     .HasForeignKey(n => n.ReceiverId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<RequestSalesQuotation>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.RequestCode)
+                    .HasMaxLength(64)
+                    .IsRequired();
+
+                entity.Property(e => e.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.HasOne(e => e.CustomerProfile)
+                    .WithMany(cp => cp.RequestSalesQuotations)
+                    .HasForeignKey(e => e.CustomerId);
+            });
+
+            builder.Entity<RequestSalesQuotationDetails>(entity =>
+            {
+                entity.HasKey(e => new { e.RequestSalesQuotationId, e.ProductId}); 
             });
         }
     }

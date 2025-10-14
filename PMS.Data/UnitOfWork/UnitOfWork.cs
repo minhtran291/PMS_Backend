@@ -10,6 +10,8 @@ using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
+using PMS.Data.Repositories.RequestSalesQuotation;
+using PMS.Data.Repositories.RequestSalesQuotationDetails;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
@@ -27,7 +29,9 @@ namespace PMS.Data.UnitOfWork
         IProductCategoryRepository category,
         IWarehouseRepository warehouse,
         IWarehouseLocationRepository warehouseLocation,
-        INotificationRepository notification) : IUnitOfWork
+        INotificationRepository notification, 
+        IRequestSalesQuotationRepository requestSalesQuotation, 
+        IRequestSalesQuotationDetailsRepository requestSalesQuotationDetails) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -40,6 +44,8 @@ namespace PMS.Data.UnitOfWork
         public IWarehouseRepository Warehouse { get; private set; } = warehouse;
         public INotificationRepository Notification { get; private set; } = notification;
         public IWarehouseLocationRepository WarehouseLocation { get; private set; } = warehouseLocation;
+        public IRequestSalesQuotationRepository RequestSalesQuotation { get; private set; } = requestSalesQuotation;
+        public IRequestSalesQuotationDetailsRepository RequestSalesQuotationDetails { get; private set; } = requestSalesQuotationDetails;
 
         public async Task<int> CommitAsync()
         {
