@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PMS.Data.Repositories.SalesStaffProfile
+namespace PMS.Data.Repositories.StaffProfile
 {
-    public class SalesStaffProfileRepository(PMSContext context) : RepositoryBase<Core.Domain.Entities.SalesStaffProfile>(context), ISalesStaffProfileRepository
+    public class StaffProfileRepository(PMSContext context) : RepositoryBase<Core.Domain.Entities.StaffProfile>(context), IStaffProfileRepository
     {
     }
 }

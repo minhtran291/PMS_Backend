@@ -68,16 +68,15 @@ namespace PMS.Application.Services.Admin
                 }
 
                 // Tạo StaffProfile
-                var staffProfile = new SalesStaffProfile
+                var staffProfile = new StaffProfile
                 {
                     UserId = user.Id,
                     EmployeeCode = string.IsNullOrWhiteSpace(request.EmployeeCode)
                         ? GenerateEmployeeCode()
                         : request.EmployeeCode,
-                    Department = request.Department,
                     Notes = request.Notes
                 };
-                await _unitOfWork.SalesStaffProfile.AddAsync(staffProfile);
+                await _unitOfWork.StaffProfile.AddAsync(staffProfile);
 
                 var role = request.StaffRole switch
                 {
@@ -124,7 +123,7 @@ namespace PMS.Application.Services.Admin
         public async Task<ServiceResult<AccountDetails>> GetAccountDetailAsync(string userId)
         {
             var user = await _unitOfWork.Users.Query()
-                .Include(p => p.SalesStaffProfile)
+                .Include(p => p.StaffProfile)
                 .Include(p => p.CustomerProfile)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -153,10 +152,9 @@ namespace PMS.Application.Services.Admin
                 Gender = user.Gender,
                 Address = user.Address,
 
-                StaffProfileId = user.SalesStaffProfile?.Id,
-                EmployeeCode = user.SalesStaffProfile?.EmployeeCode,
-                Department = user.SalesStaffProfile?.Department,
-                Notes = user.SalesStaffProfile?.Notes,
+                StaffProfileId = user.StaffProfile?.Id,
+                EmployeeCode = user.StaffProfile?.EmployeeCode,
+                Notes = user.StaffProfile?.Notes,
 
                 CustomerProfileId = user.CustomerProfile?.Id,
                 Mst = user.CustomerProfile?.Mst,
@@ -176,7 +174,7 @@ namespace PMS.Application.Services.Admin
         public async Task<List<AccountList>> GetAccountListAsync(string? keyword)
         {
             var users = _unitOfWork.Users.Query()
-                    .Include(u => u.SalesStaffProfile)
+                    .Include(u => u.StaffProfile)
                     .Include(u => u.CustomerProfile)
                     .AsQueryable();
 
@@ -188,9 +186,9 @@ namespace PMS.Application.Services.Admin
                     (u.Email != null && u.Email.ToLower().Contains(handleKeyword)) ||
                     (u.PhoneNumber != null && u.PhoneNumber.ToLower().Contains(handleKeyword)) ||
                     (u.FullName != null && u.FullName.ToLower().Contains(handleKeyword)) ||
-                    (u.SalesStaffProfile != null &&
-                     u.SalesStaffProfile.Department != null &&
-                     u.SalesStaffProfile.Department.ToLower().Contains(handleKeyword)));
+                    (u.StaffProfile != null &&
+                     u.StaffProfile.EmployeeCode != null &&
+                     u.StaffProfile.EmployeeCode.ToLower().Contains(handleKeyword)));
             }
 
             var result = await users.OrderByDescending(u => u.CreateAt).ToListAsync();
@@ -207,7 +205,6 @@ namespace PMS.Application.Services.Admin
                 CreateAt = u.CreateAt,
                 FullName = u.FullName,
                 Gender = u.Gender,
-                Department = u.SalesStaffProfile?.Department,
                 IsCustomer = u.CustomerProfile != null
             }).ToList();
         }
@@ -241,7 +238,7 @@ namespace PMS.Application.Services.Admin
         public async Task<ServiceResult<bool>> UpdateAccountAsync(UpdateAccountRequest request)
         {
             var user = await _unitOfWork.Users.Query()
-                .Include(u => u.SalesStaffProfile)
+                .Include(u => u.StaffProfile)
                 .FirstOrDefaultAsync(u => u.Id == request.UserId);
             if (user == null)
             {
@@ -272,7 +269,7 @@ namespace PMS.Application.Services.Admin
                 await _unitOfWork.Users.UserManager.UpdateAsync(user);
 
                 // Update / Upsert StaffProfile
-                var staffProfile = user.SalesStaffProfile;
+                var staffProfile = user.StaffProfile;
                 if (staffProfile == null)
                 {
                     _logger.LogWarning("Update profile loi, khong co staff profile");
@@ -285,10 +282,9 @@ namespace PMS.Application.Services.Admin
                 }
 
                 if (request.EmployeeCode != null) staffProfile.EmployeeCode = request.EmployeeCode;
-                if (request.Department != null) staffProfile.Department = request.Department;
                 if (request.Notes != null) staffProfile.Notes = request.Notes;
 
-                _unitOfWork.SalesStaffProfile.Update(staffProfile);
+                _unitOfWork.StaffProfile.Update(staffProfile);
 
                 await _unitOfWork.CommitAsync();
 
