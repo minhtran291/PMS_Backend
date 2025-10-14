@@ -21,7 +21,7 @@ namespace PMS.Application.DTOs.Admin
         // Staff
         public int? StaffProfileId { get; set; }
         public string? EmployeeCode { get; set; }
-        public string? Department { get; set; }
+        public StaffRole? StaffRole { get; set; }
         public string? Notes { get; set; }
 
         // Customer (view-only)
