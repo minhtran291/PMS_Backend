@@ -9,7 +9,7 @@ using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
-using PMS.Data.Repositories.SalesStaffProfile;
+using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
 using PMS.Data.Repositories.Warehouse;
@@ -21,7 +21,7 @@ namespace PMS.Data.UnitOfWork
         IUserRepository users,
         ICustomerProfileRepository customerProfile,
         ISupplierRepository supplier,
-        ISalesStaffProfileRepository salesStaffProfile,
+        IStaffProfileRepository staffProfile,
         IProductRepository product,
         IProductCategoryRepository category,
         IWarehouseRepository warehouse,
@@ -31,7 +31,7 @@ namespace PMS.Data.UnitOfWork
         private IDbContextTransaction? _transaction;
         public IUserRepository Users { get; private set; } = users;
         public ICustomerProfileRepository CustomerProfile { get; private set; } = customerProfile;
-        public ISalesStaffProfileRepository SalesStaffProfile { get; private set; } = salesStaffProfile;
+        public IStaffProfileRepository StaffProfile { get; private set; } = staffProfile;
         public ISupplierRepository Supplier { get; private set; } = supplier;
         public IProductRepository Product { get; private set; } = product;
         public IProductCategoryRepository Category { get; private set; } = category;

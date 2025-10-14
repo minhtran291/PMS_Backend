@@ -60,7 +60,7 @@ namespace PMS.Application.Services.User
                 CreateAt = DateTime.Now,
                 UserStatus = UserStatus.Active,
                 Address = customer.Address,
-                Avatar = "https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg",
+                Avatar = "/images/AvatarDefault.png",
             };
 
             var createResult = await _unitOfWork.Users.UserManager.CreateAsync(user, customer.ConfirmPassword);

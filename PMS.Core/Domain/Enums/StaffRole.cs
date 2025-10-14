@@ -11,5 +11,6 @@ namespace PMS.Core.Domain.Enums
         SalesStaff = 0,
         PurchasesStaff = 1,
         WarehouseStaff = 2,
+        Accountant = 3
     }
 }
