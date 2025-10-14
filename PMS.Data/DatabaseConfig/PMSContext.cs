@@ -14,7 +14,7 @@ namespace PMS.Data.DatabaseConfig
     public class PMSContext(DbContextOptions<PMSContext> options) : IdentityDbContext<User>(options)
     {
         public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
-        public virtual DbSet<StaffProfile> SalesStaffProfiles { get; set; }
+        public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
         public virtual DbSet<Supplier> Suppliers { get; set; }
         public virtual DbSet<Product> Products { get; set; }
         public virtual DbSet<Category> Categories { get; set; }
