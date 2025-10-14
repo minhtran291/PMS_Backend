@@ -18,5 +18,13 @@ namespace PMS.Application.Services.Notification
         NotificationType type);
         Task<ServiceResult<IEnumerable<PMS.Application.DTOs.Notification.NotificationDTO>>> GetNotificationsForUserAsync(string userId);
         Task<ServiceResult<bool>> MarkNotificationAsReadAsync(int notificationId);
+
+        Task SendNotificationToCustomerAsync(
+        string senderId,
+        string receiverId,
+        string title,
+        string message,
+        NotificationType type);
+
     }
 }

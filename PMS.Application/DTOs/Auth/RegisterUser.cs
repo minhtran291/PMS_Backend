@@ -4,9 +4,11 @@ namespace PMS.Application.DTOs.Auth
 {
     public class RegisterUser
     {
-        [Required(ErrorMessage = "Họ và tên không được để trống")]
+        [Required(ErrorMessage = "UserName không được để trống.")]
+        [RegularExpression(@"^\S+$", ErrorMessage = "UserName không được chứa khoảng trắng.")]
+        [StringLength(50, MinimumLength = 8, ErrorMessage = "UserName phải có độ dài từ 8 đến 50 ký tự.")]
+        [Display(Name = "Tên đăng nhập")]
         public required string UserName { get; set; }
-
         [Required(ErrorMessage = "Email không được để trống")]
         [EmailAddress(ErrorMessage = "Email không hợp lệ")]
         public required string Email { get; set; }
