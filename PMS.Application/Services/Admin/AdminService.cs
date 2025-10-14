@@ -1,12 +1,14 @@
 using AutoMapper;
-using PMS.Core.Domain.Entities;
-using PMS.Core.Domain.Enums;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.Admin;
 using PMS.Application.Services.Base;
-using PMS.Data.UnitOfWork;
-using Microsoft.EntityFrameworkCore;
 using PMS.Core.Domain.Constant;
-using Microsoft.Extensions.Logging;
+using PMS.Core.Domain.Entities;
+using PMS.Core.Domain.Enums;
+using PMS.Core.Domain.Identity;
+using PMS.Data.DatabaseConfig;
+using PMS.Data.UnitOfWork;
 
 namespace PMS.Application.Services.Admin
 {
@@ -139,8 +141,6 @@ namespace PMS.Application.Services.Admin
                 };
             }
 
-            var roles = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
-
             var data = new AccountDetails
             {
                 UserId = user.Id,
@@ -157,7 +157,7 @@ namespace PMS.Application.Services.Admin
                 StaffProfileId = user.StaffProfile?.Id,
                 EmployeeCode = user.StaffProfile?.EmployeeCode,
                 Notes = user.StaffProfile?.Notes,
-
+                //StaffRole = user.StaffProfile.,
                 CustomerProfileId = user.CustomerProfile?.Id,
                 Mst = user.CustomerProfile?.Mst,
                 ImageCnkd = user.CustomerProfile?.ImageCnkd,
@@ -172,6 +172,7 @@ namespace PMS.Application.Services.Admin
                 Data = data
             };
         }
+
 
         public async Task<List<AccountList>> GetAccountListAsync(string? keyword)
         {
@@ -198,6 +199,13 @@ namespace PMS.Application.Services.Admin
             if (result == null || result.Count == 0)
                 throw new Exception("Không có dữ liệu");
 
+            var roleOfUser = new Dictionary<string, StaffRole>();
+            foreach (var u in result)
+            {
+                var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(u); // IList<string>
+                roleOfUser[u.Id] = ToStaffRole(roleNames); // map tên role -> enum StaffRole
+            }
+
             return result.Select(u => new AccountList
             {
                 UserId = u.Id,
@@ -207,8 +215,18 @@ namespace PMS.Application.Services.Admin
                 CreateAt = u.CreateAt,
                 FullName = u.FullName,
                 Gender = u.Gender,
+                EmployeeCode = u.StaffProfile?.EmployeeCode,
+                Role = roleOfUser.TryGetValue(u.Id, out var r) ? r : StaffRole.SalesStaff,
                 IsCustomer = u.CustomerProfile != null
             }).ToList();
+        }
+
+        private static StaffRole ToStaffRole(IList<string> names)
+        {
+            if (names.Contains(UserRoles.SALES_STAFF)) return StaffRole.SalesStaff;
+            if (names.Contains(UserRoles.PURCHASES_STAFF)) return StaffRole.PurchasesStaff;
+            if (names.Contains(UserRoles.WAREHOUSE_STAFF)) return StaffRole.WarehouseStaff;
+            else return StaffRole.Accountant;
         }
 
         public async Task<ServiceResult<bool>> SuspendAccountAsync(string userId)
@@ -236,6 +254,7 @@ namespace PMS.Application.Services.Admin
                 Data = true
             };
         }
+
 
         public async Task<ServiceResult<bool>> UpdateAccountAsync(UpdateAccountRequest request)
         {
@@ -305,8 +324,8 @@ namespace PMS.Application.Services.Admin
                 throw;
             }
         }
-        private static string GenerateEmployeeCode(string role)
-           => $"{role}{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+        private static string GenerateEmployeeCode(string role )
+           => $"EMP{DateTime.UtcNow:yyyyMMddHHmmssfff}";
 
         public async Task <ServiceResult<bool>> ActiveAccountAsync(string userID)
         {
