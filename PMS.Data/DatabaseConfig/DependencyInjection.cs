@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.Core.Domain.Identity;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.StaffProfile;
@@ -42,6 +43,8 @@ namespace PMS.Data.DatabaseConfig
             //
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
+            //
+            services.AddScoped<INotificationRepository, NotificationRepository>();
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)

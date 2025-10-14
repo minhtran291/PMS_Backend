@@ -1,8 +1,9 @@
 
 using Microsoft.OpenApi.Models;
 using PMS.API.DIConfig;
-using PMS.Application.Filters;
 using PMS.Application.DIConfig;
+using PMS.Application.Filters;
+using PMS.Application.Services.Notification;
 using PMS.Data.DatabaseConfig;
 
 namespace PMS.API
@@ -17,6 +18,10 @@ namespace PMS.API
 
             // DbContext
             builder.Services.AddDatabaseContext(builder.Configuration);
+            builder.Services.AddScoped<INotificationSender, SignalRNotificationSender>();
+
+            //signalR
+            builder.Services.AddSignalR();
 
             // Identity
             builder.Services.AddIdentityConfig();
@@ -109,6 +114,9 @@ namespace PMS.API
 
             app.UseAuthorization();
             // kt quyen han => ng nay co dc phep lam viec nay ko?
+
+            //maphub
+            app.MapHub<NotificationHub>("/notificationHub");
 
             app.MapControllers();
 
