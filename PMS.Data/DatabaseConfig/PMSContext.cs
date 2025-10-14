@@ -14,7 +14,7 @@ namespace PMS.Data.DatabaseConfig
     public class PMSContext(DbContextOptions<PMSContext> options) : IdentityDbContext<User>(options)
     {
         public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
-        public virtual DbSet<SalesStaffProfile> SalesStaffProfiles { get; set; }
+        public virtual DbSet<StaffProfile> SalesStaffProfiles { get; set; }
         public virtual DbSet<Supplier> Suppliers { get; set; }
         public virtual DbSet<Product> Products { get; set; }
         public virtual DbSet<Category> Categories { get; set; }
@@ -108,16 +108,20 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey<CustomerProfile>(cp => cp.UserId);
             });
 
-            builder.Entity<SalesStaffProfile>(entity =>
+            builder.Entity<StaffProfile>(entity =>
             {
-                entity.HasKey(ss => ss.Id);
+                entity.HasKey(s => s.Id);
 
-                entity.Property(ss => ss.Id)
+                entity.Property(s => s.Id)
                     .ValueGeneratedOnAdd();
 
+                entity.Property(s => s.EmployeeCode)
+                    .HasMaxLength(128)
+                    .IsRequired();
+
                 entity.HasOne(ss => ss.User)
-                    .WithOne(u => u.SalesStaffProfile)
-                    .HasForeignKey<SalesStaffProfile>(ss => ss.UserId);
+                    .WithOne(u => u.StaffProfile)
+                    .HasForeignKey<StaffProfile>(ss => ss.UserId);
             });
 
             builder.Entity<Supplier>(entity =>
