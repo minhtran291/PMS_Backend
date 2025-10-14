@@ -1,4 +1,5 @@
 ﻿using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.StaffProfile;
@@ -18,6 +19,7 @@ namespace PMS.Data.UnitOfWork
         IProductRepository Product { get; }
         IProductCategoryRepository Category { get; }
         IWarehouseRepository Warehouse { get; }
+        INotificationRepository Notification { get; }
         IWarehouseLocationRepository WarehouseLocation { get; }
         Task<int> CommitAsync();
         Task BeginTransactionAsync();

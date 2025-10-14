@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.StaffProfile;
@@ -25,7 +26,8 @@ namespace PMS.Data.UnitOfWork
         IProductRepository product,
         IProductCategoryRepository category,
         IWarehouseRepository warehouse,
-        IWarehouseLocationRepository warehouseLocation) : IUnitOfWork
+        IWarehouseLocationRepository warehouseLocation,
+        INotificationRepository notification) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -36,6 +38,7 @@ namespace PMS.Data.UnitOfWork
         public IProductRepository Product { get; private set; } = product;
         public IProductCategoryRepository Category { get; private set; } = category;
         public IWarehouseRepository Warehouse { get; private set; } = warehouse;
+        public INotificationRepository Notification { get; private set; } = notification;
         public IWarehouseLocationRepository WarehouseLocation { get; private set; } = warehouseLocation;
 
         public async Task<int> CommitAsync()
