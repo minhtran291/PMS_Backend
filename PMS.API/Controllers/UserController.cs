@@ -1,12 +1,14 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using PMS.Application.DTOs.Auth;
+using PMS.Application.DTOs.Customer;
 using PMS.Application.Services.User;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Identity;
-using PMS.Application.DTOs.Auth;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Controllers
@@ -31,7 +33,7 @@ namespace PMS.API.Controllers
 
             var result = await _userService.RegisterUserAsync(customer);
 
-         
+
             return result.StatusCode switch
             {
                 200 => Ok(new
@@ -45,7 +47,7 @@ namespace PMS.API.Controllers
                     success = false,
                     message = result.Message
                 }),
-                
+
                 _ => Ok(new
                 {
                     success = false,
@@ -105,6 +107,8 @@ namespace PMS.API.Controllers
             };
         }
 
+        //https://localhost:7213/api/User/resend-confirm-email
+
         [HttpPost("resend-confirm-email")]
         public async Task<IActionResult> ResendConfirmEmail([FromBody] ResendConfirmEmailRequest request)
         {
@@ -120,5 +124,63 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
+
+        /// <summary>
+        /// Cập nhật thông tin hồ sơ khách hàng.
+        /// https://localhost:7213/api/User/CustomerProfileUpdate
+        /// </summary>
+        /// <param name="request">Thông tin hồ sơ khách hàng cần cập nhật</param>
+        [HttpPut("CustomerProfileUpdate")]
+        public async Task<IActionResult> UpdateCustomerProfile([FromBody] CustomerProfileDTO request)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(e => e.Value?.Errors.Count > 0)
+                    .Select(e => new
+                    {
+                        Field = e.Key,
+                        Errors = e.Value!.Errors.Select(er => er.ErrorMessage).ToArray()
+                    });
+
+                return BadRequest(new
+                {
+                    Message = "Dữ liệu không hợp lệ.",
+                    Errors = errors
+                });
+            }
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+            var result = await _userService.UpdateCustomerProfile(userId, request);
+            if (result.Data)
+                return Ok(result);
+            else
+                return BadRequest(result);
+        }
+
+
+        /// <summary>
+        /// Lấy thông tin khách hàng theo userId
+        /// </summary>
+        /// <param name="userId">Id của người dùng</param>
+        /// <returns>Thông tin khách hàng</returns>
+        /// <remarks>GET: https://localhost:7213/api/User/viewprofile</remarks>
+        [HttpGet("viewprofile")]
+        public async Task<IActionResult> GetCustomerById()
+        {
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+            var result = await _userService.GetCustomerByIdAsync(userId);
+
+            if (result.StatusCode == 404)
+                return NotFound(result);
+
+            return Ok(result);
+        }
     }
+
 }
+

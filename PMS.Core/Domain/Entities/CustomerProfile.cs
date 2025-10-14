@@ -16,5 +16,6 @@ namespace PMS.Core.Domain.Entities
         public string? ImageByt { get; set; }
         public long? Mshkd { get; set; }
         public virtual User User { get; set; } = null!;
+        public virtual ICollection<RequestSalesQuotation>? RequestSalesQuotations { get; set; }
     }
 }

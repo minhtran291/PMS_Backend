@@ -17,7 +17,7 @@ namespace PMS.Application.DTOs.Admin
 
         // Profile
         public string? FullName { get; set; }
-        public Gender Gender { get; set; }
+        public bool? Gender { get; set; }
         public string? Address { get; set; }
 
         // StaffProfile

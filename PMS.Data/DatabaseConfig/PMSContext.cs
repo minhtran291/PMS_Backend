@@ -20,6 +20,9 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<Category> Categories { get; set; }
         public virtual DbSet<Warehouse> Warehouses { get; set; }
         public virtual DbSet<WarehouseLocation> WarehouseLocations { get; set; }
+        public virtual DbSet<Notification> Notifications { get; set; }
+        public virtual DbSet<RequestSalesQuotation> RequestSalesQuotations { get; set; }
+        public virtual DbSet<RequestSalesQuotationDetails> RequestSalesQuotationDetails { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -257,6 +260,77 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(c => c.Name)
                     .IsRequired()
                     .HasMaxLength(100);
+            });
+
+            builder.Entity<Notification>(entity =>
+            {
+                entity.HasKey(n => n.Id);
+
+                entity.Property(n => n.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(n => n.Title)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(n => n.Message)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.Property(n => n.SenderId)
+                    .IsRequired();
+
+                entity.Property(n => n.ReceiverId)
+                    .IsRequired();
+
+                entity.Property(n => n.Type)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(n => n.IsRead)
+                    .IsRequired()
+                    .HasColumnType("bit");
+
+                entity.Property(n => n.CreatedAt)
+                    .IsRequired()
+                    .HasColumnType("datetime");
+
+                entity.HasOne(n => n.Sender)
+                    .WithMany(u => u.SentNotifications)
+                    .HasForeignKey(n => n.SenderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(n => n.Receiver)
+                    .WithMany(u => u.ReceivedNotifications)
+                    .HasForeignKey(n => n.ReceiverId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<RequestSalesQuotation>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.RequestCode)
+                    .HasMaxLength(64)
+                    .IsRequired();
+
+                entity.Property(e => e.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.HasOne(e => e.CustomerProfile)
+                    .WithMany(cp => cp.RequestSalesQuotations)
+                    .HasForeignKey(e => e.CustomerId);
+            });
+
+            builder.Entity<RequestSalesQuotationDetails>(entity =>
+            {
+                entity.HasKey(e => new { e.RequestSalesQuotationId, e.ProductId}); 
             });
         }
     }
