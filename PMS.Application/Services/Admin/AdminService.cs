@@ -51,7 +51,7 @@ namespace PMS.Application.Services.Admin
                     EmailConfirmed = true,
                     FullName = request.FullName,
                     Address = request.Address,
-                    Avatar = "https://as2.ftcdn.net/v2/jpg/03/31/69/91/1000_F_331699188_lRpvqxO5QRtwOM05gR50ImaaJgBx68vi.jpg",
+                    Avatar = "/images/AvatarDefault.png",
                 };
 
                 var createResult = await _unitOfWork.Users.UserManager.CreateAsync(user, request.Password);
@@ -83,6 +83,7 @@ namespace PMS.Application.Services.Admin
                     StaffRole.SalesStaff => UserRoles.SALES_STAFF,
                     StaffRole.PurchasesStaff => UserRoles.PURCHASES_STAFF,
                     StaffRole.WarehouseStaff => UserRoles.WAREHOUSE_STAFF,
+                    StaffRole.Accountant => UserRoles.ACCOUNTANT,
                     _ => throw new Exception("Role không hợp lệ")
 
                 };
