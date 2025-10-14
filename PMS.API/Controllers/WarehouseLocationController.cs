@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PMS.API.Services.WarehouseLocation;
-using PMS.Core.DTO.WarehouseLocation;
+using PMS.Application.Services.WarehouseLocation;
+using PMS.Application.DTOs.WarehouseLocation;
 
 namespace PMS.API.Controllers
 {

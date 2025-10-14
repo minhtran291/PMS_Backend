@@ -1,8 +1,5 @@
 ﻿using PMS.Core.Domain.Constant;
 using PMS.Application.DTOs.Admin;
-using DProfile = PMS.Core.Domain.Entities.Profile;
-using DStaffProfile = PMS.Core.Domain.Entities.StaffProfile;
-using DUser = PMS.Core.Domain.Identity.User;
 
 namespace PMS.Application.Services.Admin
 {

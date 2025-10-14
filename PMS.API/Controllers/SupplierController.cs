@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PMS.API.Services.Supplier;
+using PMS.Application.Services.Supplier;
 using PMS.Core.Domain.Constant;
-using PMS.Core.DTO.Supplier;
+using PMS.Application.DTOs.Supplier;
 
 namespace PMS.API.Controllers
 {

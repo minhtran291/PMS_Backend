@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using PMS.API.Services.Product;
+using PMS.Application.Services.Product;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
-using PMS.Core.DTO.Content;
+using PMS.Application.DTOs.Product;
 
 namespace PMS.API.Controllers
 {

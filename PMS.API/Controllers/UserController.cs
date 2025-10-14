@@ -2,12 +2,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using PMS.API.Services.User;
+using PMS.Application.Services.User;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Identity;
-using PMS.Core.DTO.Content;
-using PMS.Core.DTO.Request;
+using PMS.Application.DTOs.Auth;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Controllers
