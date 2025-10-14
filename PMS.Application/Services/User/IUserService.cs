@@ -17,5 +17,6 @@ namespace PMS.Application.Services.User
         Task<ServiceResult<bool>> UpdateCustomerProfile(string userId, CustomerProfileDTO request);
         Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus();
         Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string managerId);
+        Task<ServiceResult<CustomerViewDTO>> GetCustomerByIdAsync(string userId);
     }
 }

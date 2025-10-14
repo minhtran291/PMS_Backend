@@ -394,5 +394,51 @@ namespace PMS.Application.Services.User
                 StatusCode = 200,
             };  
         }
+
+        public async Task<ServiceResult<CustomerViewDTO>> GetCustomerByIdAsync(string userId)
+        {
+            var user = await _unitOfWork.Users.Query()
+                .Include(u => u.CustomerProfile)
+                .Where(u => u.Id == userId)
+                .FirstOrDefaultAsync();
+
+            if (user == null || user.CustomerProfile == null)
+            {
+                return new ServiceResult<CustomerViewDTO>
+                {
+                    Data = null,
+                    Message = "Không tìm thấy người dùng hoặc người dùng không có hồ sơ khách hàng.",
+                    StatusCode = 404
+                };
+            }
+
+            var dto = new CustomerViewDTO
+            {
+                // From User
+                Id = user.Id,
+                FullName = user.FullName,
+                Avatar = user.Avatar,
+                Address = user.Address,
+                Gender = user.Gender,
+                CreateAt = user.CreateAt,
+                UserStatus = user.UserStatus,
+
+                // From CustomerProfile
+                CustomerProfileId = user.CustomerProfile.Id,
+                Mst = user.CustomerProfile.Mst,
+                ImageCnkd = user.CustomerProfile.ImageCnkd,
+                ImageByt = user.CustomerProfile.ImageByt,
+                Mshkd = user.CustomerProfile.Mshkd
+            };
+
+            return new ServiceResult<CustomerViewDTO>
+            {
+                Data = dto,
+                Message = "Lấy thông tin khách hàng thành công.",
+                StatusCode = 200
+            };
+        }
+
+
     }
 }

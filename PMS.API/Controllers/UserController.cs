@@ -158,6 +158,29 @@ namespace PMS.API.Controllers
             else
                 return BadRequest(result);
         }
+
+
+        /// <summary>
+        /// Lấy thông tin khách hàng theo userId
+        /// </summary>
+        /// <param name="userId">Id của người dùng</param>
+        /// <returns>Thông tin khách hàng</returns>
+        /// <remarks>GET: https://localhost:7213/api/User/viewprofile</remarks>
+        [HttpGet("viewprofile")]
+        public async Task<IActionResult> GetCustomerById()
+        {
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+            var result = await _userService.GetCustomerByIdAsync(userId);
+
+            if (result.StatusCode == 404)
+                return NotFound(result);
+
+            return Ok(result);
+        }
     }
+
 }
 
