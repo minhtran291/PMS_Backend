@@ -11,6 +11,7 @@ using PMS.Application.Services.Base;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
+using PMS.Core.Domain.Identity;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.Application.Services.Notification
@@ -78,6 +79,31 @@ namespace PMS.Application.Services.Notification
                     Message = "lỗi khi lấy notification"
                 };
             }
+        }
+
+        public async Task SendNotificationToCustomerAsync(string senderId, string receiverId, string title, string message, NotificationType type)
+        {
+            var notification = new PMS.Core.Domain.Entities.Notification
+            {
+                SenderId = senderId,
+                ReceiverId = receiverId,
+                Title = title,
+                Message = message,
+                Type = type,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _unitOfWork.Notification.AddAsync(notification);
+            await _unitOfWork.CommitAsync();
+
+            await notificationSender.SendNotificationAsync(receiverId, new
+            {
+                notification.Id,
+                notification.Title,
+                notification.Message,
+                notification.Type,
+                notification.CreatedAt
+            });
         }
 
         public async Task SendNotificationToRolesAsync(

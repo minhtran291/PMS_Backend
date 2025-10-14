@@ -24,6 +24,8 @@ namespace PMS.API.Controllers
         [HttpPost("send")]
         public async Task<IActionResult> SendNotification([FromBody] SendNotificationRequest request)
         {
+
+
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { message = "Không thể xác thực người dùng." });

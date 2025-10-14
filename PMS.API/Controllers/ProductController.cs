@@ -102,6 +102,8 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> AddProduct([FromBody] ProductDTO product)
         {
+
+
             var result = await _productService.AddProductAsync(product);
             return StatusCode(result.StatusCode, new
             {
