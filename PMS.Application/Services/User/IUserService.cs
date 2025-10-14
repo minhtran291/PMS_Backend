@@ -1,5 +1,6 @@
-﻿using PMS.Core.Domain.Constant;
-using PMS.Application.DTOs.Auth;
+﻿using PMS.Application.DTOs.Auth;
+using PMS.Application.DTOs.Customer;
+using PMS.Core.Domain.Constant;
 
 namespace PMS.Application.Services.User
 {
@@ -13,5 +14,8 @@ namespace PMS.Application.Services.User
         Task<ServiceResult<bool>> ConfirmEmailAsync(string userId, string token);
         Task<ServiceResult<bool>> SendEmailResetPasswordAsync(string email);
         Task<ServiceResult<bool>> ResetPasswordAsync(ResetPasswordRequest request);
+        Task<ServiceResult<bool>> UpdateCustomerProfile(string userId, CustomerProfileDTO request);
+        Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus();
+        Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string managerId);
     }
 }

@@ -1,22 +1,25 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PMS.Application.DTOs.Auth;
+using PMS.Application.DTOs.Customer;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
+using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Enums;
 using PMS.Data.UnitOfWork;
-using PMS.Application.DTOs.Auth;
 
 namespace PMS.Application.Services.User
 {
     public class UserService(IUnitOfWork unitOfWork,
         IMapper mapper,
         IEmailService emailService,
-        ILogger<UserService> logger) : Service(unitOfWork, mapper), IUserService
+        ILogger<UserService> logger, INotificationService notificationService) : Service(unitOfWork, mapper), IUserService
     {
         private readonly IEmailService _emailService = emailService;
         private readonly ILogger<UserService> _logger = logger;
+        private readonly INotificationService _notificationService = notificationService;
 
         public async Task<Core.Domain.Identity.User?> GetUserById(string userId)
         {
@@ -58,7 +61,7 @@ namespace PMS.Application.Services.User
                 Email = customer.Email,
                 PhoneNumber = customer.PhoneNumber,
                 CreateAt = DateTime.Now,
-                UserStatus = UserStatus.Active,
+                UserStatus = UserStatus.Inactive,
                 Address = customer.Address,
                 Avatar = "/images/AvatarDefault.png",
             };
@@ -273,6 +276,123 @@ namespace PMS.Application.Services.User
                 Message = "thành công",
                 Data = true
             };
+        }
+
+        public async Task<ServiceResult<bool>> UpdateCustomerProfile(string userId, CustomerProfileDTO request)
+        {
+            try
+            {
+                var exUser = await _unitOfWork.CustomerProfile.Query()
+                    .FirstOrDefaultAsync(u => u.UserId == userId);
+
+                if (exUser == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        Data = false,
+                        Message = "không tìm thấy userId hoặc đã bị khóa",
+                        StatusCode = 200,
+                    };
+                }
+                //
+                var username = await _unitOfWork.Users.Query().FirstOrDefaultAsync(un => un.Id == exUser.UserId);
+                if (username == null) { return new ServiceResult<bool> { Data = false, Message = "không tìm thấy userId hoặc đã bị khóa", StatusCode = 200 }; }
+                //
+                exUser.Mst = request.Mst;
+                exUser.Mshkd = request.Mshkd;
+                exUser.ImageCnkd = request.ImageCnkd;
+                exUser.ImageByt = request.ImageByt;
+                _unitOfWork.CustomerProfile.Update(exUser);
+                await _unitOfWork.CommitAsync();
+                //
+                await _notificationService.SendNotificationToRolesAsync(
+                    senderId: userId,
+                    targetRoles: new List<string> { "ADMIN" },
+                    title: "Thông báo duyệt tài khoản",
+                    message: $"Khách hàng {username.UserName} đã cập nhật thông tin hồ sơ." +
+                    $" Vui lòng kiểm tra và xác nhận.",
+                    type: NotificationType.System
+                );
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Data = true,
+                    Message = "Thành công vui lòng chờ xác nhận của quản lý để mở khóa tài khoản"
+                };
+
+            }
+            catch (Exception ex)
+            {
+                throw new ArgumentException($"Lỗi khi cập nhật sản phẩm: {ex.Message}", ex);
+            }
+
+        }
+
+
+        public async Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus()
+        {
+            try
+            {
+
+                var listUser = await _unitOfWork.Users.Query()
+                    .Include(u => u.CustomerProfile)
+                    .Where(u => u.UserStatus == UserStatus.Inactive)
+                    .ToListAsync();
+                var result = listUser.Select(u => new CustomerDTO
+                {
+                    Id = u.Id,
+                    UserName = u.UserName ?? string.Empty,
+                    Mst = u.CustomerProfile?.Mst,
+                    ImageCnkd = u.CustomerProfile?.ImageCnkd ?? string.Empty,
+                    ImageByt = u.CustomerProfile?.ImageByt ?? string.Empty,
+                    Mshkd = u.CustomerProfile?.Mshkd,
+                    UserStatus = u.UserStatus
+                }).ToList();
+                return new ServiceResult<IEnumerable<CustomerDTO>>
+                {
+                    Data = result,
+                    StatusCode = 200,
+                    Message = result.Any()
+                        ? "Lấy danh sách khách hàng thành công."
+                        : "Không có khách hàng nào ở trạng thái Inactive."
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult<IEnumerable<CustomerDTO>>
+                {
+                    Data = Enumerable.Empty<CustomerDTO>(),
+                    StatusCode = 500,
+                    Message = $"Đã xảy ra lỗi khi lấy danh sách khách hàng: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId,string managerId)
+        {
+            var exuser = await _unitOfWork.Users.Query()
+                    .Include(u => u.CustomerProfile).FirstOrDefaultAsync(u => u.Id == userId);
+            if (exuser == null)
+            {
+                return new ServiceResult<bool> { Data = false, Message = "không tìm thấy người dùng", StatusCode = 200 };
+            }
+            exuser.UserStatus = UserStatus.Active;
+            _unitOfWork.Users.Update(exuser);
+            await _unitOfWork.CommitAsync();
+
+            await _notificationService.SendNotificationToCustomerAsync(
+                senderId: managerId,
+                userId,
+                title: "Thông báo duyệt tài khoản",
+                message: $"tài khoản đã cập nhật ",
+                type: NotificationType.System);
+
+            return new ServiceResult<bool>
+            {
+                Data = true,
+                Message = "cập nhật thành công",
+                StatusCode = 200,
+            };  
         }
     }
 }
