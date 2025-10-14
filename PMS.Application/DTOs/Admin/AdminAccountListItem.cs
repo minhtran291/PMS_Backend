@@ -10,7 +10,7 @@ namespace PMS.Application.DTOs.Admin
         public UserStatus UserStatus { get; set; }
         public DateTime CreateAt { get; set; }
         public string? FullName { get; set; }
-        public Gender Gender { get; set; }
+        //public Gender Gender { get; set; }
         public bool IsStaff => UserStatus.Equals(UserStatus.Active);
         public bool IsCustomer { get; set; }  
     }
