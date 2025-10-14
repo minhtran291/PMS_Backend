@@ -68,17 +68,7 @@ namespace PMS.Application.Services.Admin
                 }
 
                 // Tạo StaffProfile
-                var staffProfile = new StaffProfile
-                {
-                    UserId = user.Id,
-                    EmployeeCode = string.IsNullOrWhiteSpace(request.EmployeeCode)
-                        ? GenerateEmployeeCode()
-                        : request.EmployeeCode,
-                    Notes = request.Notes
-                };
-                await _unitOfWork.StaffProfile.AddAsync(staffProfile);
-
-                var role = request.StaffRole switch
+                string role = request.StaffRole switch
                 {
                     StaffRole.SalesStaff => UserRoles.SALES_STAFF,
                     StaffRole.PurchasesStaff => UserRoles.PURCHASES_STAFF,
@@ -88,6 +78,17 @@ namespace PMS.Application.Services.Admin
 
                 };
 
+                var staffProfile = new StaffProfile
+                {
+                    UserId = user.Id,
+                    EmployeeCode = string.IsNullOrWhiteSpace(request.EmployeeCode)
+                        ? GenerateEmployeeCode(role)
+                        : request.EmployeeCode,
+                    Notes = request.Notes
+                };
+                await _unitOfWork.StaffProfile.AddAsync(staffProfile);
+
+               
                 var roleResult = await _unitOfWork.Users.UserManager.AddToRoleAsync(user, role);
 
                 if (!roleResult.Succeeded)
@@ -304,8 +305,8 @@ namespace PMS.Application.Services.Admin
                 throw;
             }
         }
-        private static string GenerateEmployeeCode()
-           => $"EMP{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+        private static string GenerateEmployeeCode(string role)
+           => $"{role}{DateTime.UtcNow:yyyyMMddHHmmssfff}";
 
         public async Task <ServiceResult<bool>> ActiveAccountAsync(string userID)
         {

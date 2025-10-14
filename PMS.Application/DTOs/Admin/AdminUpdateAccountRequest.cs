@@ -17,7 +17,6 @@ namespace PMS.Application.DTOs.Admin
 
         // Update StaffProfile
         public string? EmployeeCode { get; set; }
-        public string? Department { get; set; }
         public string? Notes { get; set; }
     }
 }
