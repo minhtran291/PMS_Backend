@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Azure.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using PMS.Application.DTOs.Supplier;
 using PMS.Application.Services.Supplier;
 using PMS.Core.Domain.Constant;
-using PMS.Application.DTOs.Supplier;
 
 namespace PMS.API.Controllers
 {
@@ -20,99 +22,108 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost("create")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> Create([FromBody] CreateSupplierRequestDTO dto)
+        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> CreateSupplierAsync([FromBody] CreateSupplierRequestDTO dto)
         {
-            try
+            if (!ModelState.IsValid)
             {
-                if (!ModelState.IsValid) return ValidationProblem(ModelState);
-                var created = await _service.CreateAsync(dto);
-                return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+                return StatusCode(400, new
+                {
+                    success = false,
+                    message = "Dữ liệu không hợp lệ",
+                    data = ModelState
+                });
             }
-            catch (Exception ex)
+
+            var result = await _service.CreateAsync(dto);
+
+            return StatusCode(result.StatusCode, new
             {
-                _logger.LogError(ex, "Create supplier failed");
-                return BadRequest(ex.Message);
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+
         }
 
         [HttpGet("list")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? keyword = null)
+        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> GetSupplierListAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? keyword = null)
         {
-            try
+            var result = await _service.GetPagedAsync(page, pageSize, keyword);
+
+            return StatusCode(result.StatusCode, new
             {
-                var list = await _service.GetPagedAsync(page, pageSize, keyword);
-                if (list.Count == 0) return NotFound("Không có dữ liệu");
-                return Ok(list);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                success = result.StatusCode == 200,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         [HttpGet("detail")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> GetById([FromQuery] int id)
+        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> GetSupplierByIdAsync([FromQuery] int id)
         {
-            try
+            var result = await _service.GetByIdAsync(id);
+
+            return StatusCode(result.StatusCode, new
             {
-                var dto = await _service.GetByIdAsync(id);
-                return dto == null ? NotFound() : Ok(dto);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                success = result.StatusCode == 200,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         [HttpPut("update")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> Update([FromQuery] int id, [FromBody] UpdateSupplierRequestDTO dto)
+        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> UpdateSupplierAsync([FromQuery] int id, [FromBody] UpdateSupplierRequestDTO dto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            try
             {
-                if (!ModelState.IsValid) return ValidationProblem(ModelState);
-                var result = await _service.UpdateAsync(id, dto);
-                return Ok(result);
+                return StatusCode(400, new
+                {
+                    success = false,
+                    message = "Dữ liệu không hợp lệ",
+                    data = ModelState
+                });
             }
-            catch (Exception ex)
+
+            var result = await _service.UpdateAsync(id, dto);
+
+            return StatusCode(result.StatusCode, new
             {
-                return BadRequest(ex.Message);
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         [HttpPost("enable")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> Enable([FromQuery] string supplierId)
+        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> EnableSupplierAsync([FromQuery] string supplierId)
         {
-            try
+            var result = await _service.EnableSupplier(supplierId);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _service.EnableSupplier(supplierId);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         [HttpPost("disable")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> Disable([FromQuery] string supplierId)
+        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> DisableSupplierAsync([FromQuery] string supplierId)
         {
-            try
+            var result = await _service.DisableSupplier(supplierId);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _service.DisableSupplier(supplierId);
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
     }
 }

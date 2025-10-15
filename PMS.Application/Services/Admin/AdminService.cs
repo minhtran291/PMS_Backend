@@ -326,7 +326,7 @@ namespace PMS.Application.Services.Admin
             }
         }
         private static string GenerateEmployeeCode(string role )
-           => $"EMP{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+           => $"{role}{DateTime.UtcNow:yyyyMMddHHmmssfff}";
 
         public async Task <ServiceResult<bool>> ActiveAccountAsync(string userID)
         {

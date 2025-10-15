@@ -302,6 +302,50 @@ namespace PMS.Data.Migrations
                     b.ToTable("Products");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.RequestSalesQuotation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RequestCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("TINYINT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("RequestSalesQuotations");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.RequestSalesQuotationDetails", b =>
+                {
+                    b.Property<int>("RequestSalesQuotationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RequestSalesQuotationId", "ProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("RequestSalesQuotationDetails");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.StaffProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -339,29 +383,27 @@ namespace PMS.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Address")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("BankAccountNumber")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("MyDebt")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
@@ -627,6 +669,36 @@ namespace PMS.Data.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.RequestSalesQuotation", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.CustomerProfile", "CustomerProfile")
+                        .WithMany("RequestSalesQuotations")
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CustomerProfile");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.RequestSalesQuotationDetails", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.Product", "Product")
+                        .WithMany("RequestSalesQuotationDetails")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Core.Domain.Entities.RequestSalesQuotation", "RequestSalesQuotation")
+                        .WithMany("RequestSalesQuotationDetails")
+                        .HasForeignKey("RequestSalesQuotationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("RequestSalesQuotation");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.StaffProfile", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Identity.User", "User")
@@ -652,6 +724,21 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.Category", b =>
                 {
                     b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
+                {
+                    b.Navigation("RequestSalesQuotations");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
+                {
+                    b.Navigation("RequestSalesQuotationDetails");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.RequestSalesQuotation", b =>
+                {
+                    b.Navigation("RequestSalesQuotationDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Warehouse", b =>

@@ -1,10 +1,12 @@
 ﻿using PMS.Core.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace PMS.Application.DTOs.Admin
 {
     public class AccountList
     {
         public string UserId { get; set; } = null!;
+        [Required(ErrorMessage = "Email là bắt buộc!")]
         public string? Email { get; set; } = null!;
         public string? PhoneNumber { get; set; }
         public UserStatus UserStatus { get; set; }
