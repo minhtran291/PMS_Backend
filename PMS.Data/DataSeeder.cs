@@ -43,6 +43,7 @@ namespace PMS.Data
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456789",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
@@ -78,6 +79,7 @@ namespace PMS.Data
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456788",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
@@ -113,6 +115,7 @@ namespace PMS.Data
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456787",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
@@ -157,6 +160,7 @@ namespace PMS.Data
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456786",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
@@ -201,6 +205,7 @@ namespace PMS.Data
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456785",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
@@ -245,6 +250,7 @@ namespace PMS.Data
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456784",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
