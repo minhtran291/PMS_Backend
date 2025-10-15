@@ -35,6 +35,8 @@ namespace PMS.API.Controllers
         [Route("create-warehouse")]
         public async Task<IActionResult> CreateWarehouse([FromBody] CreateWarehouse dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
             try
             {
                 await _warehouseService.CreateWarehouseAsync(dto);

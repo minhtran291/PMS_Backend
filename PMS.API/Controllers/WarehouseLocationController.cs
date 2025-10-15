@@ -35,6 +35,8 @@ namespace PMS.API.Controllers
         [Route("create-warehouse-location")]
         public async Task<IActionResult> CreateWarehouseLocation([FromBody] CreateWarehouseLocation dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
             try
             {
                 await _warehouseLocationService.CreateWarehouseLocation(dto);
@@ -50,6 +52,8 @@ namespace PMS.API.Controllers
         [Route("update-warehouse-location")]
         public async Task<IActionResult> UpdateWarehouseLocation([FromBody] UpdateWarehouseLocation dto)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
             try
             {
                 await _warehouseLocationService.UpdateWarehouseLocation(dto);

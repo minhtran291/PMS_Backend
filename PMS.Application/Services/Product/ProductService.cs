@@ -256,7 +256,6 @@ namespace PMS.Application.Services.Product
                     };
                 }
 
-
                 var product = await _unitOfWork.Product.Query().FirstOrDefaultAsync(p => p.ProductID == productId);
                 if (product == null)
                 {
@@ -267,7 +266,6 @@ namespace PMS.Application.Services.Product
                         Data = false
                     };
                 }
-
 
                 product.Status = status;
 

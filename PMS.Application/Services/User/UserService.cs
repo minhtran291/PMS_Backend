@@ -328,7 +328,6 @@ namespace PMS.Application.Services.User
 
         }
 
-
         public async Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus()
         {
             try
