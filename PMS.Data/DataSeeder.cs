@@ -49,7 +49,7 @@ namespace PMS.Data
                 };
 
                 user.PasswordHash = passwordHasher.HashPassword(user, "Pmsadmin!");
-                _ = await context.Users.AddAsync(user);
+                await context.Users.AddAsync(user);
                 await context.SaveChangesAsync();
 
                 var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.ADMIN);
@@ -84,7 +84,7 @@ namespace PMS.Data
                 };
 
                 manager.PasswordHash = passwordHasher.HashPassword(manager, "Pmsmanager!");
-                _ = await context.Users.AddAsync(manager);
+                await context.Users.AddAsync(manager);
                 await context.SaveChangesAsync();
 
                 var managerRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.MANAGER);
@@ -119,7 +119,7 @@ namespace PMS.Data
                 };
 
                 salesStaff.PasswordHash = passwordHasher.HashPassword(salesStaff, "Pmssales!");
-                _ = await context.Users.AddAsync(salesStaff);
+                await context.Users.AddAsync(salesStaff);
                 await context.SaveChangesAsync();
 
                 var salesRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.SALES_STAFF);
@@ -132,6 +132,15 @@ namespace PMS.Data
                         UserId = salesStaff.Id,
                     });
                 }
+                await context.SaveChangesAsync();
+
+                var salesProfile = new StaffProfile
+                {
+                    UserId = salesStaff.Id,
+                    EmployeeCode = "SALE-001"
+                };
+
+                await context.StaffProfiles.AddAsync(salesProfile);
                 await context.SaveChangesAsync();
 
                 // purchases staff
@@ -154,7 +163,7 @@ namespace PMS.Data
                 };
 
                 purchasesStaff.PasswordHash = passwordHasher.HashPassword(purchasesStaff, "Pmspurchases!");
-                _ = await context.Users.AddAsync(purchasesStaff);
+                await context.Users.AddAsync(purchasesStaff);
                 await context.SaveChangesAsync();
 
                 var purchasesRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.PURCHASES_STAFF);
@@ -167,6 +176,15 @@ namespace PMS.Data
                         UserId = purchasesStaff.Id,
                     });
                 }
+                await context.SaveChangesAsync();
+
+                var purchasesProfile = new StaffProfile
+                {
+                    UserId = purchasesStaff.Id,
+                    EmployeeCode = "PURCHASE-001"
+                };
+
+                await context.StaffProfiles.AddAsync(purchasesProfile);
                 await context.SaveChangesAsync();
 
                 // warehouse staff
@@ -189,7 +207,7 @@ namespace PMS.Data
                 };
 
                 warehouseStaff.PasswordHash = passwordHasher.HashPassword(warehouseStaff, "Pmswarehouse!");
-                _ = await context.Users.AddAsync(warehouseStaff);
+                await context.Users.AddAsync(warehouseStaff);
                 await context.SaveChangesAsync();
 
                 var warehouseRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.WAREHOUSE_STAFF);
@@ -202,6 +220,15 @@ namespace PMS.Data
                         UserId = warehouseStaff.Id,
                     });
                 }
+                await context.SaveChangesAsync();
+
+                var warehouseProfile = new StaffProfile
+                {
+                    UserId = warehouseStaff.Id,
+                    EmployeeCode = "WAREHOUSE-001"
+                };
+
+                await context.StaffProfiles.AddAsync(warehouseProfile);
                 await context.SaveChangesAsync();
 
                 // accountant staff
@@ -224,7 +251,7 @@ namespace PMS.Data
                 };
 
                 accountant.PasswordHash = passwordHasher.HashPassword(accountant, "Pmsaccountant!");
-                _ = await context.Users.AddAsync(accountant);
+                await context.Users.AddAsync(accountant);
                 await context.SaveChangesAsync();
 
                 var accountantRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.ACCOUNTANT);
@@ -237,6 +264,15 @@ namespace PMS.Data
                         UserId = accountant.Id,
                     });
                 }
+                await context.SaveChangesAsync();
+
+                var accountantProfile = new StaffProfile
+                {
+                    UserId = accountant.Id,
+                    EmployeeCode = "ACCOUNTANT-001"
+                };
+
+                await context.StaffProfiles.AddAsync(accountantProfile);
                 await context.SaveChangesAsync();
             }
 
