@@ -136,19 +136,19 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.Property(p => p.Name)
                     .IsRequired()
-                    .HasMaxLength(50);
+                    .HasMaxLength(200);
 
                 entity.Property(p => p.Email)
                     .IsRequired()
-                    .HasMaxLength(50);
+                    .HasMaxLength(200);
 
                 entity.Property(p => p.PhoneNumber)
                     .IsRequired()
                     .HasMaxLength(50);
 
                 entity.Property(p => p.Address)
-                    .IsRequired()
-                    .HasMaxLength(100);
+                    .IsRequired(false)
+                    .HasMaxLength(300);
 
                 entity.Property(p => p.Status)
                     .HasConversion<byte>()
@@ -157,10 +157,10 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.Property(p => p.BankAccountNumber)
                     .IsRequired()
-                    .HasMaxLength(50);
+                    .HasMaxLength(256);
 
                 entity.Property(p => p.MyDebt)
-                    .IsRequired()
+                    .IsRequired(false)
                     .HasMaxLength(50);
             });
 

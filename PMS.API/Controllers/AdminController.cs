@@ -21,7 +21,7 @@ namespace PMS.API.Controllers
         }
         //[Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("create-staff-account")]
-        public async Task<IActionResult> Create([FromBody] CreateAccountRequest request)
+        public async Task<IActionResult> CreateStaffAccountAsync([FromBody] CreateAccountRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -37,7 +37,7 @@ namespace PMS.API.Controllers
         }
         //[Authorize(Roles = UserRoles.ADMIN)]
         [HttpGet("get-account-list")]
-        public async Task<IActionResult> List(string? keyword)
+        public async Task<IActionResult> AccountListAsync(string? keyword)
         {
             try
             {
@@ -51,7 +51,7 @@ namespace PMS.API.Controllers
         }
         //[Authorize(Roles = UserRoles.ADMIN)]
         [HttpGet("get-account-details")]
-        public async Task<IActionResult> Detail(string userId)
+        public async Task<IActionResult> AccountDetailAsync(string userId)
         {
             var result = await _adminService.GetAccountDetailAsync(userId);
 
@@ -64,7 +64,7 @@ namespace PMS.API.Controllers
         }
         //[Authorize(Roles = UserRoles.ADMIN)]
         [HttpPut("update-staff-account")]
-        public async Task<IActionResult> Update([FromBody] UpdateAccountRequest request)
+        public async Task<IActionResult> UpdateAccountAsync([FromBody] UpdateAccountRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -80,7 +80,7 @@ namespace PMS.API.Controllers
         }
         //[Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("suspend-account")]
-        public async Task<IActionResult> Suspend(string userId)
+        public async Task<IActionResult> SuspendAccountAsync(string userId)
         {
             var result = await _adminService.SuspendAccountAsync(userId);
 
@@ -93,7 +93,7 @@ namespace PMS.API.Controllers
         }
         //[Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("active-account")]
-        public async Task<IActionResult> Active(string userID)
+        public async Task<IActionResult> ActiveAccountAsync(string userID)
         {
             var result = await _adminService.ActiveAccountAsync(userID);
 

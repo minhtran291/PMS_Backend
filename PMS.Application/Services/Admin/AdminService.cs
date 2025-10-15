@@ -214,6 +214,7 @@ namespace PMS.Application.Services.Admin
                 UserStatus = u.UserStatus,
                 CreateAt = u.CreateAt,
                 FullName = u.FullName,
+                Address = u.Address,
                 Gender = u.Gender,
                 EmployeeCode = u.StaffProfile?.EmployeeCode,
                 Role = roleOfUser.TryGetValue(u.Id, out var r) ? r : StaffRole.SalesStaff,
@@ -325,7 +326,7 @@ namespace PMS.Application.Services.Admin
             }
         }
         private static string GenerateEmployeeCode(string role )
-           => $"EMP{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+           => $"{role}{DateTime.UtcNow:yyyyMMddHHmmssfff}";
 
         public async Task <ServiceResult<bool>> ActiveAccountAsync(string userID)
         {
