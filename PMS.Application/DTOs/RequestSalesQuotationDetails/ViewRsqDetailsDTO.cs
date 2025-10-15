@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace PMS.Application.DTOs.RequestSalesQuotationDetails
 {
-    public class CreateRsqDetailsDTO
+    public class ViewRsqDetailsDTO
     {
         public int ProductId { get; set; }
+        public string ProductName { get; set; } = null!;
     }
 }

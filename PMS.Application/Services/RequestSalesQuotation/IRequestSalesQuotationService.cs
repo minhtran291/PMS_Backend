@@ -1,4 +1,6 @@
-﻿using System;
+﻿using PMS.Application.DTOs.RequestSalesQuotation;
+using PMS.Core.Domain.Constant;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +10,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
 {
     public interface IRequestSalesQuotationService
     {
-        Task CreateRequestSalesQuotation();
+        Task<ServiceResult<bool>> CreateRequestSalesQuotation(CreateRsqDTO dto, string? userId);
+        Task<ServiceResult<List<ViewRsqDTO>>> ViewRequestSalesQuotationList(string? userId);
     }
 }
