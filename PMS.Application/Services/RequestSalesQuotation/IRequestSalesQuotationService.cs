@@ -10,8 +10,11 @@ namespace PMS.Application.Services.RequestSalesQuotation
 {
     public interface IRequestSalesQuotationService
     {
-        Task<ServiceResult<bool>> CreateRequestSalesQuotation(CreateRsqDTO dto, string? userId);
-        Task<ServiceResult<List<ViewRsqDTO>>> ViewRequestSalesQuotationList(string? userId);
+        Task<ServiceResult<object>> CreateRequestSalesQuotation(CreateRsqDTO dto, string? customerProfileId);
+        Task<ServiceResult<List<ViewRsqDTO>>> ViewRequestSalesQuotationList(string? customerProfileId);
         Task<ServiceResult<ViewRsqDTO>> ViewRequestSalesQuotationDetails(int rsqId);
+        Task<ServiceResult<object>> UpdateRequestSalesQuotation(UpdateRsqDTO dto, string? customerProfileId);
+        Task<ServiceResult<object>> SendSalesQuotationRequest(string? customerProfileId, int rsqId);
+        Task<ServiceResult<object>> RemoveRequestSalesQuotation(int rsqId);
     }
 }

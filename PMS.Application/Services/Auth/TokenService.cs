@@ -36,6 +36,16 @@ namespace PMS.Application.Services.Auth
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // JWT ID
             };
 
+            if(user.CustomerProfile != null)
+            {
+                authClaims.Add(new Claim("customer_id", user.CustomerProfile.Id.ToString()));
+            }
+
+            if(user.StaffProfile != null)
+            {
+                authClaims.Add(new Claim("staff_id", user.StaffProfile.Id.ToString()));
+            }
+
             foreach (var role in roles)
             {
                 authClaims.Add(new(ClaimTypes.Role, role));
@@ -154,7 +164,7 @@ namespace PMS.Application.Services.Auth
 
             var claims = CreateClaimForAccessToken(user, roles); // tao lai de tao moi ca jti cho an toan
 
-            var newAccessToken = GenerateToken(claims, 1);
+            var newAccessToken = GenerateToken(claims, 5);
 
             var newRefreshToken = GenerateRefreshToken();
 
