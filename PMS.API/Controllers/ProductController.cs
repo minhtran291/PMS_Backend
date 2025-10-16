@@ -63,7 +63,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <returns>List<ProductUpdate></returns>
         [HttpGet("active")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+       // [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetActiveProducts()
         {
             var result = await _productService.GetAllProductsWithStatusAsync();

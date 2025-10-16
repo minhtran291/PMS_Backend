@@ -108,6 +108,7 @@ namespace PMS.Application.Services.Product
                 var products = await _unitOfWork.Product.GetAllAsync();
                 var productList = products.Select(p => new ProductDTO
                 {
+                    ProductID = p.ProductID,
                     ProductName = p.ProductName,
                     ProductDescription = p.ProductDescription,
                     CategoryID = p.CategoryID,
@@ -150,6 +151,7 @@ namespace PMS.Application.Services.Product
                     .Where(p => p.Status == true)
                     .Select(p => new ProductDTO
                     {
+                        ProductID = p.ProductID,
                         ProductName = p.ProductName,
                         ProductDescription = p.ProductDescription,
                         CategoryID = p.CategoryID,
@@ -208,6 +210,7 @@ namespace PMS.Application.Services.Product
 
                 var productUpdate = new ProductDTO
                 {
+                    ProductID = product.ProductID,
                     ProductName = product.ProductName,
                     ProductDescription = product.ProductDescription,
                     Unit = product.Unit,
