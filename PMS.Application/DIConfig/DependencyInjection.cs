@@ -11,8 +11,9 @@ using PMS.Application.Services.Supplier;
 using PMS.Application.Services.User;
 using PMS.Application.Services.Warehouse;
 using PMS.Application.Services.WarehouseLocation;
+using PMS.Application.Services.Notification;
 using PMS.Core.ConfigOptions;
-using PMS.Data.Repositories.Notification;
+using PMS.Application.Services.RequestSalesQuotation;
 
 namespace PMS.Application.DIConfig
 {
@@ -33,13 +34,11 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IProductService, ProductService>();
             services.AddScoped<ICategoryService, CategoryService>();
             services.AddScoped<IWarehouseService, WarehouseService>();
-            //services.AddScoped<PMS.Application.Services.Notification.INotificationSender>();
-            services.AddScoped<PMS.Application.Services.Notification.IUserRoleResolverService,
-                PMS.Application.Services.Notification.UserRoleResolverService> ();
+            services.AddScoped<IUserRoleResolverService, UserRoleResolverService>();
             services.AddScoped<IWarehouseLocationService, WarehouseLocationService>();
-            services.AddScoped<PMS.Application.Services.Notification.INotificationService,
-                PMS.Application.Services.Notification.NotificationService > ();
-}
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IRequestSalesQuotationService, RequestSalesQuotationService>();
+        }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
         {

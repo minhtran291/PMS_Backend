@@ -7,9 +7,10 @@ using System.Threading.Tasks;
 
 namespace PMS.Application.DTOs.RequestSalesQuotation
 {
-    public class CreateRsqDTO
+    public class UpdateRsqDTO
     {
-        //public List<CreateRsqDetailsDTO> RsqDetails { get; set; } = new List<CreateRsqDetailsDTO>();
+        public int RsqId { get; set; }
+        //public List<UpdateRsqDetailsDTO> Product { get; set; } = [];
         public List<int> ProductIdList { get; set; } = [];
     }
 }

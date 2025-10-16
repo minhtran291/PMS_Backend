@@ -20,16 +20,87 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost, Authorize(Roles = UserRoles.CUSTOMER)]
-        [Route("create")]
+        [Route("create-request")]
         public async Task<IActionResult> CreateRequest([FromBody] CreateRsqDTO dto)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var customerId = User.FindFirstValue("customer_id");
 
-            var result = await _requestSalesQuotationService.CreateRequestSalesQuotation(dto, userId);
+            var result = await _requestSalesQuotationService.CreateRequestSalesQuotation(dto, customerId);
 
             return StatusCode(result.StatusCode, new
             {
                 message = result.Message,
+            });
+        }
+
+        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER)]
+        [Route("view-list")]
+        public async Task<IActionResult> ViewRequestList()
+        {
+            var customerId = User.FindFirstValue("customer_id");
+
+            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationList(customerId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER)]
+        [Route("view-details")]
+        public async Task<IActionResult> ViewRequestDetails(int rsqId)
+        {
+            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationDetails(rsqId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data,
+            });
+        }
+
+        [HttpPut, Authorize(Roles = UserRoles.CUSTOMER)]
+        [Route("update-request")]
+        public async Task<IActionResult> UpdateRequest([FromBody]UpdateRsqDTO dto)
+        {
+            var customerId = User.FindFirstValue("customer_id");
+
+            var result = await _requestSalesQuotationService.UpdateRequestSalesQuotation(dto, customerId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data,
+            });
+        }
+
+        [HttpPost, Authorize(Roles = UserRoles.CUSTOMER)]
+        [Route("send-request")]
+        public async Task<IActionResult> SendRequest(int rsqId)
+        {
+            var customerId = User.FindFirstValue("customer_id");
+
+            var result = await _requestSalesQuotationService.SendSalesQuotationRequest(customerId, rsqId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data,
+            });
+        }
+
+        [HttpDelete, Authorize(Roles = UserRoles.CUSTOMER)]
+        [Route("delete-request")]
+        public async Task<IActionResult> DeleteRequest(int rsqId)
+        {
+            var result = await _requestSalesQuotationService.RemoveRequestSalesQuotation(rsqId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data,
             });
         }
     }
