@@ -12,5 +12,6 @@ namespace PMS.Application.Services.RequestSalesQuotation
     {
         Task<ServiceResult<bool>> CreateRequestSalesQuotation(CreateRsqDTO dto, string? userId);
         Task<ServiceResult<List<ViewRsqDTO>>> ViewRequestSalesQuotationList(string? userId);
+        Task<ServiceResult<ViewRsqDTO>> ViewRequestSalesQuotationDetails(int rsqId);
     }
 }

@@ -132,5 +132,43 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 };
             }
         }
+
+        public async Task<ServiceResult<ViewRsqDTO>> ViewRequestSalesQuotationDetails(int rsqId)
+        {
+            try
+            {
+                var requestSalesQuotation = await _unitOfWork.RequestSalesQuotation.Query()
+                    .FirstOrDefaultAsync(r => r.Id == rsqId)
+                    ?? throw new Exception("Khong tim thay request sales quotation id");
+
+                return new ServiceResult<ViewRsqDTO>
+                {
+                    StatusCode = 200,
+                    Message = "",
+                    Data = new ViewRsqDTO
+                    {
+                        Id = requestSalesQuotation.Id,
+                        RequestCode = requestSalesQuotation.RequestCode,
+                        RequestDate = requestSalesQuotation.RequestDate,
+                        Status = requestSalesQuotation.Status,
+                        Details = requestSalesQuotation.RequestSalesQuotationDetails.Select(d => new DTOs.RequestSalesQuotationDetails.ViewRsqDetailsDTO
+                        {
+                            ProductId = d.ProductId,
+                            ProductName = d.Product.ProductName,
+                        }).ToList()
+                    }
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<ViewRsqDTO>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi",
+                    Data = null
+                };
+            }
+        }
     }
 }
