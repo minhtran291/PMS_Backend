@@ -141,6 +141,9 @@ namespace PMS.Application.Services.Admin
                 };
             }
 
+            var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
+            var staffRole = MapToSingleStaffRole(roleNames);
+
             var data = new AccountDetails
             {
                 UserId = user.Id,
@@ -157,7 +160,7 @@ namespace PMS.Application.Services.Admin
                 StaffProfileId = user.StaffProfile?.Id,
                 EmployeeCode = user.StaffProfile?.EmployeeCode,
                 Notes = user.StaffProfile?.Notes,
-                //StaffRole = user.StaffProfile.,
+                StaffRole = staffRole,
                 CustomerProfileId = user.CustomerProfile?.Id,
                 Mst = user.CustomerProfile?.Mst,
                 ImageCnkd = user.CustomerProfile?.ImageCnkd,
@@ -173,6 +176,18 @@ namespace PMS.Application.Services.Admin
             };
         }
 
+        //Get role to account details 
+        private static StaffRole? MapToSingleStaffRole(IList<string> roleNames)
+        {
+            if (roleNames == null || roleNames.Count == 0) return null;
+
+            if (roleNames.Contains(UserRoles.SALES_STAFF)) return StaffRole.SalesStaff;
+            if (roleNames.Contains(UserRoles.PURCHASES_STAFF)) return StaffRole.PurchasesStaff;
+            if (roleNames.Contains(UserRoles.WAREHOUSE_STAFF)) return StaffRole.WarehouseStaff;
+            if (roleNames.Contains(UserRoles.ACCOUNTANT)) return StaffRole.Accountant;
+
+            return null;
+        }
 
         public async Task<List<AccountList>> GetAccountListAsync(string? keyword)
         {
