@@ -1,5 +1,6 @@
 ﻿
 using Microsoft.Extensions.Options;
+using MimeKit;
 using PMS.Core.ConfigOptions;
 using System.Net.Mail;
 
@@ -40,6 +41,54 @@ namespace PMS.Application.Services.ExternalService
             };
             mailMessage.To.Add(toEmail);
             await smtpClient.SendMailAsync(mailMessage);
+        }
+
+        public async Task SendEmailWithAttachmentAsync(string recipientEmail, string subject, string body, byte[] attachmentBytes, string attachmentFileName)
+        {
+            try
+            {
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(_emailConfig.FromName, _emailConfig.FromEmail));
+                message.To.Add(MailboxAddress.Parse(recipientEmail));
+                message.Subject = subject;
+
+                var builder = new BodyBuilder
+                {
+                    TextBody = body
+                };
+
+                //attachment excel
+                if (attachmentBytes != null && attachmentBytes.Length > 0)
+                {
+                    builder.Attachments.Add(
+                        attachmentFileName,
+                        attachmentBytes,
+                        ContentType.Parse("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+                }
+
+                message.Body = builder.ToMessageBody();
+
+                using (var client = new MailKit.Net.Smtp.SmtpClient())
+                {
+                    await client.ConnectAsync(
+                        _emailConfig.Host,
+                        int.Parse(_emailConfig.Port ?? "587"),
+                        MailKit.Security.SecureSocketOptions.StartTls
+                    );
+                    await client.AuthenticateAsync(
+                        _emailConfig.Username,
+                        _emailConfig.Password
+                    );
+                    await client.SendAsync(message);
+                    await client.DisconnectAsync(true);
+                    Console.WriteLine($"[EmailService] Email sent to {recipientEmail}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EmailService] Error sending email: {ex.Message}");
+                throw new Exception($"Gửi email thất bại: {ex.Message}", ex);
+            }
         }
     }
 }

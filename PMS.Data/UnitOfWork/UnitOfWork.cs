@@ -10,6 +10,8 @@ using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
+using PMS.Data.Repositories.PurchasingRequestForQuotationRepository;
+using PMS.Data.Repositories.PurchasingRequestProductRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
 using PMS.Data.Repositories.StaffProfile;
@@ -31,7 +33,11 @@ namespace PMS.Data.UnitOfWork
         IWarehouseLocationRepository warehouseLocation,
         INotificationRepository notification, 
         IRequestSalesQuotationRepository requestSalesQuotation, 
-        IRequestSalesQuotationDetailsRepository requestSalesQuotationDetails) : IUnitOfWork
+        IRequestSalesQuotationDetailsRepository requestSalesQuotationDetails,
+        IPurchasingRequestForQuotationRepository
+        purchasingRequestForQuotation,
+        IPurchasingRequestProductRepository
+        purchasingRequestProduct) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -46,6 +52,8 @@ namespace PMS.Data.UnitOfWork
         public IWarehouseLocationRepository WarehouseLocation { get; private set; } = warehouseLocation;
         public IRequestSalesQuotationRepository RequestSalesQuotation { get; private set; } = requestSalesQuotation;
         public IRequestSalesQuotationDetailsRepository RequestSalesQuotationDetails { get; private set; } = requestSalesQuotationDetails;
+        public IPurchasingRequestForQuotationRepository PurchasingRequestForQuotation { get; private set; } = purchasingRequestForQuotation;
+        public IPurchasingRequestProductRepository PurchasingRequestProduct { get; private set; } = purchasingRequestProduct;
 
         public async Task<int> CommitAsync()
         {

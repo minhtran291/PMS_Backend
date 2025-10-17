@@ -17,5 +17,6 @@ namespace PMS.Core.Domain.Entities
         public SupplierStatus Status { get; set; } 
         public string BankAccountNumber { get; set; } = string.Empty;
         public string MyDebt { get; set; } = string.Empty;
+        public virtual ICollection<PurchasingRequestForQuotation> PurchasingRequestForQuotations { get; set; } = new List<PurchasingRequestForQuotation>();
     }
 }

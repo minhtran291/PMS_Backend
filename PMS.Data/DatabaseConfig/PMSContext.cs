@@ -23,6 +23,8 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<Notification> Notifications { get; set; }
         public virtual DbSet<RequestSalesQuotation> RequestSalesQuotations { get; set; }
         public virtual DbSet<RequestSalesQuotationDetails> RequestSalesQuotationDetails { get; set; }
+        public virtual DbSet<PurchasingRequestForQuotation> PurchasingRequestForQuotations { get; set; }
+        public virtual DbSet<PurchasingRequestProduct> PurchasingRequestProducts { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -330,7 +332,55 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<RequestSalesQuotationDetails>(entity =>
             {
-                entity.HasKey(e => new { e.RequestSalesQuotationId, e.ProductId}); 
+                entity.HasKey(e => new { e.RequestSalesQuotationId, e.ProductId });
+            });
+
+            builder.Entity<PurchasingRequestForQuotation>(entity =>
+            {
+                entity.HasKey(prfq => prfq.PRFQID);
+
+                entity.Property(prfq => prfq.RequestDate)
+                    .IsRequired();
+
+                entity.Property(prfq => prfq.TaxCode)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(prfq => prfq.MyPhone)
+                    .IsRequired()
+                    .HasMaxLength(10);
+
+                entity.Property(prfq => prfq.MyAddress)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.Property(prfq => prfq.Status)
+                    .IsRequired();
+
+                entity.HasOne(prfq => prfq.Supplier)
+                    .WithMany(s => s.PurchasingRequestForQuotations)
+                    .HasForeignKey(prfq => prfq.SupplierID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(prfq => prfq.User)
+                    .WithMany(u => u.PurchasingRequestForQuotations)
+                    .HasForeignKey(prfq => prfq.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<PurchasingRequestProduct>(entity =>
+            {
+                entity.HasKey(prp => prp.PRPID);
+
+                entity.HasOne(prp => prp.PRFQ)
+                    .WithMany(prfq => prfq.PRPS)
+                    .HasForeignKey(prp => prp.PRFQID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(prp => prp.Product)
+                    .WithMany(p => p.PRPS)
+                    .HasForeignKey(prp => prp.ProductID)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }
