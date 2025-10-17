@@ -33,5 +33,7 @@ namespace PMS.Core.Domain.Entities
 
         public virtual Category Category { get; set; } = null!;
         public virtual ICollection<RequestSalesQuotationDetails> RequestSalesQuotationDetails { get; set; } = [];
+
+        public virtual ICollection<PurchasingRequestProduct> PRPS { get; set; } = new List<PurchasingRequestProduct>();
     }
 }

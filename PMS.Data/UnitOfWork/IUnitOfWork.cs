@@ -2,6 +2,8 @@
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
+using PMS.Data.Repositories.PurchasingRequestForQuotationRepository;
+using PMS.Data.Repositories.PurchasingRequestProductRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
 using PMS.Data.Repositories.StaffProfile;
@@ -25,6 +27,8 @@ namespace PMS.Data.UnitOfWork
         IWarehouseLocationRepository WarehouseLocation { get; }
         IRequestSalesQuotationRepository RequestSalesQuotation { get; }
         IRequestSalesQuotationDetailsRepository RequestSalesQuotationDetails { get; }
+        IPurchasingRequestForQuotationRepository PurchasingRequestForQuotation { get; }
+        IPurchasingRequestProductRepository PurchasingRequestProduct { get; }
         Task<int> CommitAsync();
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
