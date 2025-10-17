@@ -80,11 +80,11 @@ namespace PMS.Application.Services.User
             if (!createResult.Succeeded)
             {
                 var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-                _logger.LogError("Tao nguoi dung that bai: {Errors}", errors);
+                _logger.LogError("Tạo tài khoản thất bại: {Errors}", errors);
                 return new ServiceResult<bool>
                 {
                     StatusCode = 500,
-                    Message = "có lỗi xảy ra",
+                    Message = "Có lỗi xảy ra",
                     Data = false
                 };
             }
@@ -99,11 +99,11 @@ namespace PMS.Application.Services.User
             if (!roleResult.Succeeded)
             {
                 var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
-                _logger.LogError("Gan role that bai: {Errors}", errors);
+                _logger.LogError("Gán role thất bại: {Errors}", errors);
                 return new ServiceResult<bool>
                 {
                     StatusCode = 500,
-                    Message = "có lỗi xảy ra",
+                    Message = "Có lỗi xảy ra",
                     Data = false
                 };
             }
@@ -111,7 +111,7 @@ namespace PMS.Application.Services.User
             await _unitOfWork.CommitAsync();
 
             await SendEmailConfirmAsync(user);
-            _logger.LogInformation("Gui email xac nhan cho email: {Email}", user.Email);
+            _logger.LogInformation("Gửi email xác nhận thành công: {Email}", user.Email);
             return new ServiceResult<bool>
             {
                 StatusCode = 200,
@@ -143,7 +143,7 @@ namespace PMS.Application.Services.User
                 return new ServiceResult<bool>
                 {
                     StatusCode = 404,
-                    Message = "sai email",
+                    Message = "Sai email",
                     Data = false
                 };
             }
@@ -157,7 +157,7 @@ namespace PMS.Application.Services.User
             return new ServiceResult<bool>
             {
                 StatusCode = 200,
-                Message = "thành công vui lòng kiểm tra email",
+                Message = "Thành công, vui lòng kiểm tra email",
                 Data = true
             };
         }
@@ -180,7 +180,7 @@ namespace PMS.Application.Services.User
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
-                    Message = "Tài khoản đã được xác nhận trước đó",
+                    Message = "Tài khoản đã được xác nhận thành công",
                     Data = false
                 };
 
@@ -254,7 +254,7 @@ namespace PMS.Application.Services.User
 
             if (user == null)
             {
-                _logger.LogWarning("Khong tim thay user id cua nguoi dung");
+                _logger.LogWarning("Không tìm thấy user id của người dùng");
                 return new ServiceResult<bool>
                 {
                     StatusCode = 404,
@@ -268,11 +268,11 @@ namespace PMS.Application.Services.User
             if (!result.Succeeded)
             {
                 var errors = string.Join("; ", result.Errors.Select(e => e.Description));
-                _logger.LogWarning("Dat lai mat khau loi: {Erros}", errors);
+                _logger.LogWarning("Đặt lại mật khẩu lỗi: {Erros}", errors);
                 return new ServiceResult<bool>
                 {
                     StatusCode = 500,
-                    Message = "đặt lại mật khẩu thất bại",
+                    Message = "Đặt lại mật khẩu thất bại",
                     Data = false
                 };
             }
@@ -283,7 +283,7 @@ namespace PMS.Application.Services.User
             return new ServiceResult<bool>
             {
                 StatusCode = 200,
-                Message = "thành công",
+                Message = "Đặt lại mật khẩu thành công",
                 Data = true
             };
         }
@@ -300,7 +300,7 @@ namespace PMS.Application.Services.User
                     return new ServiceResult<bool>
                     {
                         Data = false,
-                        Message = "không tìm thấy userId hoặc đã bị khóa",
+                        Message = "Không tìm thấy userId hoặc đã bị khóa",
                         StatusCode = 200,
                     };
                 }
@@ -393,13 +393,13 @@ namespace PMS.Application.Services.User
                 senderId: managerId,
                 userId,
                 title: "Thông báo duyệt tài khoản",
-                message: $"tài khoản đã cập nhật ",
+                message: $"Tài khoản đã cập nhật ",
                 type: NotificationType.System);
 
             return new ServiceResult<bool>
             {
                 Data = true,
-                Message = "cập nhật thành công",
+                Message = "Cập nhật thành công",
                 StatusCode = 200,
             };  
         }
