@@ -5,6 +5,7 @@ namespace PMS.Application.DTOs.Product
 {
     public class ProductDTO
     {
+        public int ProductID { get; set; }
         [Required(ErrorMessage = "Tên của sản phẩm là bắt buộc")]
         [StringLength(100, MinimumLength = 10, ErrorMessage = "Tên sản phẩm phải từ 10 đến 100 ký tự")]
         public required string ProductName { get; set; }

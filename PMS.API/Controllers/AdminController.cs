@@ -50,6 +50,12 @@ namespace PMS.API.Controllers
             }
         }
         //[Authorize(Roles = UserRoles.ADMIN)]
+        /// <summary>
+        /// https://localhost:7213/api/Admin/get-account-details
+        /// get ....
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
         [HttpGet("get-account-details")]
         public async Task<IActionResult> AccountDetailAsync(string userId)
         {

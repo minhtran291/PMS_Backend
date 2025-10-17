@@ -1,5 +1,6 @@
 
 using Microsoft.OpenApi.Models;
+using OfficeOpenXml;
 using PMS.API.DIConfig;
 using PMS.Application.DIConfig;
 using PMS.Application.Filters;
@@ -13,7 +14,7 @@ namespace PMS.API
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
+            ExcelPackage.License.SetNonCommercialPersonal("hoanganh");
             // Add services to the container.
 
             // DbContext

@@ -108,6 +108,7 @@ namespace PMS.Application.Services.Product
                 var products = await _unitOfWork.Product.GetAllAsync();
                 var productList = products.Select(p => new ProductDTO
                 {
+                    ProductID = p.ProductID,
                     ProductName = p.ProductName,
                     ProductDescription = p.ProductDescription,
                     CategoryID = p.CategoryID,
@@ -150,6 +151,7 @@ namespace PMS.Application.Services.Product
                     .Where(p => p.Status == true)
                     .Select(p => new ProductDTO
                     {
+                        ProductID = p.ProductID,
                         ProductName = p.ProductName,
                         ProductDescription = p.ProductDescription,
                         CategoryID = p.CategoryID,
@@ -208,6 +210,7 @@ namespace PMS.Application.Services.Product
 
                 var productUpdate = new ProductDTO
                 {
+                    ProductID = product.ProductID,
                     ProductName = product.ProductName,
                     ProductDescription = product.ProductDescription,
                     Unit = product.Unit,
@@ -256,7 +259,6 @@ namespace PMS.Application.Services.Product
                     };
                 }
 
-
                 var product = await _unitOfWork.Product.Query().FirstOrDefaultAsync(p => p.ProductID == productId);
                 if (product == null)
                 {
@@ -267,7 +269,6 @@ namespace PMS.Application.Services.Product
                         Data = false
                     };
                 }
-
 
                 product.Status = status;
 

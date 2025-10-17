@@ -55,6 +55,16 @@ namespace PMS.Application.Services.User
                     Data = false
                 };
 
+            var validateUsername = await _unitOfWork.Users.UserManager.FindByNameAsync(customer.UserName.ToLower());
+
+            if(validateUsername != null)
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Tên đăng nhập đã tồn tại",
+                    Data = false
+                };
+
             var user = new Core.Domain.Identity.User
             {
                 UserName = customer.UserName,
@@ -327,7 +337,6 @@ namespace PMS.Application.Services.User
             }
 
         }
-
 
         public async Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus()
         {

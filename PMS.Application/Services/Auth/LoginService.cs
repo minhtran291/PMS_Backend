@@ -4,6 +4,8 @@ using PMS.Application.DTOs.Auth;
 using PMS.Data.UnitOfWork;
 using PMS.Application.Services.Base;
 using Microsoft.Extensions.Logging;
+using PMS.Core.Domain.Constant;
+using Microsoft.EntityFrameworkCore;
 
 namespace PMS.Application.Services.Auth
 {
@@ -19,7 +21,9 @@ namespace PMS.Application.Services.Auth
 
         public async Task<TokenResponse> Login(LoginRequest request)
         {
-            var account = await _unitOfWork.Users.UserManager.FindByEmailAsync(request.UsernameOrEmail);
+            var account = (request.UsernameOrEmail!.Contains('@'))
+                ? await _unitOfWork.Users.UserManager.FindByEmailAsync(request.UsernameOrEmail)
+                : await _unitOfWork.Users.UserManager.FindByNameAsync(request.UsernameOrEmail);
 
             if (account == null)
             {
@@ -49,8 +53,28 @@ namespace PMS.Application.Services.Auth
                 throw new Exception("Có lỗi xảy ra");
             }
 
+            if (roles.Contains(UserRoles.CUSTOMER))
+            {
+                account = await _unitOfWork.Users
+                    .Query()
+                    .Include(u => u.CustomerProfile)
+                    .FirstOrDefaultAsync(u => u.Id == account.Id);
+            }
+
+            if (roles.Any(r =>
+                r == UserRoles.SALES_STAFF ||
+                r == UserRoles.PURCHASES_STAFF ||
+                r == UserRoles.WAREHOUSE_STAFF ||
+                r == UserRoles.ACCOUNTANT))
+            {
+                account = await _unitOfWork.Users
+                    .Query()
+                    .Include(a => a.StaffProfile)
+                    .FirstOrDefaultAsync(u => u.Id == account.Id);
+            }
+
             var authClaims = _tokenService.CreateClaimForAccessToken(account, roles);
-            var accessToken = _tokenService.GenerateToken(authClaims, 1);
+            var accessToken = _tokenService.GenerateToken(authClaims, 5);
             var newRefreshToken = _tokenService.GenerateRefreshToken();
 
             account.RefreshToken = newRefreshToken;

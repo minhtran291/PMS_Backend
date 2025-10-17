@@ -20,5 +20,6 @@ namespace PMS.Core.Domain.Identity
 
         public virtual ICollection<Notification> SentNotifications { get; set; } = new List<Notification>();
         public virtual ICollection<Notification> ReceivedNotifications { get; set; } = new List<Notification>();
+        public virtual ICollection<PurchasingRequestForQuotation> PurchasingRequestForQuotations { get; set; } = new List<PurchasingRequestForQuotation>();
     }
 }

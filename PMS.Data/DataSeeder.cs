@@ -39,18 +39,18 @@ namespace PMS.Data
                     NormalizedUserName = "ADMIN",
                     UserStatus = Core.Domain.Enums.UserStatus.Active,
                     FullName = "PMS Admin",
-                    PhoneNumber = "0912345987",
                     Avatar = "/images/AvatarDefault.png",
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456789",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
                 };
 
                 user.PasswordHash = passwordHasher.HashPassword(user, "Pmsadmin!");
-                _ = await context.Users.AddAsync(user);
+                await context.Users.AddAsync(user);
                 await context.SaveChangesAsync();
 
                 var adminRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.ADMIN);
@@ -75,18 +75,18 @@ namespace PMS.Data
                     NormalizedUserName = "MANAGER",
                     UserStatus = Core.Domain.Enums.UserStatus.Active,
                     FullName = "PMS MANAGER",
-                    PhoneNumber = "0912312309",
                     Avatar = "/images/AvatarDefault.png",
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456788",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
                 };
 
                 manager.PasswordHash = passwordHasher.HashPassword(manager, "Pmsmanager!");
-                _ = await context.Users.AddAsync(manager);
+                await context.Users.AddAsync(manager);
                 await context.SaveChangesAsync();
 
                 var managerRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.MANAGER);
@@ -111,18 +111,18 @@ namespace PMS.Data
                     NormalizedUserName = "SALES",
                     UserStatus = Core.Domain.Enums.UserStatus.Active,
                     FullName = "PMS SALES",
-                    PhoneNumber = "0912345912",
                     Avatar = "/images/AvatarDefault.png",
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456787",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
                 };
 
                 salesStaff.PasswordHash = passwordHasher.HashPassword(salesStaff, "Pmssales!");
-                _ = await context.Users.AddAsync(salesStaff);
+                await context.Users.AddAsync(salesStaff);
                 await context.SaveChangesAsync();
 
                 var salesRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.SALES_STAFF);
@@ -137,6 +137,15 @@ namespace PMS.Data
                 }
                 await context.SaveChangesAsync();
 
+                var salesProfile = new StaffProfile
+                {
+                    UserId = salesStaff.Id,
+                    EmployeeCode = "SALE-001"
+                };
+
+                await context.StaffProfiles.AddAsync(salesProfile);
+                await context.SaveChangesAsync();
+
                 // purchases staff
                 var purchasesStaff = new User
                 {
@@ -147,18 +156,18 @@ namespace PMS.Data
                     NormalizedUserName = "PURCHASES",
                     UserStatus = Core.Domain.Enums.UserStatus.Active,
                     FullName = "PMS PURCHASES",
-                    PhoneNumber = "0912345923",
                     Avatar = "/images/AvatarDefault.png",
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456786",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
                 };
 
                 purchasesStaff.PasswordHash = passwordHasher.HashPassword(purchasesStaff, "Pmspurchases!");
-                _ = await context.Users.AddAsync(purchasesStaff);
+                await context.Users.AddAsync(purchasesStaff);
                 await context.SaveChangesAsync();
 
                 var purchasesRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.PURCHASES_STAFF);
@@ -173,6 +182,15 @@ namespace PMS.Data
                 }
                 await context.SaveChangesAsync();
 
+                var purchasesProfile = new StaffProfile
+                {
+                    UserId = purchasesStaff.Id,
+                    EmployeeCode = "PURCHASE-001"
+                };
+
+                await context.StaffProfiles.AddAsync(purchasesProfile);
+                await context.SaveChangesAsync();
+
                 // warehouse staff
                 var warehouseStaff = new User
                 {
@@ -183,18 +201,18 @@ namespace PMS.Data
                     NormalizedUserName = "WAREHOUSE",
                     UserStatus = Core.Domain.Enums.UserStatus.Active,
                     FullName = "PMS WAREHOUSE",
-                    PhoneNumber = "0912345934",
                     Avatar = "/images/AvatarDefault.png",
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456785",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
                 };
 
                 warehouseStaff.PasswordHash = passwordHasher.HashPassword(warehouseStaff, "Pmswarehouse!");
-                _ = await context.Users.AddAsync(warehouseStaff);
+                await context.Users.AddAsync(warehouseStaff);
                 await context.SaveChangesAsync();
 
                 var warehouseRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.WAREHOUSE_STAFF);
@@ -209,6 +227,15 @@ namespace PMS.Data
                 }
                 await context.SaveChangesAsync();
 
+                var warehouseProfile = new StaffProfile
+                {
+                    UserId = warehouseStaff.Id,
+                    EmployeeCode = "WAREHOUSE-001"
+                };
+
+                await context.StaffProfiles.AddAsync(warehouseProfile);
+                await context.SaveChangesAsync();
+
                 // accountant staff
                 var accountant = new User
                 {
@@ -219,18 +246,18 @@ namespace PMS.Data
                     NormalizedUserName = "ACCOUNTANT",
                     UserStatus = Core.Domain.Enums.UserStatus.Active,
                     FullName = "PMS ACCOUNTANT",
-                    PhoneNumber = "0912345945",
                     Avatar = "/images/AvatarDefault.png",
                     Address = "Ha Noi",
                     Gender = true,
                     EmailConfirmed = true,
+                    PhoneNumber = "0123456784",
                     SecurityStamp = Guid.NewGuid().ToString(),
                     LockoutEnabled = false,
                     CreateAt = DateTime.Now
                 };
 
                 accountant.PasswordHash = passwordHasher.HashPassword(accountant, "Pmsaccountant!");
-                _ = await context.Users.AddAsync(accountant);
+                await context.Users.AddAsync(accountant);
                 await context.SaveChangesAsync();
 
                 var accountantRole = await context.Roles.FirstOrDefaultAsync(r => r.Name == UserRoles.ACCOUNTANT);
@@ -243,6 +270,15 @@ namespace PMS.Data
                         UserId = accountant.Id,
                     });
                 }
+                await context.SaveChangesAsync();
+
+                var accountantProfile = new StaffProfile
+                {
+                    UserId = accountant.Id,
+                    EmployeeCode = "ACCOUNTANT-001"
+                };
+
+                await context.StaffProfiles.AddAsync(accountantProfile);
                 await context.SaveChangesAsync();
             }
 

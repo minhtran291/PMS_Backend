@@ -24,7 +24,8 @@ namespace PMS.API.Controllers
         [HttpPost("send")]
         public async Task<IActionResult> SendNotification([FromBody] SendNotificationRequest request)
         {
-
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))

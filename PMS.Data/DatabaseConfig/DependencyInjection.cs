@@ -12,6 +12,8 @@ using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
+using PMS.Data.Repositories.PurchasingRequestForQuotationRepository;
+using PMS.Data.Repositories.PurchasingRequestProductRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
 using PMS.Data.Repositories.StaffProfile;
@@ -39,14 +41,23 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<ICustomerProfileRepository, CustomerProfileRepository>();
             services.AddScoped<IStaffProfileRepository, StaffProfileRepository>();
             services.AddScoped<ISupplierRepository, SupplierRepository>();
+            //
             services.AddScoped<IWarehouseRepository, WarehouseRepository>();
             services.AddScoped<IWarehouseLocationRepository, WarehouseLocationRepository>();
+            //
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
+            //
             services.AddScoped<INotificationRepository, NotificationRepository>();
+            //
             services.AddScoped<IRequestSalesQuotationRepository, RequestSalesQuotationRepository>();
             services.AddScoped<IRequestSalesQuotationDetailsRepository, RequestSalesQuotationDetailsRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
+            //
+            services.AddScoped<IPurchasingRequestForQuotationRepository,
+            PurchasingRequestForQuotationRepository>();
+            services.AddScoped<IPurchasingRequestProductRepository,
+            PurchasingRequestProductRepository>();
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)

@@ -143,6 +143,9 @@ namespace PMS.Application.Services.Admin
             var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
             var staffRole = MapToSingleStaffRole(roleNames);
 
+            var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
+            var staffRole = MapToSingleStaffRole(roleNames);
+
             var data = new AccountDetails
             {
                 UserId = user.Id,
