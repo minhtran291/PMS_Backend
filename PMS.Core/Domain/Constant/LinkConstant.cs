@@ -26,6 +26,17 @@ namespace PMS.Core.Domain.Constant
                 return fe;
             }
 
+            // Nếu là link đặt lại mật khẩu -> điều hướng tới FE route /reset-password
+            if (controller == "User" && path == "reset-password")
+            {
+                var fe = new UriBuilder(frontendBaseUri)
+                {
+                    Path = "reset-password",
+                    Query = $"userId={userId}&token={Uri.EscapeDataString(token)}"
+                };
+                return fe;
+            }
+
             // Mặc định: trỏ tới BE API (giữ nguyên hành vi cũ cho các luồng khác như reset-password)
             var be = new UriBuilder(backendBaseUri)
             {
