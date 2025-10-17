@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.Auth;
@@ -57,7 +58,7 @@ namespace PMS.Application.Services.User
 
             var validateUsername = await _unitOfWork.Users.UserManager.FindByNameAsync(customer.UserName.ToLower());
 
-            if(validateUsername != null)
+            if (validateUsername != null)
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
@@ -377,7 +378,7 @@ namespace PMS.Application.Services.User
             }
         }
 
-        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId,string managerId)
+        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string managerId)
         {
             var exuser = await _unitOfWork.Users.Query()
                     .Include(u => u.CustomerProfile).FirstOrDefaultAsync(u => u.Id == userId);
@@ -401,7 +402,7 @@ namespace PMS.Application.Services.User
                 Data = true,
                 Message = "Cập nhật thành công",
                 StatusCode = 200,
-            };  
+            };
         }
 
         public async Task<ServiceResult<CustomerViewDTO>> GetCustomerByIdAsync(string userId)
@@ -448,6 +449,47 @@ namespace PMS.Application.Services.User
             };
         }
 
+        public async Task<ServiceResult<bool>> ChangePasswordAsync(string userId, string oldPassword, string newPassword)
+        {
+            try
+            {
+                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        Data = false,
+                        Message = $"Không tìm thấy người dùng với ID: {userId}",
+                        StatusCode = 404
+                    };
+                }
 
+
+                var result = await _unitOfWork.Users.UserManager.ChangePasswordAsync(user, oldPassword, newPassword);
+                if (!result.Succeeded)
+                {
+
+                    var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                    return new ServiceResult<bool>
+                    {
+                        Data = false,
+                        Message = $"Đổi mật khẩu thất bại: {errors}",
+                        StatusCode = 400
+                    };
+                }
+
+                return new ServiceResult<bool>
+                {
+                    Data = true,
+                    Message = "Đổi mật khẩu thành công.",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error changing password: {ex.Message}", ex);
+            }
+        }
     }
 }
+
