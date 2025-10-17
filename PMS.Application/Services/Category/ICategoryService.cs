@@ -8,5 +8,6 @@ namespace PMS.Application.Services.Category
         Task<ServiceResult<CategoryDTO>> GetByIdAsync(int id);
         Task<ServiceResult<IEnumerable<CategoryDTO>>> GetAllAsync();
         Task <ServiceResult<bool>> AddAsync(CategoryDTO category);
+        Task <ServiceResult<bool>> UpdateCategoryAsync(CategoryDTO category);
     }
 }

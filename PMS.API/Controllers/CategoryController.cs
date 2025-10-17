@@ -9,7 +9,7 @@ namespace PMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CategoryController : ControllerBase
+    public class CategoryController : BaseController
     {
         private readonly ICategoryService _categoryService;
 
@@ -58,7 +58,7 @@ namespace PMS.API.Controllers
         /// Lấy thể loại theo ID
         /// </summary>
         [HttpGet("getbyid/{id}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+       // [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetCategory(int id)
         {
             var result = await _categoryService.GetByIdAsync(id);
@@ -69,5 +69,42 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
+
+        /// <summary>
+        /// https://localhost:7213/api/Category/updatecategory
+        /// Cập nhật thông tin danh mục sản phẩm
+        /// </summary>
+        [HttpPut("updatecategory")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> UpdateCategoryAsync([FromBody] CategoryDTO category)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var result = await _categoryService.UpdateCategoryAsync(category);
+                return HandleServiceResult(result); 
+            }
+            catch (ArgumentException ex)
+            {
+                return HandleServiceResult(new ServiceResult<bool>
+                {
+                    Data = false,
+                    Message = ex.Message,
+                    StatusCode = 400
+                });
+            }
+            catch (Exception ex)
+            {
+                return HandleServiceResult(new ServiceResult<bool>
+                {
+                    Data = false,
+                    Message = $"Đã xảy ra lỗi hệ thống khi cập nhật danh mục: {ex.Message}",
+                    StatusCode = 500
+                });
+            }
+        }
+
     }
 }
