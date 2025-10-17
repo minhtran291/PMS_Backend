@@ -138,7 +138,9 @@ namespace PMS.Application.Services.User
 
         public async Task<ServiceResult<bool>> ReSendEmailConfirmAsync(ResendConfirmEmailRequest request)
         {
-            var user = await _unitOfWork.Users.UserManager.FindByEmailAsync(request.EmailOrUsername);
+            var user = (request.EmailOrUsername!.Contains('@'))
+                ? await _unitOfWork.Users.UserManager.FindByEmailAsync(request.EmailOrUsername)
+                : await _unitOfWork.Users.UserManager.FindByNameAsync(request.EmailOrUsername);
             if (user == null)
             {
                 return new ServiceResult<bool>
