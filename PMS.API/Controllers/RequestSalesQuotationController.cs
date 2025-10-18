@@ -33,13 +33,15 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER)]
+        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
         [Route("view-list")]
         public async Task<IActionResult> ViewRequestList()
         {
             var customerId = User.FindFirstValue("customer_id");
 
-            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationList(customerId);
+            var staffId = User.FindFirstValue("staff_id");
+
+            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationList(customerId, staffId);
 
             return StatusCode(result.StatusCode, new
             {
@@ -48,11 +50,15 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER)]
+        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
         [Route("view-details")]
         public async Task<IActionResult> ViewRequestDetails(int rsqId)
         {
-            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationDetails(rsqId);
+            var customerId = User.FindFirstValue("customer_id");
+
+            var staffId = User.FindFirstValue("staff_id");
+
+            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationDetails(rsqId, customerId, staffId);
 
             return StatusCode(result.StatusCode, new
             {
@@ -95,7 +101,9 @@ namespace PMS.API.Controllers
         [Route("delete-request")]
         public async Task<IActionResult> DeleteRequest(int rsqId)
         {
-            var result = await _requestSalesQuotationService.RemoveRequestSalesQuotation(rsqId);
+            var customerId = User.FindFirstValue("customer_id");
+
+            var result = await _requestSalesQuotationService.RemoveRequestSalesQuotation(rsqId, customerId);
 
             return StatusCode(result.StatusCode, new
             {

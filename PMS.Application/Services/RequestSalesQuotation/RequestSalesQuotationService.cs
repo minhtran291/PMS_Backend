@@ -6,8 +6,8 @@ using PMS.Application.Services.Base;
 using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
-using PMS.Core.Domain.Identity;
 using PMS.Data.UnitOfWork;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace PMS.Application.Services.RequestSalesQuotation
 {
@@ -23,42 +23,13 @@ namespace PMS.Application.Services.RequestSalesQuotation
         {
             try
             {
-                if (!int.TryParse(customerProfileId, out int profileId))
-                {
-                    throw new Exception("CustomerProfileId khong hop le");
-                }
-
-                var profile = await _unitOfWork.CustomerProfile.Query().FirstOrDefaultAsync(cp => cp.Id == profileId)
-                    ?? throw new Exception("Customer chua co profile");
-
-                if (profile.Mst == null || profile.ImageCnkd == null || profile.ImageByt == null || profile.Mshkd == null)
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Bạn chưa đủ điều kiện để yêu cầu báo giá. Vui lòng cập nhật lại hồ sơ.",
-                        Data = null
-                    };
-
-                if (dto.ProductIdList == null || dto.ProductIdList.Count == 0)
-                {
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Bạn phải chọn ít nhất một sản phẩm",
-                        Data = null
-                    };
-                }
+                var profile = await ValidateCustomerProfile(customerProfileId);
 
                 var productIds = dto.ProductIdList;
-                if (productIds.Count != productIds.Distinct().Count())
-                {
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Danh sách sản phẩm có sản phẩm bị trùng",
-                        Data = null
-                    };
-                }
+
+                var checkList = await ValidateProductId(productIds);
+
+                if (checkList != null) return checkList;
 
                 await _unitOfWork.BeginTransactionAsync();
 
@@ -91,7 +62,6 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     StatusCode = 201,
                     Message = "Tạo yêu cầu báo giá thành công",
-                    Data = null
                 };
             }
             catch (Exception ex)
@@ -102,7 +72,6 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     StatusCode = 500,
                     Message = "Tạo yêu cầu báo giá thất bại",
-                    Data = null
                 };
             }
         }
@@ -110,32 +79,35 @@ namespace PMS.Application.Services.RequestSalesQuotation
         private static string GenerateRequestCode()
         {
             var datePart = DateTime.Now.ToString("yyyyMMdd");
-            var randomPart = Guid.NewGuid().ToString("N").Substring(0, 4).ToUpper();
+            var randomPart = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
             return $"RSQ-{datePart}-{randomPart}";
         }
 
-        public async Task<ServiceResult<List<ViewRsqDTO>>> ViewRequestSalesQuotationList(string? customerProfileId)
+        public async Task<ServiceResult<List<ViewRsqDTO>>> ViewRequestSalesQuotationList(string? customerProfileId, string? staffProfileId)
         {
             try
             {
-                if (!int.TryParse(customerProfileId, out int profileId))
+                var (Customer, Staff) = await GetUserProifleAsync(customerProfileId, staffProfileId);
+
+                var query = _unitOfWork.RequestSalesQuotation.Query();
+
+                if (Customer != null)
                 {
-                    throw new Exception("CustomerProfileId khong hop le");
+                    query = query.Where(r => r.CustomerId == Customer.Id);
+                }
+                else if (Staff != null)
+                {
+                    query = query.Where(r => r.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Sent);
                 }
 
-                var profile = await _unitOfWork.CustomerProfile.Query().FirstOrDefaultAsync(cp => cp.Id == profileId)
-                    ?? throw new Exception("Customer chua co profile");
+                var list = await query.Select(r => new ViewRsqDTO
+                {
+                    Id = r.Id,
+                    RequestCode = r.RequestCode,
+                    RequestDate = r.RequestDate,
+                    Status = r.Status,
+                }).ToListAsync();
 
-                var list = await _unitOfWork.RequestSalesQuotation.Query()
-                    .Where(r => r.CustomerId == profile.Id)
-                    .Select(r => new ViewRsqDTO
-                    {
-                        Id = r.Id,
-                        RequestCode = r.RequestCode,
-                        RequestDate = r.RequestDate,
-                        Status = r.Status,
-                    })
-                    .ToListAsync();
 
                 return new ServiceResult<List<ViewRsqDTO>>
                 {
@@ -151,30 +123,36 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     StatusCode = 500,
                     Message = "Lỗi",
-                    Data = null
                 };
             }
         }
 
-        public async Task<ServiceResult<ViewRsqDTO>> ViewRequestSalesQuotationDetails(int rsqId)
+        public async Task<ServiceResult<object>> ViewRequestSalesQuotationDetails(int rsqId, string? customerProfileId, string? staffProfileId)
         {
             try
             {
-                var requestSalesQuotation = await _unitOfWork.RequestSalesQuotation.Query()
-                    .FirstOrDefaultAsync(r => r.Id == rsqId)
-                    ?? throw new Exception("Khong tim thay request sales quotation id");
+                var (Customer, Staff) = await GetUserProifleAsync(customerProfileId, staffProfileId);
 
-                return new ServiceResult<ViewRsqDTO>
+                var rsq = await _unitOfWork.RequestSalesQuotation.Query()
+                    .Include(r => r.RequestSalesQuotationDetails)
+                        .ThenInclude(d => d.Product)
+                    .FirstOrDefaultAsync(r => r.Id == rsqId);
+
+                var validateRsq = ValidateRsqDetails(rsq, Customer, Staff);
+
+                if (validateRsq != null) return validateRsq;
+
+                return new ServiceResult<object>
                 {
                     StatusCode = 200,
                     Message = "",
                     Data = new ViewRsqDTO
                     {
-                        Id = requestSalesQuotation.Id,
-                        RequestCode = requestSalesQuotation.RequestCode,
-                        RequestDate = requestSalesQuotation.RequestDate,
-                        Status = requestSalesQuotation.Status,
-                        Details = requestSalesQuotation.RequestSalesQuotationDetails.Select(d => new DTOs.RequestSalesQuotationDetails.ViewRsqDetailsDTO
+                        Id = rsq.Id,
+                        RequestCode = rsq.RequestCode,
+                        RequestDate = rsq.RequestDate,
+                        Status = rsq.Status,
+                        Details = rsq.RequestSalesQuotationDetails.Select(d => new DTOs.RequestSalesQuotationDetails.ViewRsqDetailsDTO
                         {
                             ProductId = d.ProductId,
                             ProductName = d.Product.ProductName,
@@ -185,11 +163,10 @@ namespace PMS.Application.Services.RequestSalesQuotation
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Loi");
-                return new ServiceResult<ViewRsqDTO>
+                return new ServiceResult<object>
                 {
                     StatusCode = 500,
                     Message = "Lỗi",
-                    Data = null
                 };
             }
         }
@@ -198,58 +175,23 @@ namespace PMS.Application.Services.RequestSalesQuotation
         {
             try
             {
-                if (!int.TryParse(customerProfileId, out int profileId))
-                {
-                    throw new Exception("CustomerProfileId khong hop le");
-                }
-
-                var profile = await _unitOfWork.CustomerProfile.Query().FirstOrDefaultAsync(cp => cp.Id == profileId)
-                    ?? throw new Exception("Customer chua co profile");
-
-                if (profile.Mst == null || profile.ImageCnkd == null || profile.ImageByt == null || profile.Mshkd == null)
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Bạn chưa đủ điều kiện để yêu cầu báo giá. Vui lòng cập nhật lại hồ sơ.",
-                        Data = null
-                    };
-
-                if (dto.ProductIdList == null || dto.ProductIdList.Count == 0)
-                {
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Bạn phải chọn ít nhất một sản phẩm",
-                        Data = null
-                    };
-                }
-
-                var productIds = dto.ProductIdList;
-                if (productIds.Count != productIds.Distinct().Count())
-                {
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Danh sách sản phẩm có sản phẩm bị trùng",
-                        Data = null
-                    };
-                }
+                var profile = await ValidateCustomerProfile(customerProfileId);
 
                 var rsq = await _unitOfWork.RequestSalesQuotation.Query()
-                    .FirstOrDefaultAsync(r => r.Id == dto.RsqId)
-                    ?? throw new Exception("Loi khong tim thay request sales quotation id");
+                    .Include(r => r.RequestSalesQuotationDetails)
+                    .FirstOrDefaultAsync(r => r.Id == dto.RsqId);
 
-                if (rsq.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Sent)
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 200,
-                        Message = "Yêu cầu báo giá đã gửi không thể cập nhật",
-                        Data = null
-                    };
+                var validateRsq = ValidateRsq(rsq, profile, "Yêu cầu báo giá đã gửi không thể sửa");
 
-                var existingDetails = rsq.RequestSalesQuotationDetails.ToList();
+                if (validateRsq != null) return validateRsq;
 
                 var newDetails = dto.ProductIdList;
+
+                var checkList = await ValidateProductId(newDetails);
+
+                if (checkList != null) return checkList;
+
+                var existingDetails = rsq.RequestSalesQuotationDetails.ToList();
 
                 var toAdd = newDetails
                     .Where(nd => !existingDetails.Any(ed => ed.ProductId == nd))
@@ -276,7 +218,6 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     StatusCode = 200,
                     Message = "Cập nhật thành công",
-                    Data = null
                 };
             }
             catch (Exception ex)
@@ -286,7 +227,6 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     StatusCode = 500,
                     Message = "Lỗi",
-                    Data = null
                 };
             }
         }
@@ -295,25 +235,24 @@ namespace PMS.Application.Services.RequestSalesQuotation
         {
             try
             {
-                if (!int.TryParse(customerProfileId, out int profileId))
-                {
-                    throw new Exception("CustomerProfileId khong hop le");
-                }
+                var profile = await ValidateCustomerProfile(customerProfileId);
 
-                var profile = await _unitOfWork.CustomerProfile.Query().FirstOrDefaultAsync(cp => cp.Id == profileId)
-                    ?? throw new Exception("Customer chua co profile");
+                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(profile.UserId)
+                    ?? throw new Exception("User id khong ton tai");
 
                 if (profile.Mst == null || profile.ImageCnkd == null || profile.ImageByt == null || profile.Mshkd == null)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
                         Message = "Bạn chưa đủ điều kiện để yêu cầu báo giá. Vui lòng cập nhật lại hồ sơ.",
-                        Data = null
                     };
 
                 var rsq = await _unitOfWork.RequestSalesQuotation.Query()
-                    .FirstOrDefaultAsync(r => r.Id == rsqId)
-                    ?? throw new Exception("Khong tim thay request sales quotation id");
+                    .FirstOrDefaultAsync(r => r.Id == rsqId);
+
+                var validateRsq = ValidateRsq(rsq, profile, "Yêu cầu báo giá đã gửi");
+
+                if (validateRsq != null) return validateRsq;
 
                 rsq.Status = Core.Domain.Enums.RequestSalesQuotationStatus.Sent;
 
@@ -321,7 +260,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 await _unitOfWork.CommitAsync();
 
                 await _notificationService.SendNotificationToRolesAsync(
-                    profile.User.Id,
+                    user.Id,
                     ["SALES_STAFF"],
                     "Yêu cầu báo giá",
                     "Bạn nhận được 1 yêu cầu báo giá mới từ khách hàng",
@@ -332,7 +271,6 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     StatusCode = 200,
                     Message = "Đã gửi yêu cầu báo giá",
-                    Data = null
                 };
             }
             catch (Exception ex)
@@ -342,27 +280,23 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     StatusCode = 500,
                     Message = "Lỗi",
-                    Data = null
                 };
             }
         }
 
-        public async Task<ServiceResult<object>> RemoveRequestSalesQuotation(int rsqId)
+        public async Task<ServiceResult<object>> RemoveRequestSalesQuotation(int rsqId, string? customerProfileId)
         {
             try
             {
+                var profile = await ValidateCustomerProfile(customerProfileId);
+
                 var rsq = await _unitOfWork.RequestSalesQuotation.Query()
                     .Include(r => r.RequestSalesQuotationDetails)
-                    .FirstOrDefaultAsync(r => r.Id == rsqId)
-                    ?? throw new Exception("Khong tim thay request sales quotation id");
+                    .FirstOrDefaultAsync(r => r.Id == rsqId);
 
-                if (rsq.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Sent)
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Báo giá đã gửi không thể xóa",
-                        Data = null
-                    };
+                var validateRsq = ValidateRsq(rsq, profile, "Yêu cầu báo giá đã gửi không thể xóa");
+
+                if (validateRsq != null) return validateRsq;
 
                 await _unitOfWork.BeginTransactionAsync();
 
@@ -380,10 +314,9 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     StatusCode = 200,
                     Message = "Đã xóa yêu cầu báo giá",
-                    Data = null
                 };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex, "Loi");
@@ -392,9 +325,161 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     StatusCode = 500,
                     Message = "Lỗi",
-                    Data = null
                 };
             }
+        }
+
+        private async Task<ServiceResult<object>?> ValidateProductId(List<int> list)
+        {
+            if (list == null || list.Count == 0)
+            {
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = "Bạn phải chọn ít nhất một sản phẩm",
+                };
+            }
+
+            if (list.Count != list.Distinct().Count())
+            {
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = "Danh sách sản phẩm có sản phẩm bị trùng",
+                };
+            }
+
+            var productsInDb = await _unitOfWork.Product.Query()
+                .Where(p => list.Contains(p.ProductID))
+                .ToListAsync();
+
+            var invalidMessages = new List<string>();
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                var productId = list[i];
+                var product = productsInDb.FirstOrDefault(p => p.ProductID == productId);
+
+                if (product == null)
+                {
+                    invalidMessages.Add($"Sản phẩm số {i + 1} không tồn tại.");
+                }
+                else if (!product.Status)
+                {
+                    invalidMessages.Add($"Sản phẩm số {i + 1} không hoạt động.");
+                }
+            }
+
+
+            if (invalidMessages.Count > 0)
+            {
+                string combinedMessage = string.Join(" ", invalidMessages);
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = combinedMessage
+                };
+            }
+
+            return null;
+        }
+
+        private async Task<CustomerProfile> ValidateCustomerProfile(string? customerProfileId)
+        {
+            if (!int.TryParse(customerProfileId, out int profileId))
+                throw new Exception("CustomerProfileId khong hop le");
+
+            var profile = await _unitOfWork.CustomerProfile.Query().FirstOrDefaultAsync(cp => cp.Id == profileId)
+                ?? throw new Exception("Customer chua co profile");
+
+            return profile;
+        }
+
+        private static ServiceResult<object>? ValidateRsq(Core.Domain.Entities.RequestSalesQuotation? rsq, CustomerProfile profile, string message)
+        {
+            if (rsq == null)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 404,
+                    Message = "Yêu cầu báo giá không tồn tại",
+                };
+
+            if (rsq.CustomerId != profile.Id)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 403,
+                    Message = "Bạn không có quyền thao tác trên yêu cầu báo giá này",
+                };
+
+            if (rsq.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Sent)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = message
+                };
+
+            return null;
+        }
+
+        private static ServiceResult<object>? ValidateRsqDetails(Core.Domain.Entities.RequestSalesQuotation? rsq, CustomerProfile? customerProfile, StaffProfile? staffProfile)
+        {
+            if (rsq == null)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 404,
+                    Message = "Yêu cầu báo giá không tồn tại",
+                };
+
+            if (customerProfile != null)
+            {
+                if (rsq.CustomerId != customerProfile.Id)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền xem yêu cầu báo giá này",
+                    };
+            }
+
+            if (staffProfile != null)
+            {
+                if (rsq.Status != Core.Domain.Enums.RequestSalesQuotationStatus.Sent)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền xem yêu cầu báo giá này",
+                    };
+            }
+
+            return null;
+        }
+
+        private async Task<(CustomerProfile? Customer, StaffProfile? Staff)> GetUserProifleAsync(string? customerProfileId, string? staffProfileId)
+        {
+            var hasCustomer = int.TryParse(customerProfileId, out int intCustomerId);
+            var hasStaff = int.TryParse(staffProfileId, out int intStaffId);
+
+            if (!hasCustomer && !hasStaff)
+                throw new Exception("Khong parse duoc customer id va staff id");
+
+            CustomerProfile? customer = null;
+            StaffProfile? staff = null;
+
+            if (hasCustomer)
+            {
+                customer = await _unitOfWork.CustomerProfile.Query()
+                    .FirstOrDefaultAsync(cp => cp.Id == intCustomerId);
+            }
+
+            if (hasStaff)
+            {
+                staff = await _unitOfWork.StaffProfile.Query()
+                    .FirstOrDefaultAsync(sp => sp.Id == intStaffId);
+            }
+
+            if (customer == null && staff == null)
+                throw new Exception("Khong co profile");
+
+            return (customer, staff);
         }
     }
 }
