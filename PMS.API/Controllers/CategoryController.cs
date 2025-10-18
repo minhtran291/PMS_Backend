@@ -106,5 +106,35 @@ namespace PMS.API.Controllers
             }
         }
 
+        /// <summary>
+        /// https://localhost:7213/api/Category/toggleStatus/{cateId}
+        /// </summary>
+        /// <param name="cateId"></param>
+        /// <returns></returns>
+        [HttpPut("toggleStatus/{cateId}")]
+        public async Task<IActionResult> ToggleCategoryStatus(int cateId)
+        {
+            try
+            {
+                var result = await _categoryService.ActiveSupplierAsync(cateId);
+
+                if (result.StatusCode == 404)
+                    return NotFound(result);
+
+                if (result.StatusCode == 500)
+                    return StatusCode(500, result);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Data = false,
+                    Message = $"Đã xảy ra lỗi trong quá trình xử lý: {ex.Message}"
+                });
+            }
+        }
+
     }
 }
