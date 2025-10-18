@@ -181,7 +181,6 @@ namespace PMS.API.Controllers
             return Ok(result);
         }
 
-
         /// <summary>
         /// https://localhost:7213/api/User/changePassword
         /// Đổi mật khẩu người dùng (yêu cầu nhập mật khẩu cũ)

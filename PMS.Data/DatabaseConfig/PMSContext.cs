@@ -262,6 +262,8 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(c => c.Name)
                     .IsRequired()
                     .HasMaxLength(100);
+                entity.Property(c => c.Status)
+                .IsRequired();
             });
 
             builder.Entity<Notification>(entity =>

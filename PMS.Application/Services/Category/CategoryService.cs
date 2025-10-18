@@ -11,6 +11,49 @@ namespace PMS.Application.Services.Category
 {
     public class CategoryService(IUnitOfWork unitOfWork, IMapper mapper, IConfiguration configuration) : Service(unitOfWork, mapper), ICategoryService
     {
+        public async Task<ServiceResult<bool>> ActiveSupplierAsync(int cateId)
+        {
+            try
+            {
+
+                var excate = await _unitOfWork.Category.Query()
+                    .FirstOrDefaultAsync(c => c.CategoryID == cateId);
+
+                if (excate == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        Data = false,
+                        Message = $"Không tìm thấy loại sản phẩm với ID: {cateId}",
+                        StatusCode = 404
+                    };
+                }
+
+
+                excate.Status = !excate.Status;
+
+
+                _unitOfWork.Category.Update(excate);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    Data = true,
+                    Message = $"Đã {(excate.Status ? "kích hoạt" : "vô hiệu hóa")} loại sản phẩm thành công.",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult<bool>
+                {
+                    Data = false,
+                    Message = $"Đã xảy ra lỗi: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
+
         public async Task<ServiceResult<bool>> AddAsync(CategoryDTO category)
         {
             try
@@ -41,6 +84,7 @@ namespace PMS.Application.Services.Category
                 {
                     Name = category.Name,
                     Description = category.Description,
+                    Status = true,
                 };
 
                 await _unitOfWork.Category.AddAsync(newcategory);
@@ -78,6 +122,7 @@ namespace PMS.Application.Services.Category
                     CategoryID = p.CategoryID,
                     Name = p.Name,
                     Description = p.Description,
+                    Status = p.Status,
                 }).ToList();
 
 
@@ -133,6 +178,7 @@ namespace PMS.Application.Services.Category
                     CategoryID = category.CategoryID,
                     Name = category.Name,
                     Description = category.Description,
+                    Status = category.Status,
 
                     Products = category.Products.Select(p => new ProductDTO
                     {
@@ -188,6 +234,7 @@ namespace PMS.Application.Services.Category
 
                 excate.Name = category.Name;
                 excate.Description = category.Description;
+                excate.Status = category.Status;
                 _unitOfWork.Category.Update(excate);
                 await _unitOfWork.CommitAsync();
                 return new ServiceResult<bool>()
