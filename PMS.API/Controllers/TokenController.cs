@@ -22,52 +22,48 @@ namespace PMS.API.Controllers
         [Route("refresh")]
         public async Task<ActionResult<string>> RefreshAccessToken(TokenRequest tokenRequest)
         {
-            try
+            string refreshToken = Request.Cookies["X-Refresh-Token"];
+
+            if (string.IsNullOrEmpty(refreshToken))
+                return Unauthorized("Missing refresh token");
+
+            var tokenResponse = await _jwtService.RefreshAccessToken(tokenRequest, refreshToken);
+
+            if (tokenResponse.Data != null)
             {
-                string refreshToken = Request.Cookies["X-Refresh-Token"];
-
-                if (string.IsNullOrEmpty(refreshToken))
-                    return Unauthorized("Missing refresh token");
-
-                var tokenResponse = await _jwtService.RefreshAccessToken(tokenRequest, refreshToken);
-
-                Response.Cookies.Append("X-Refresh-Token", tokenResponse.RefreshToken, new CookieOptions
+                Response.Cookies.Append("X-Refresh-Token", tokenResponse.Data.RefreshToken, new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = true,
                     SameSite = SameSiteMode.None,
-                    Expires = DateTimeOffset.UtcNow.AddDays(10)
+                    Expires = DateTimeOffset.Now.AddDays(10)
                 });
+            }
 
-                return Ok(tokenResponse.AccessToken);
-            }
-            catch (Exception ex)
+            return StatusCode(tokenResponse.StatusCode, new
             {
-                return BadRequest(ex.Message);
-            }
+                message = tokenResponse.Message,
+                data = tokenResponse.Data?.AccessToken
+            });
         }
 
         [HttpPost, Authorize]
         [Route("logout")]
         public async Task<IActionResult> Logout()
         {
-            try
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Invalid user id in token");
+
+            var result = await _jwtService.Revoke(userId);
+
+            Response.Cookies.Delete("X-Refresh-Token");
+
+            return StatusCode(result.StatusCode, new
             {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest("Invalid user id in token");
-
-                await _jwtService.Revoke(userId);
-
-                Response.Cookies.Delete("X-Refresh-Token");
-
-                return NoContent();
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                message = result.Message,
+            });
         }
     }
 }

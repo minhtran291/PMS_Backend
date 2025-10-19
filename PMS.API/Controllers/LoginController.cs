@@ -21,30 +21,26 @@ namespace PMS.API.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-            try
-            {
-                var tokenResponse = await _loginService.Login(request);
 
-                Response.Cookies.Append("X-Refresh-Token", tokenResponse.RefreshToken, new CookieOptions()
+            var tokenResponse = await _loginService.Login(request);
+
+            if(tokenResponse.Data != null)
+            {
+                Response.Cookies.Append("X-Refresh-Token", tokenResponse.Data.RefreshToken, new CookieOptions()
                 {
                     HttpOnly = true,
                     Secure = true,
                     SameSite = SameSiteMode.None,
-                    Expires = DateTimeOffset.UtcNow.AddDays(10)
+                    Expires = DateTimeOffset.Now.AddDays(10)
                 });
+            }
 
-                return Ok(new
-                {
-                    tokenResponse.AccessToken
-                });
-            }
-            catch (Exception ex)
+            return StatusCode(tokenResponse.StatusCode, new
             {
-                return Unauthorized(new
-                {
-                    message = ex.Message
-                });
-            }
+                message = tokenResponse.Message,
+                data = tokenResponse.Data?.AccessToken,
+            });
+
         }
     }
 }

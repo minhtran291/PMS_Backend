@@ -11,6 +11,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Logging;
+using PMS.Core.Domain.Constant;
 
 namespace PMS.Application.Services.Auth
 {
@@ -24,7 +25,7 @@ namespace PMS.Application.Services.Auth
         private readonly IUserService _userService = userService;
         private readonly ILogger<TokenService> _logger = logger;
 
-        public List<Claim> CreateClaimForAccessToken(Core.Domain.Identity.User user, IList<string>? roles)
+        public List<Claim> CreateClaimForAccessToken(Core.Domain.Identity.User user, IList<string> roles)
         {
             var authClaims = new List<Claim>()
             {
@@ -36,12 +37,12 @@ namespace PMS.Application.Services.Auth
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // JWT ID
             };
 
-            if(user.CustomerProfile != null)
+            if (user.CustomerProfile != null)
             {
                 authClaims.Add(new Claim("customer_id", user.CustomerProfile.Id.ToString()));
             }
 
-            if(user.StaffProfile != null)
+            if (user.StaffProfile != null)
             {
                 authClaims.Add(new Claim("staff_id", user.StaffProfile.Id.ToString()));
             }
@@ -112,94 +113,151 @@ namespace PMS.Application.Services.Auth
             return principal;
         }
 
-        public async Task<TokenResponse> RefreshAccessToken(TokenRequest tokenRequest, string refreshToken)
+        public async Task<ServiceResult<TokenResponse>> RefreshAccessToken(TokenRequest tokenRequest, string refreshToken)
         {
-            _logger.LogInformation("Bat dau xu ly refresh token");
-            if (tokenRequest is null)
+            try
             {
-                _logger.LogWarning("Access token null");
-                throw new Exception("Có lỗi xảy ra");
+                _logger.LogInformation("Bat dau xu ly refresh token");
+
+                if (tokenRequest == null || string.IsNullOrEmpty(tokenRequest.AccessToken))
+                {
+                    _logger.LogInformation("Access token khong hop le");
+                    return new ServiceResult<TokenResponse>
+                    {
+                        StatusCode = 400,
+                    };
+                }
+
+                string accessToken = tokenRequest.AccessToken;
+
+                // lay thong tin tu access token het han
+                var principal = GetPrincipalFromToken(accessToken, false); // Access Token het han nen de la false
+
+                if (principal == null || principal.Identity == null || principal.Identity.Name == null)
+                {
+                    _logger.LogInformation("Khong xac thuc duoc thong tin nguoi dung tu access token");
+                    return new ServiceResult<TokenResponse>
+                    {
+                        StatusCode = 401,
+                    };
+                }
+
+                var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    _logger.LogInformation("Khong lay duoc user id tu claim");
+                    return new ServiceResult<TokenResponse>
+                    {
+                        StatusCode = 401,
+                    };
+                }
+
+                var user = await _userService.GetUserById(userId);
+
+                if (user == null)
+                {
+                    _logger.LogInformation("Nguoi dung khong ton tai");
+                    return new ServiceResult<TokenResponse>
+                    {
+                        StatusCode = 404,
+                    };
+                }
+
+
+                if (user.RefreshToken != refreshToken)
+                {
+                    _logger.LogInformation("Refresh token khong hop le");
+                    return new ServiceResult<TokenResponse>
+                    {
+                        StatusCode = 401,
+                    };
+                }
+
+                if (user.RefreshTokenExpriryTime <= DateTime.Now)
+                {
+                    _logger.LogInformation("Refresh token da het han");
+                    return new ServiceResult<TokenResponse>
+                    {
+                        StatusCode = 401,
+                    };
+                }
+
+                var roles = await _userService.GetUserRoles(user);
+
+                var claims = CreateClaimForAccessToken(user, roles); // tao lai de tao moi ca jti cho an toan
+
+                var newAccessToken = GenerateToken(claims, 5);
+
+                var newRefreshToken = GenerateRefreshToken();
+
+                user.RefreshToken = newRefreshToken;
+
+                await _unitOfWork.Users.UserManager.UpdateAsync(user);
+
+                await _unitOfWork.CommitAsync();
+
+                _logger.LogInformation("Refresh token thanh cong");
+
+                return new ServiceResult<TokenResponse>
+                {
+                    StatusCode = 200,
+                    Message = "",
+                    Data = new TokenResponse
+                    {
+                        AccessToken = newAccessToken,
+                        RefreshToken = newRefreshToken,
+                    }
+                };
             }
-
-            string accessToken = tokenRequest.AccessToken;
-
-            // lay thong tin tu access token het han
-            var principal = GetPrincipalFromToken(accessToken, false); // Access Token het han nen de la false
-
-            if (principal == null || principal.Identity == null || principal.Identity.Name == null)
+            catch (Exception ex)
             {
-                _logger.LogWarning("Principal tu access token bi null");
-                throw new Exception("Có lỗi xảy ra");
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<TokenResponse>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
             }
-
-            var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            if (userId == null)
-            {
-                _logger.LogDebug("Khong lay duoc user id tu principal");
-                throw new Exception("Có lỗi xảy ra");
-            }
-
-            var user = await _userService.GetUserById(userId);
-
-            if (user == null)
-            {
-                _logger.LogWarning("Khong tim thay user tuong ung với user id tu principal");
-                throw new Exception("Có lỗi xảy ra");
-            }
-
-            if (user.RefreshToken != refreshToken)
-            {
-                _logger.LogWarning("Refresh token khong khop");
-                throw new Exception("Có lỗi xảy ra");
-            }
-
-            if (user.RefreshTokenExpriryTime <= DateTime.Now)
-            {
-                _logger.LogWarning("Refresh token da het han");
-                throw new Exception("Có lỗi xảy ra");
-            }
-
-            var roles = await _userService.GetUserRoles(user);
-
-            var claims = CreateClaimForAccessToken(user, roles); // tao lai de tao moi ca jti cho an toan
-
-            var newAccessToken = GenerateToken(claims, 5);
-
-            var newRefreshToken = GenerateRefreshToken();
-
-            user.RefreshToken = newRefreshToken;
-
-            await _unitOfWork.Users.UserManager.UpdateAsync(user);
-
-            await _unitOfWork.CommitAsync();
-
-            _logger.LogInformation("Refresh token thanh cong");
-
-            return new TokenResponse
-            {
-                AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken,
-            };
         }
 
-        public async Task Revoke(string userId)
+        public async Task<ServiceResult<object>> Revoke(string userId)
         {
-            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
-
-            if (user == null)
+            try
             {
-                _logger.LogWarning("Khong tim thay user");
-                throw new Exception("Có lỗi xảy ra");
+                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+
+                if (user == null)
+                {
+                    _logger.LogInformation("Khong tim thay user");
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                    };
+                }
+
+                user.RefreshToken = null;
+
+                user.RefreshTokenExpriryTime = null;
+
+                await _unitOfWork.Users.UserManager.UpdateAsync(user);
+
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                };
             }
-
-            user.RefreshToken = null;
-
-            user.RefreshTokenExpriryTime = null;
-
-            await _unitOfWork.Users.UserManager.UpdateAsync(user);
-
-            await _unitOfWork.CommitAsync();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
         }
     }
 }
