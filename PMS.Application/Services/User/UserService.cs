@@ -34,37 +34,70 @@ namespace PMS.Application.Services.User
 
         public async Task<ServiceResult<bool>> RegisterUserAsync(RegisterUser customer)
         {
+            _logger.LogWarning($"=== BẮT ĐẦU ĐĂNG KÝ USER ===");
+            _logger.LogInformation($"Bắt đầu đăng ký user: {customer.Email}");
+            
             var validateEmail = await _unitOfWork.Users.UserManager.FindByEmailAsync(customer.Email);
+            _logger.LogInformation($"Kết quả tìm email: {validateEmail?.Email} - EmailConfirmed: {validateEmail?.EmailConfirmed}");
 
             if (validateEmail != null)
             {
-                return new ServiceResult<bool>
+                _logger.LogWarning($"=== EMAIL ĐÃ TỒN TẠI ===");
+                _logger.LogWarning($"Email: {validateEmail.Email}");
+                _logger.LogWarning($"EmailConfirmed: {validateEmail.EmailConfirmed}");
+                
+                // Kiểm tra email đã được xác thực hay chưa
+                if (validateEmail.EmailConfirmed)
                 {
-                    StatusCode = 200,
-                    Message = "Trùng email",
-                    Data = false
-                };
+                    _logger.LogWarning($"Email đã được đăng ký: {customer.Email}");
+                    _logger.LogWarning($"Trả về StatusCode 400 với message: Email đã được đăng ký");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Email đã được đăng ký",
+                        Data = false
+                    };
+                }
+                else
+                {
+                    _logger.LogWarning($"Email chưa xác thực: {customer.Email}");
+                    _logger.LogWarning($"Trả về StatusCode 400 với message: Email chưa xác thực");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Email chưa xác thực",
+                        Data = false
+                    };
+                }
             }
+            
+            _logger.LogInformation($"Email không tồn tại, tiếp tục đăng ký: {customer.Email}");
 
             var validatePhone = await _unitOfWork.Users.Query().FirstOrDefaultAsync(u => u.PhoneNumber == customer.PhoneNumber);
 
             if (validatePhone != null)
+            {
+                _logger.LogWarning($"Số điện thoại đã tồn tại: {customer.PhoneNumber}");
                 return new ServiceResult<bool>
                 {
-                    StatusCode = 200,
+                    StatusCode = 400,
                     Message = "Trùng số điện thoại",
                     Data = false
                 };
+            }
 
             var validateUsername = await _unitOfWork.Users.UserManager.FindByNameAsync(customer.UserName.ToLower());
 
             if (validateUsername != null)
+            {
+                _logger.LogWarning($"Tên đăng nhập đã tồn tại: {customer.UserName}");
                 return new ServiceResult<bool>
                 {
-                    StatusCode = 200,
+                    StatusCode = 400,
                     Message = "Tên đăng nhập đã tồn tại",
                     Data = false
                 };
+            }
 
             var user = new Core.Domain.Identity.User
             {
@@ -77,7 +110,14 @@ namespace PMS.Application.Services.User
                 Avatar = "/images/AvatarDefault.png",
             };
 
+            _logger.LogWarning($"=== TẠO USER ===");
+            _logger.LogWarning($"UserName: {user.UserName}");
+            _logger.LogWarning($"Email: {user.Email}");
+            _logger.LogWarning($"PhoneNumber: {user.PhoneNumber}");
+            _logger.LogWarning($"Password length: {customer.ConfirmPassword?.Length}");
+            
             var createResult = await _unitOfWork.Users.UserManager.CreateAsync(user, customer.ConfirmPassword);
+            _logger.LogWarning($"CreateResult.Succeeded: {createResult.Succeeded}");
             if (!createResult.Succeeded)
             {
                 var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
@@ -89,14 +129,18 @@ namespace PMS.Application.Services.User
                     Data = false
                 };
             }
+            _logger.LogWarning($"Tạo user thành công: {user.Email} - ID: {user.Id}");
 
             var customerProfile = new Core.Domain.Entities.CustomerProfile
             {
                 UserId = user.Id
             };
             await _unitOfWork.CustomerProfile.AddAsync(customerProfile);
+            _logger.LogWarning($"Tạo CustomerProfile thành công cho user: {user.Id}");
 
             var roleResult = await _unitOfWork.Users.UserManager.AddToRoleAsync(user, UserRoles.CUSTOMER);
+            _logger.LogWarning($"=== GÁN ROLE ===");
+            _logger.LogWarning($"RoleResult.Succeeded: {roleResult.Succeeded}");
             if (!roleResult.Succeeded)
             {
                 var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
@@ -108,11 +152,35 @@ namespace PMS.Application.Services.User
                     Data = false
                 };
             }
+            _logger.LogWarning($"Gán role CUSTOMER thành công cho user: {user.Id}");
 
-            await _unitOfWork.CommitAsync();
+            _logger.LogWarning($"=== COMMIT TRANSACTION ===");
+            try
+            {
+                var result = await _unitOfWork.CommitAsync();
+                _logger.LogWarning($"Commit transaction thành công - Rows affected: {result}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Commit transaction thất bại: {ex.Message}");
+                _logger.LogError($"Exception details: {ex}");
+                throw;
+            }
 
-            await SendEmailConfirmAsync(user);
-            _logger.LogInformation("Gửi email xác nhận thành công: {Email}", user.Email);
+            _logger.LogWarning($"=== GỬI EMAIL ===");
+            try
+            {
+                await SendEmailConfirmAsync(user);
+                _logger.LogInformation("Gửi email xác nhận thành công: {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Gửi email thất bại: {ex.Message}");
+                // Không throw exception ở đây vì user đã được tạo thành công
+            }
+            _logger.LogWarning($"=== ĐĂNG KÝ THÀNH CÔNG ===");
+            _logger.LogWarning($"Email: {user.Email}");
+            _logger.LogWarning($"Trả về StatusCode 200 với message: Thành công vui lòng kiểm tra email");
             return new ServiceResult<bool>
             {
                 StatusCode = 200,
@@ -124,16 +192,38 @@ namespace PMS.Application.Services.User
 
         public async Task SendEmailConfirmAsync(Core.Domain.Identity.User user)
         {
+            _logger.LogWarning($"=== BẮT ĐẦU GỬI EMAIL ===");
+            _logger.LogWarning($"User Email: {user.Email}");
+            _logger.LogWarning($"User ID: {user.Id}");
+            
             // tao token moi voi securiry stamp moi
             string token = await _unitOfWork.Users.UserManager.GenerateEmailConfirmationTokenAsync(user);
+            _logger.LogWarning($"Token generated: {token?.Substring(0, Math.Min(20, token?.Length ?? 0))}...");
 
             UriBuilder uriBuilder = LinkConstant.UriBuilder("User", "confirm-email", user.Id, token);
 
             var link = uriBuilder.ToString();
+            _logger.LogWarning($"Link generated: {link}");
 
             var body = EmailBody.CONFIRM_EMAIL(user.Email, link);
+            _logger.LogWarning($"Email body generated");
 
-            await _emailService.SendMailAsync(EmailSubject.CONFIRM_EMAIL, body, user.Email);
+            _logger.LogWarning($"=== GỬI EMAIL QUA SERVICE ===");
+            try
+            {
+                _logger.LogWarning($"Calling SendMailAsync with subject: {EmailSubject.CONFIRM_EMAIL}");
+                _logger.LogWarning($"Body length: {body?.Length}");
+                _logger.LogWarning($"To email: {user.Email}");
+                
+                await _emailService.SendMailAsync(EmailSubject.CONFIRM_EMAIL, body, user.Email);
+                _logger.LogWarning($"Email sent successfully to: {user.Email}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Email service error: {ex.Message}");
+                _logger.LogError($"Exception details: {ex}");
+                throw;
+            }
         }
 
         public async Task<ServiceResult<bool>> ReSendEmailConfirmAsync(ResendConfirmEmailRequest request)
@@ -246,7 +336,7 @@ namespace PMS.Application.Services.User
             return new ServiceResult<bool>
             {
                 StatusCode = 200,
-                Message = "Thành công vui lòng kiểm tra mail",
+                Message = "Thành công vui lòng kiểm tra email",
                 Data = true
             };
         }

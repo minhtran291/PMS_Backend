@@ -42,6 +42,11 @@ namespace PMS.API.Controllers
                     message = result.Message,
                     data = result.Data
                 }),
+                400 => BadRequest(new
+                {
+                    success = false,
+                    message = result.Message
+                }),
                 500 => StatusCode(500, new
                 {
                     success = false,
