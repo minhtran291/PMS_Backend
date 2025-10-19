@@ -83,19 +83,19 @@ namespace PMS.Application.Services.RequestSalesQuotation
             return $"RSQ-{datePart}-{randomPart}";
         }
 
-        public async Task<ServiceResult<List<ViewRsqDTO>>> ViewRequestSalesQuotationList(string? customerProfileId, string? staffProfileId)
+        public async Task<ServiceResult<List<ViewRsqDTO>>> ViewRequestSalesQuotationList(string userId)
         {
             try
             {
-                var (Customer, Staff) = await GetUserProifleAsync(customerProfileId, staffProfileId);
+                var customer = await GetUserProifleAsync(userId);
 
                 var query = _unitOfWork.RequestSalesQuotation.Query();
 
-                if (Customer != null)
+                if (customer != null)
                 {
-                    query = query.Where(r => r.CustomerId == Customer.Id);
+                    query = query.Where(r => r.CustomerId == customer.Id);
                 }
-                else if (Staff != null)
+                else
                 {
                     query = query.Where(r => r.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Sent);
                 }
@@ -127,18 +127,18 @@ namespace PMS.Application.Services.RequestSalesQuotation
             }
         }
 
-        public async Task<ServiceResult<object>> ViewRequestSalesQuotationDetails(int rsqId, string? customerProfileId, string? staffProfileId)
+        public async Task<ServiceResult<object>> ViewRequestSalesQuotationDetails(int rsqId, string userId)
         {
             try
             {
-                var (Customer, Staff) = await GetUserProifleAsync(customerProfileId, staffProfileId);
+                var customer = await GetUserProifleAsync(userId);
 
                 var rsq = await _unitOfWork.RequestSalesQuotation.Query()
                     .Include(r => r.RequestSalesQuotationDetails)
                         .ThenInclude(d => d.Product)
                     .FirstOrDefaultAsync(r => r.Id == rsqId);
 
-                var validateRsq = ValidateRsqDetails(rsq, Customer, Staff);
+                var validateRsq = ValidateRsqDetails(rsq, customer);
 
                 if (validateRsq != null) return validateRsq;
 
@@ -421,7 +421,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
             return null;
         }
 
-        private static ServiceResult<object>? ValidateRsqDetails(Core.Domain.Entities.RequestSalesQuotation? rsq, CustomerProfile? customerProfile, StaffProfile? staffProfile)
+        private static ServiceResult<object>? ValidateRsqDetails(Core.Domain.Entities.RequestSalesQuotation? rsq, CustomerProfile? customerProfile)
         {
             if (rsq == null)
                 return new ServiceResult<object>
@@ -439,8 +439,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                         Message = "Bạn không có quyền xem yêu cầu báo giá này",
                     };
             }
-
-            if (staffProfile != null)
+            else
             {
                 if (rsq.Status != Core.Domain.Enums.RequestSalesQuotationStatus.Sent)
                     return new ServiceResult<object>
@@ -453,33 +452,27 @@ namespace PMS.Application.Services.RequestSalesQuotation
             return null;
         }
 
-        private async Task<(CustomerProfile? Customer, StaffProfile? Staff)> GetUserProifleAsync(string? customerProfileId, string? staffProfileId)
+        private async Task<CustomerProfile?> GetUserProifleAsync(string userId)
         {
-            var hasCustomer = int.TryParse(customerProfileId, out int intCustomerId);
-            var hasStaff = int.TryParse(staffProfileId, out int intStaffId);
+            var user = await _unitOfWork.Users.Query().Include(u => u.CustomerProfile).FirstOrDefaultAsync(u => u.Id == userId)
+                ?? throw new Exception("Khong tim thay user");
 
-            if (!hasCustomer && !hasStaff)
-                throw new Exception("Khong parse duoc customer id va staff id");
+            var isCustomer = await _unitOfWork.Users.UserManager.IsInRoleAsync(user, UserRoles.CUSTOMER);
+
+            var isStaff = await _unitOfWork.Users.UserManager.IsInRoleAsync(user, UserRoles.SALES_STAFF);
+
+            if (!isCustomer && !isStaff)
+                throw new Exception("Role khong hop le");
 
             CustomerProfile? customer = null;
-            StaffProfile? staff = null;
 
-            if (hasCustomer)
-            {
-                customer = await _unitOfWork.CustomerProfile.Query()
-                    .FirstOrDefaultAsync(cp => cp.Id == intCustomerId);
-            }
+            if (isCustomer)
+                customer = user.CustomerProfile;
 
-            if (hasStaff)
-            {
-                staff = await _unitOfWork.StaffProfile.Query()
-                    .FirstOrDefaultAsync(sp => sp.Id == intStaffId);
-            }
+            if (customer == null && !isStaff)
+                throw new Exception("Customer profile null");
 
-            if (customer == null && staff == null)
-                throw new Exception("Khong co profile");
-
-            return (customer, staff);
+            return customer;
         }
     }
 }

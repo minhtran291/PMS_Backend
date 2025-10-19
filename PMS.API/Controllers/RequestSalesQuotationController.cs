@@ -37,11 +37,14 @@ namespace PMS.API.Controllers
         [Route("view-list")]
         public async Task<IActionResult> ViewRequestList()
         {
-            var customerId = User.FindFirstValue("customer_id");
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var staffId = User.FindFirstValue("staff_id");
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("Token không chứa thông tin định danh người dùng.");
+            }
 
-            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationList(customerId, staffId);
+            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationList(userId);
 
             return StatusCode(result.StatusCode, new
             {
@@ -54,11 +57,14 @@ namespace PMS.API.Controllers
         [Route("view-details")]
         public async Task<IActionResult> ViewRequestDetails(int rsqId)
         {
-            var customerId = User.FindFirstValue("customer_id");
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var staffId = User.FindFirstValue("staff_id");
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("Token không chứa thông tin định danh người dùng.");
+            }
 
-            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationDetails(rsqId, customerId, staffId);
+            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationDetails(rsqId, userId);
 
             return StatusCode(result.StatusCode, new
             {
@@ -78,7 +84,6 @@ namespace PMS.API.Controllers
             return StatusCode(result.StatusCode, new
             {
                 message = result.Message,
-                data = result.Data,
             });
         }
 
@@ -93,7 +98,6 @@ namespace PMS.API.Controllers
             return StatusCode(result.StatusCode, new
             {
                 message = result.Message,
-                data = result.Data,
             });
         }
 
@@ -108,7 +112,6 @@ namespace PMS.API.Controllers
             return StatusCode(result.StatusCode, new
             {
                 message = result.Message,
-                data = result.Data,
             });
         }
     }
