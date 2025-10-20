@@ -215,6 +215,44 @@ namespace PMS.Data.Migrations
                     b.ToTable("CustomerProfiles");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
+                {
+                    b.Property<int>("LotID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LotID"));
+
+                    b.Property<DateTime>("ExpiredDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime>("InputDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("InputPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("LotQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("SalePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SupplierID")
+                        .HasColumnType("int");
+
+                    b.HasKey("LotID");
+
+                    b.HasIndex("ProductID");
+
+                    b.HasIndex("SupplierID");
+
+                    b.ToTable("LotProducts");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -271,6 +309,7 @@ namespace PMS.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Image")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("MaxQuantity")
@@ -711,6 +750,25 @@ namespace PMS.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.Product", "Product")
+                        .WithMany("LotProducts")
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Core.Domain.Entities.Supplier", "Supplier")
+                        .WithMany("LotProducts")
+                        .HasForeignKey("SupplierID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Supplier");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.Notification", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Identity.User", "Receiver")
@@ -843,6 +901,8 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
                 {
+                    b.Navigation("LotProducts");
+
                     b.Navigation("PRPS");
 
                     b.Navigation("RequestSalesQuotationDetails");
@@ -860,6 +920,8 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Supplier", b =>
                 {
+                    b.Navigation("LotProducts");
+
                     b.Navigation("PurchasingRequestForQuotations");
                 });
 

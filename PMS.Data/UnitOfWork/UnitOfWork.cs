@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
@@ -31,13 +32,14 @@ namespace PMS.Data.UnitOfWork
         IProductCategoryRepository category,
         IWarehouseRepository warehouse,
         IWarehouseLocationRepository warehouseLocation,
-        INotificationRepository notification, 
-        IRequestSalesQuotationRepository requestSalesQuotation, 
+        INotificationRepository notification,
+        IRequestSalesQuotationRepository requestSalesQuotation,
         IRequestSalesQuotationDetailsRepository requestSalesQuotationDetails,
         IPurchasingRequestForQuotationRepository
         purchasingRequestForQuotation,
         IPurchasingRequestProductRepository
-        purchasingRequestProduct) : IUnitOfWork
+        purchasingRequestProduct,
+        ILotProductRepository lotProduct) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -47,6 +49,7 @@ namespace PMS.Data.UnitOfWork
         public ISupplierRepository Supplier { get; private set; } = supplier;
         public IProductRepository Product { get; private set; } = product;
         public IProductCategoryRepository Category { get; private set; } = category;
+        public ILotProductRepository LotProduct { get; private set; } = lotProduct;
         public IWarehouseRepository Warehouse { get; private set; } = warehouse;
         public INotificationRepository Notification { get; private set; } = notification;
         public IWarehouseLocationRepository WarehouseLocation { get; private set; } = warehouseLocation;

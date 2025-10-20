@@ -17,6 +17,7 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
         public virtual DbSet<Supplier> Suppliers { get; set; }
         public virtual DbSet<Product> Products { get; set; }
+        public virtual DbSet<LotProduct> LotProducts { get; set; }
         public virtual DbSet<Category> Categories { get; set; }
         public virtual DbSet<Warehouse> Warehouses { get; set; }
         public virtual DbSet<WarehouseLocation> WarehouseLocations { get; set; }
@@ -245,11 +246,42 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(p => p.Status)
                     .IsRequired();
 
-                entity.Property(p => p.Image);
+                entity.Property(p => p.Image).IsRequired();
 
                 entity.HasOne(p => p.Category)
                     .WithMany(c => c.Products)
                     .HasForeignKey(p => p.CategoryID)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<LotProduct>(entity =>
+            {
+                entity.HasKey(lp => lp.LotID);
+
+                entity.Property(lp => lp.InputDate)
+                    .IsRequired()
+                    .HasColumnType("date");
+
+                entity.Property(lp => lp.ExpiredDate)
+                    .IsRequired()
+                    .HasColumnType("date");
+
+                entity.Property(lp => lp.LotQuantity)
+                    .IsRequired();
+
+                entity.Property(lp => lp.InputPrice).
+                HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(lp => lp.SalePrice)
+                .HasColumnType("decimal(18,2)");
+
+                entity.HasOne(lp => lp.Product)
+                    .WithMany(p => p.LotProducts)
+                    .HasForeignKey(lp => lp.ProductID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(lp => lp.Supplier)
+                    .WithMany(s => s.LotProducts)
+                    .HasForeignKey(lp => lp.SupplierID)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

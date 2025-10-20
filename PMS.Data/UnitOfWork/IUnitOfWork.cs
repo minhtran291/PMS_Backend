@@ -1,4 +1,5 @@
 ﻿using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
@@ -22,6 +23,7 @@ namespace PMS.Data.UnitOfWork
         ISupplierRepository Supplier { get; }
         IProductRepository Product { get; }
         IProductCategoryRepository Category { get; }
+        ILotProductRepository LotProduct { get; }
         IWarehouseRepository Warehouse { get; }
         INotificationRepository Notification { get; }
         IWarehouseLocationRepository WarehouseLocation { get; }
