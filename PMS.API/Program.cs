@@ -98,6 +98,8 @@ namespace PMS.API
 
             await app.MigrateDatabase();
 
+            app.UseStaticFiles();
+
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
