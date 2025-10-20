@@ -13,8 +13,12 @@ using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
+using PMS.Data.Repositories.PurchasingOrderDetailRepository;
+using PMS.Data.Repositories.PurchasingOrderRepository;
 using PMS.Data.Repositories.PurchasingRequestForQuotationRepository;
 using PMS.Data.Repositories.PurchasingRequestProductRepository;
+using PMS.Data.Repositories.QuotationDetailRepository;
+using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
 using PMS.Data.Repositories.StaffProfile;
@@ -60,6 +64,12 @@ namespace PMS.Data.DatabaseConfig
             PurchasingRequestForQuotationRepository>();
             services.AddScoped<IPurchasingRequestProductRepository,
             PurchasingRequestProductRepository>();
+            //
+            services.AddScoped<IQuotationRepository, QuotationRepository>();
+            services.AddScoped<IQuotationDetailRepository, QuotationDetailRepository>();
+            //
+            services.AddScoped<IPurchasingOrderRepository, PurchasingOrderRepository>();
+            services.AddScoped<IPurchasingOrderDetailRepository, PurchasingOrderDetailRepository>();
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)

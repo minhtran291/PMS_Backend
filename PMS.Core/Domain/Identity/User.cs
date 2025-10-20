@@ -14,12 +14,14 @@ namespace PMS.Core.Domain.Identity
         public string Address { get; set; } = null!;
         public bool? Gender { get; set; }
         public DateTime CreateAt { get; set; }
-        
-        public virtual StaffProfile? StaffProfile {  get; set; }
+
+        public virtual StaffProfile? StaffProfile { get; set; }
         public virtual CustomerProfile? CustomerProfile { get; set; }
 
         public virtual ICollection<Notification> SentNotifications { get; set; } = new List<Notification>();
         public virtual ICollection<Notification> ReceivedNotifications { get; set; } = new List<Notification>();
         public virtual ICollection<PurchasingRequestForQuotation> PurchasingRequestForQuotations { get; set; } = new List<PurchasingRequestForQuotation>();
+
+        public virtual ICollection<PurchasingOrder> PurchasingOrders { get; set; } = new List<PurchasingOrder>();
     }
 }

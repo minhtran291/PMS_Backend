@@ -3,8 +3,12 @@ using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
+using PMS.Data.Repositories.PurchasingOrderDetailRepository;
+using PMS.Data.Repositories.PurchasingOrderRepository;
 using PMS.Data.Repositories.PurchasingRequestForQuotationRepository;
 using PMS.Data.Repositories.PurchasingRequestProductRepository;
+using PMS.Data.Repositories.QuotationDetailRepository;
+using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
 using PMS.Data.Repositories.StaffProfile;
@@ -17,20 +21,34 @@ namespace PMS.Data.UnitOfWork
 {
     public interface IUnitOfWork
     {
+        //Users
         IUserRepository Users { get; }
         ICustomerProfileRepository CustomerProfile { get; }
         IStaffProfileRepository StaffProfile { get; }
         ISupplierRepository Supplier { get; }
+        //Product
         IProductRepository Product { get; }
         IProductCategoryRepository Category { get; }
         ILotProductRepository LotProduct { get; }
+        //Warehouse
         IWarehouseRepository Warehouse { get; }
-        INotificationRepository Notification { get; }
         IWarehouseLocationRepository WarehouseLocation { get; }
+        //Notification
+        INotificationRepository Notification { get; }
+        //RequestSalesQuotation
         IRequestSalesQuotationRepository RequestSalesQuotation { get; }
         IRequestSalesQuotationDetailsRepository RequestSalesQuotationDetails { get; }
+        //PurchasingRequestForQuotation
         IPurchasingRequestForQuotationRepository PurchasingRequestForQuotation { get; }
         IPurchasingRequestProductRepository PurchasingRequestProduct { get; }
+        //Quotation
+        IQuotationRepository Quotation { get; }
+        IQuotationDetailRepository QuotationDetail { get; }
+        //PurchasingOrder
+        IPurchasingOrderRepository PurchasingOrder { get; }
+        IPurchasingOrderDetailRepository PurchasingOrderDetail { get; }
+
+
         Task<int> CommitAsync();
         Task BeginTransactionAsync();
         Task CommitTransactionAsync();
