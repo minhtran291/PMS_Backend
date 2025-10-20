@@ -208,8 +208,19 @@ namespace PMS.API.Controllers
         public async Task<IActionResult> GetProfile()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
             var roles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
-            return Ok();
+
+            if (string.IsNullOrEmpty(userId) || roles.Count == 0)
+                return Unauthorized();
+
+            var result = await _userService.GetProfile(userId, roles);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data,
+            });
         }
     }
 

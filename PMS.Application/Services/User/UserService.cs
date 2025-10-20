@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.Auth;
 using PMS.Application.DTOs.Customer;
+//using PMS.Application.DTOs.Profile;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.Notification;
@@ -586,16 +587,48 @@ namespace PMS.Application.Services.User
 
         public async Task<ServiceResult<object>> GetProfile(string userId, List<string> roles)
         {
-            Object result = null;
-            //if(roles.Contains("STAFF") || roles.Contains("ACCOUNTANT"))
-            //{
-
-            //}
-            return new ServiceResult<object>
+            try
             {
-                StatusCode = 200,
-                Data = result,
-            };
+                var result = await GetProfileByRoleAsync(userId, roles);
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = result,
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
+
+        private async Task<object> GetProfileByRoleAsync(string userId, List<string> roles)
+        {
+            var query = _unitOfWork.Users.Query();
+
+            if (roles.Contains(UserRoles.SALES_STAFF) || roles.Contains(UserRoles.ACCOUNTANT) 
+                || roles.Contains(UserRoles.PURCHASES_STAFF) || roles.Contains(UserRoles.WAREHOUSE_STAFF))
+            {
+                var staff = await query.Include(u => u.StaffProfile)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+                return _mapper.Map<DTOs.Profile.StaffProfileDTO>(staff);
+            }
+
+            if (roles.Contains(UserRoles.CUSTOMER))
+            {
+                var customer = await query.Include(u => u.CustomerProfile)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+                return _mapper.Map<DTOs.Profile.CustomerProfileDTO>(customer);
+            }
+
+            var common = await query.FirstOrDefaultAsync(u => u.Id == userId);
+            return _mapper.Map<DTOs.Profile.CommonProfileDTO>(common);
         }
     }
 }
