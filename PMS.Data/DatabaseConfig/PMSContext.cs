@@ -13,18 +13,31 @@ namespace PMS.Data.DatabaseConfig
 {
     public class PMSContext(DbContextOptions<PMSContext> options) : IdentityDbContext<User>(options)
     {
+        //User
         public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
         public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
         public virtual DbSet<Supplier> Suppliers { get; set; }
+        //Product
         public virtual DbSet<Product> Products { get; set; }
+        public virtual DbSet<LotProduct> LotProducts { get; set; }
         public virtual DbSet<Category> Categories { get; set; }
+        //Warehouse
         public virtual DbSet<Warehouse> Warehouses { get; set; }
         public virtual DbSet<WarehouseLocation> WarehouseLocations { get; set; }
+        //Notification
         public virtual DbSet<Notification> Notifications { get; set; }
+        //RequestSalesQuotation
         public virtual DbSet<RequestSalesQuotation> RequestSalesQuotations { get; set; }
         public virtual DbSet<RequestSalesQuotationDetails> RequestSalesQuotationDetails { get; set; }
+        //PurchasingRequestForQuotation
         public virtual DbSet<PurchasingRequestForQuotation> PurchasingRequestForQuotations { get; set; }
         public virtual DbSet<PurchasingRequestProduct> PurchasingRequestProducts { get; set; }
+        //PurchasingOrder
+        public virtual DbSet<PurchasingOrder> PurchasingOrders { get; set; }
+        public virtual DbSet<PurchasingOrderDetail> PurchasingOrderDetails { get; set; }
+        //Quotation
+        public virtual DbSet<Quotation> Quotations { get; set; }
+        public virtual DbSet<QuotationDetail> QuotationDetails { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -34,6 +47,7 @@ namespace PMS.Data.DatabaseConfig
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+            //
 
             builder.Entity<User>(entity =>
             {
@@ -67,7 +81,8 @@ namespace PMS.Data.DatabaseConfig
                     .HasMaxLength(256);
 
                 entity.Property(u => u.Address)
-                    .HasMaxLength(256);
+                    .HasMaxLength(256)
+                    .IsRequired();
 
                 entity.Property(u => u.Gender)
                     .HasColumnType("bit")
@@ -165,6 +180,7 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired(false)
                     .HasMaxLength(50);
             });
+            //
 
             builder.Entity<Warehouse>(entity =>
             {
@@ -214,6 +230,7 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(w => w.WarehouseLocations)
                     .HasForeignKey(wl => wl.WarehouseId);
             });
+            //
 
             builder.Entity<Product>(entity =>
             {
@@ -244,11 +261,42 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(p => p.Status)
                     .IsRequired();
 
-                entity.Property(p => p.Image);
+                entity.Property(p => p.Image).IsRequired();
 
                 entity.HasOne(p => p.Category)
                     .WithMany(c => c.Products)
                     .HasForeignKey(p => p.CategoryID)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<LotProduct>(entity =>
+            {
+                entity.HasKey(lp => lp.LotID);
+
+                entity.Property(lp => lp.InputDate)
+                    .IsRequired()
+                    .HasColumnType("date");
+
+                entity.Property(lp => lp.ExpiredDate)
+                    .IsRequired()
+                    .HasColumnType("date");
+
+                entity.Property(lp => lp.LotQuantity)
+                    .IsRequired();
+
+                entity.Property(lp => lp.InputPrice).
+                HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(lp => lp.SalePrice)
+                .HasColumnType("decimal(18,2)");
+
+                entity.HasOne(lp => lp.Product)
+                    .WithMany(p => p.LotProducts)
+                    .HasForeignKey(lp => lp.ProductID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(lp => lp.Supplier)
+                    .WithMany(s => s.LotProducts)
+                    .HasForeignKey(lp => lp.SupplierID)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -262,7 +310,10 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(c => c.Name)
                     .IsRequired()
                     .HasMaxLength(100);
+                entity.Property(c => c.Status)
+                .IsRequired();
             });
+            //
 
             builder.Entity<Notification>(entity =>
             {
@@ -308,6 +359,7 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(n => n.ReceiverId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+            //
 
             builder.Entity<RequestSalesQuotation>(entity =>
             {
@@ -334,6 +386,7 @@ namespace PMS.Data.DatabaseConfig
             {
                 entity.HasKey(e => new { e.RequestSalesQuotationId, e.ProductId });
             });
+            //
 
             builder.Entity<PurchasingRequestForQuotation>(entity =>
             {
@@ -381,6 +434,147 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(p => p.PRPS)
                     .HasForeignKey(prp => prp.ProductID)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+            //
+
+            builder.Entity<PurchasingOrder>(entity =>
+            {
+                entity.HasKey(po => po.POID);
+
+                entity.Property(po => po.Total)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(po => po.UserId)
+                    .IsRequired()
+                    .HasMaxLength(450);
+
+                entity.Property(po => po.Status);
+                entity.Property(po => po.Debt).HasColumnType("decimal(18,2)");
+                entity.Property(po => po.PaymentDate);
+                entity.Property(po => po.Deposit).HasColumnType("decimal(18,2)");
+
+                entity.Property(po => po.OrderDate).IsRequired();
+
+                entity.HasOne(po => po.User)
+                    .WithMany(u => u.PurchasingOrders)
+                    .HasForeignKey(po => po.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(po => po.Quotations)
+                    .WithMany(q => q.PurchasingOrders)
+                    .HasForeignKey(po => po.QID)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<PurchasingOrderDetail>(entity =>
+            {
+                entity.HasKey(pod => pod.PODID);
+
+                entity.Property(pod => pod.ProductName)
+                    .IsRequired()
+                    .HasMaxLength(255);
+
+                entity.Property(pod => pod.DVT)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(pod => pod.Quantity)
+                    .IsRequired();
+
+                entity.Property(pod => pod.UnitPrice)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(pod => pod.UnitPriceTotal)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(pod => pod.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(pod => pod.ExpiredDate)
+                .HasColumnType("date").IsRequired();
+
+                entity.HasOne(pod => pod.PurchasingOrder)
+                    .WithMany(po => po.PurchasingOrderDetails)
+                    .HasForeignKey(pod => pod.POID)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+            //
+
+            builder.Entity<Quotation>(entity =>
+            {
+                entity.HasKey(q => q.QID);
+
+
+                entity.Property(q => q.QID)
+                    .ValueGeneratedNever();
+
+                entity.Property(q => q.SendDate)
+                    .IsRequired();
+
+
+                entity.Property(q => q.QuotationExpiredDate)
+                    .IsRequired();
+
+                entity.Property(q => q.SupplierID)
+                    .IsRequired();
+
+
+                entity.Property(q => q.Status)
+                    .IsRequired();
+
+
+                entity.HasMany(q => q.PurchasingOrders)
+                    .WithOne(po => po.Quotations)
+                    .HasForeignKey(po => po.QID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+
+                entity.HasMany(q => q.QuotationDetails)
+                    .WithOne(qd => qd.Quotation)
+                    .HasForeignKey(qd => qd.QID)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<QuotationDetail>(entity =>
+            {
+                entity.HasKey(qd => qd.QDID);
+
+                entity.Property(qd => qd.QDID)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(qd => qd.QID)
+                    .IsRequired();
+
+                entity.Property(qd => qd.ProductID)
+                    .IsRequired();
+
+                entity.Property(qd => qd.ProductName)
+                    .IsRequired()
+                    .HasMaxLength(255);
+
+                entity.Property(qd => qd.ProductDescription)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(qd => qd.ProductUnit)
+                    .IsRequired()
+                    .HasMaxLength(20);
+
+                entity.Property(qd => qd.UnitPrice)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(qd => qd.ProductDate)
+                    .HasColumnType("date")
+                    .IsRequired();
+
+                entity.HasOne(qd => qd.Quotation)
+                    .WithMany(q => q.QuotationDetails)
+                    .HasForeignKey(qd => qd.QID)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

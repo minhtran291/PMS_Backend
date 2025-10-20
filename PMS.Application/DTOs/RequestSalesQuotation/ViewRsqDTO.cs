@@ -12,7 +12,7 @@ namespace PMS.Application.DTOs.RequestSalesQuotation
     {
         public int Id {  get; set; }
         public string RequestCode { get; set; } = null!;
-        public DateTime RequestDate { get; set; }
+        public DateTime? RequestDate { get; set; }
         public RequestSalesQuotationStatus Status { get; set; }
         public List<ViewRsqDetailsDTO> Details { get; set; } = [];
     }

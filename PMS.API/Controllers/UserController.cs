@@ -15,7 +15,7 @@ namespace PMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController : ControllerBase
+    public class UserController : BaseController
     {
 
         private readonly IUserService _userService;
@@ -41,6 +41,11 @@ namespace PMS.API.Controllers
                     success = true,
                     message = result.Message,
                     data = result.Data
+                }),
+                400 => BadRequest(new
+                {
+                    success = false,
+                    message = result.Message
                 }),
                 500 => StatusCode(500, new
                 {
@@ -179,6 +184,43 @@ namespace PMS.API.Controllers
                 return NotFound(result);
 
             return Ok(result);
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/User/changePassword
+        /// Đổi mật khẩu người dùng (yêu cầu nhập mật khẩu cũ)
+        /// </summary>
+        [HttpPost("changePassword")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest model)
+        {
+            if (model == null)
+                return BadRequest(new { Message = "Dữ liệu yêu cầu không hợp lệ." });
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+
+            var result = await _userService.ChangePasswordAsync(userId, model.OldPassword, model.NewPassword);
+            return HandleServiceResult(result);
+        }
+
+        [HttpGet, Authorize]
+        [Route("view-profile")]
+        public async Task<IActionResult> GetProfile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var roles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
+
+            if (string.IsNullOrEmpty(userId) || roles.Count == 0)
+                return Unauthorized();
+
+            var result = await _userService.GetProfile(userId, roles);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data,
+            });
         }
     }
 

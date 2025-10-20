@@ -7,11 +7,16 @@ using Microsoft.EntityFrameworkCore.Storage;
 using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
+using PMS.Data.Repositories.PurchasingOrderDetailRepository;
+using PMS.Data.Repositories.PurchasingOrderRepository;
 using PMS.Data.Repositories.PurchasingRequestForQuotationRepository;
 using PMS.Data.Repositories.PurchasingRequestProductRepository;
+using PMS.Data.Repositories.QuotationDetailRepository;
+using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
 using PMS.Data.Repositories.StaffProfile;
@@ -31,29 +36,46 @@ namespace PMS.Data.UnitOfWork
         IProductCategoryRepository category,
         IWarehouseRepository warehouse,
         IWarehouseLocationRepository warehouseLocation,
-        INotificationRepository notification, 
-        IRequestSalesQuotationRepository requestSalesQuotation, 
+        INotificationRepository notification,
+        IRequestSalesQuotationRepository requestSalesQuotation,
         IRequestSalesQuotationDetailsRepository requestSalesQuotationDetails,
         IPurchasingRequestForQuotationRepository
         purchasingRequestForQuotation,
         IPurchasingRequestProductRepository
-        purchasingRequestProduct) : IUnitOfWork
+        purchasingRequestProduct,
+        ILotProductRepository lotProduct, IPurchasingOrderRepository purchasingOrder,
+        IPurchasingOrderDetailRepository purchasingOrderDetail,
+        IQuotationRepository quotation,
+        IQuotationDetailRepository quotationDetail) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
+        //Users
         public IUserRepository Users { get; private set; } = users;
         public ICustomerProfileRepository CustomerProfile { get; private set; } = customerProfile;
         public IStaffProfileRepository StaffProfile { get; private set; } = staffProfile;
         public ISupplierRepository Supplier { get; private set; } = supplier;
+        //Product
         public IProductRepository Product { get; private set; } = product;
         public IProductCategoryRepository Category { get; private set; } = category;
-        public IWarehouseRepository Warehouse { get; private set; } = warehouse;
+        public ILotProductRepository LotProduct { get; private set; } = lotProduct;
+        //Notification
         public INotificationRepository Notification { get; private set; } = notification;
+        //Warehouse
+        public IWarehouseRepository Warehouse { get; private set; } = warehouse;
         public IWarehouseLocationRepository WarehouseLocation { get; private set; } = warehouseLocation;
+        //RequestSalesQuotation
         public IRequestSalesQuotationRepository RequestSalesQuotation { get; private set; } = requestSalesQuotation;
         public IRequestSalesQuotationDetailsRepository RequestSalesQuotationDetails { get; private set; } = requestSalesQuotationDetails;
+        //PurchasingRequestForQuotation
         public IPurchasingRequestForQuotationRepository PurchasingRequestForQuotation { get; private set; } = purchasingRequestForQuotation;
         public IPurchasingRequestProductRepository PurchasingRequestProduct { get; private set; } = purchasingRequestProduct;
+        //Quotation
+        public IQuotationRepository Quotation { get; private set; } = quotation;
+        public IQuotationDetailRepository QuotationDetail { get; private set; } = quotationDetail;
+        //PurchasingOrder
+        public IPurchasingOrderRepository PurchasingOrder { get; private set; } = purchasingOrder;
+        public IPurchasingOrderDetailRepository PurchasingOrderDetail { get; private set; } = purchasingOrderDetail;
 
         public async Task<int> CommitAsync()
         {

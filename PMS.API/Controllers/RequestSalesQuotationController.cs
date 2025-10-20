@@ -33,13 +33,18 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER)]
+        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
         [Route("view-list")]
         public async Task<IActionResult> ViewRequestList()
         {
-            var customerId = User.FindFirstValue("customer_id");
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationList(customerId);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("Token không chứa thông tin định danh người dùng.");
+            }
+
+            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationList(userId);
 
             return StatusCode(result.StatusCode, new
             {
@@ -48,11 +53,18 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER)]
+        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
         [Route("view-details")]
         public async Task<IActionResult> ViewRequestDetails(int rsqId)
         {
-            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationDetails(rsqId);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized("Token không chứa thông tin định danh người dùng.");
+            }
+
+            var result = await _requestSalesQuotationService.ViewRequestSalesQuotationDetails(rsqId, userId);
 
             return StatusCode(result.StatusCode, new
             {
@@ -72,7 +84,6 @@ namespace PMS.API.Controllers
             return StatusCode(result.StatusCode, new
             {
                 message = result.Message,
-                data = result.Data,
             });
         }
 
@@ -87,7 +98,6 @@ namespace PMS.API.Controllers
             return StatusCode(result.StatusCode, new
             {
                 message = result.Message,
-                data = result.Data,
             });
         }
 
@@ -95,12 +105,13 @@ namespace PMS.API.Controllers
         [Route("delete-request")]
         public async Task<IActionResult> DeleteRequest(int rsqId)
         {
-            var result = await _requestSalesQuotationService.RemoveRequestSalesQuotation(rsqId);
+            var customerId = User.FindFirstValue("customer_id");
+
+            var result = await _requestSalesQuotationService.RemoveRequestSalesQuotation(rsqId, customerId);
 
             return StatusCode(result.StatusCode, new
             {
                 message = result.Message,
-                data = result.Data,
             });
         }
     }

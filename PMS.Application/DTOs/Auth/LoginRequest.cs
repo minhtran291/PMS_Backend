@@ -1,8 +1,12 @@
-﻿namespace PMS.Application.DTOs.Auth
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace PMS.Application.DTOs.Auth
 {
     public class LoginRequest
     {
-        public string UsernameOrEmail { get; set; }
-        public string Password { get; set; }
+        [Required(ErrorMessage = "Email không được để chống")]
+        public string UsernameOrEmail { get; set; } = null!;
+        
+        public string Password { get; set; } = null!;
     }
 }

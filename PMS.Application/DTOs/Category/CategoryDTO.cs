@@ -10,6 +10,7 @@ namespace PMS.Application.DTOs.Category
         public required string Name { get; set; }
         [StringLength(300, ErrorMessage = "Mô tả loại sản phẩm không được vượt quá 300 ký tự")]
         public string? Description { get; set; }
+        public bool Status {  get; set; }
         public virtual ICollection<Product.ProductDTO> Products { get; set; }=new List<Product.ProductDTO>();
     }
 }
