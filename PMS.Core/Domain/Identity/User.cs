@@ -11,7 +11,7 @@ namespace PMS.Core.Domain.Identity
         public UserStatus UserStatus { get; set; }
         public string? FullName { get; set; }
         public string? Avatar { get; set; }
-        public string? Address { get; set; }
+        public string Address { get; set; } = null!;
         public bool? Gender { get; set; }
         public DateTime CreateAt { get; set; }
         

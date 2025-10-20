@@ -7,7 +7,6 @@ using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Data.UnitOfWork;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace PMS.Application.Services.RequestSalesQuotation
 {
@@ -37,7 +36,6 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     CustomerId = profile.Id,
                     RequestCode = GenerateRequestCode(),
-                    RequestDate = DateTime.Now,
                     Status = Core.Domain.Enums.RequestSalesQuotationStatus.Draft
                 };
 
@@ -254,6 +252,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
 
                 if (validateRsq != null) return validateRsq;
 
+                rsq.RequestDate = DateTime.Now;
                 rsq.Status = Core.Domain.Enums.RequestSalesQuotationStatus.Sent;
 
                 _unitOfWork.RequestSalesQuotation.Update(rsq);

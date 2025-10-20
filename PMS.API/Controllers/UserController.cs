@@ -202,6 +202,15 @@ namespace PMS.API.Controllers
             var result = await _userService.ChangePasswordAsync(userId, model.OldPassword, model.NewPassword);
             return HandleServiceResult(result);
         }
+
+        [HttpGet, Authorize]
+        [Route("view-profile")]
+        public async Task<IActionResult> GetProfile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var roles = User.FindAll(ClaimTypes.Role).Select(r => r.Value).ToList();
+            return Ok();
+        }
     }
 
 }
