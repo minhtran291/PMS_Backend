@@ -38,7 +38,7 @@ namespace PMS.API.Controllers
             return StatusCode(tokenResponse.StatusCode, new
             {
                 message = tokenResponse.Message,
-                data = tokenResponse.Data?.AccessToken,
+                accessToken = tokenResponse.Data?.AccessToken,
             });
 
         }
