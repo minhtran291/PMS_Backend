@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Globalization;
 using System.Text;
 using AutoMapper;
@@ -14,6 +15,7 @@ using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
+using PMS.Core.Domain.Enums;
 using PMS.Core.Domain.Identity;
 
 using PMS.Data.UnitOfWork;
@@ -45,7 +47,7 @@ namespace PMS.API.Services.PRFQService
                 };
             }
             var supplier = await _unitOfWork.Supplier.Query()
-                .FirstOrDefaultAsync(s => s.Id == supplierId && s.Status == 0);
+                .FirstOrDefaultAsync(s => s.Id == supplierId && s.Status == SupplierStatus.Active);
             if (supplier == null)
             {
                 return new ServiceResult<int>

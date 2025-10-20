@@ -1,19 +1,20 @@
 ﻿using AutoMapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PMS.API.Services.PRFQService;
 using PMS.Application.Automapper;
 using PMS.Application.Services.Admin;
 using PMS.Application.Services.Auth;
 using PMS.Application.Services.Category;
 using PMS.Application.Services.ExternalService;
+using PMS.Application.Services.Notification;
 using PMS.Application.Services.Product;
+using PMS.Application.Services.RequestSalesQuotation;
 using PMS.Application.Services.Supplier;
 using PMS.Application.Services.User;
 using PMS.Application.Services.Warehouse;
 using PMS.Application.Services.WarehouseLocation;
-using PMS.Application.Services.Notification;
 using PMS.Core.ConfigOptions;
-using PMS.Application.Services.RequestSalesQuotation;
 
 namespace PMS.Application.DIConfig
 {
@@ -38,6 +39,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IWarehouseLocationService, WarehouseLocationService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IRequestSalesQuotationService, RequestSalesQuotationService>();
+            services.AddScoped<IPRFQService, PRFQService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
