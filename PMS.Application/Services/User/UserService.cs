@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -36,7 +37,7 @@ namespace PMS.Application.Services.User
         {
             _logger.LogWarning($"=== BẮT ĐẦU ĐĂNG KÝ USER ===");
             _logger.LogInformation($"Bắt đầu đăng ký user: {customer.Email}");
-            
+
             var validateEmail = await _unitOfWork.Users.UserManager.FindByEmailAsync(customer.Email);
             _logger.LogInformation($"Kết quả tìm email: {validateEmail?.Email} - EmailConfirmed: {validateEmail?.EmailConfirmed}");
 
@@ -45,7 +46,7 @@ namespace PMS.Application.Services.User
                 _logger.LogWarning($"=== EMAIL ĐÃ TỒN TẠI ===");
                 _logger.LogWarning($"Email: {validateEmail.Email}");
                 _logger.LogWarning($"EmailConfirmed: {validateEmail.EmailConfirmed}");
-                
+
                 // Kiểm tra email đã được xác thực hay chưa
                 if (validateEmail.EmailConfirmed)
                 {
@@ -70,7 +71,7 @@ namespace PMS.Application.Services.User
                     };
                 }
             }
-            
+
             _logger.LogInformation($"Email không tồn tại, tiếp tục đăng ký: {customer.Email}");
 
             var validatePhone = await _unitOfWork.Users.Query().FirstOrDefaultAsync(u => u.PhoneNumber == customer.PhoneNumber);
@@ -115,7 +116,7 @@ namespace PMS.Application.Services.User
             _logger.LogWarning($"Email: {user.Email}");
             _logger.LogWarning($"PhoneNumber: {user.PhoneNumber}");
             _logger.LogWarning($"Password length: {customer.ConfirmPassword?.Length}");
-            
+
             var createResult = await _unitOfWork.Users.UserManager.CreateAsync(user, customer.ConfirmPassword);
             _logger.LogWarning($"CreateResult.Succeeded: {createResult.Succeeded}");
             if (!createResult.Succeeded)
@@ -195,7 +196,7 @@ namespace PMS.Application.Services.User
             _logger.LogWarning($"=== BẮT ĐẦU GỬI EMAIL ===");
             _logger.LogWarning($"User Email: {user.Email}");
             _logger.LogWarning($"User ID: {user.Id}");
-            
+
             // tao token moi voi securiry stamp moi
             string token = await _unitOfWork.Users.UserManager.GenerateEmailConfirmationTokenAsync(user);
             _logger.LogWarning($"Token generated: {token?.Substring(0, Math.Min(20, token?.Length ?? 0))}...");
@@ -214,7 +215,7 @@ namespace PMS.Application.Services.User
                 _logger.LogWarning($"Calling SendMailAsync with subject: {EmailSubject.CONFIRM_EMAIL}");
                 _logger.LogWarning($"Body length: {body?.Length}");
                 _logger.LogWarning($"To email: {user.Email}");
-                
+
                 await _emailService.SendMailAsync(EmailSubject.CONFIRM_EMAIL, body, user.Email);
                 _logger.LogWarning($"Email sent successfully to: {user.Email}");
             }
@@ -581,6 +582,20 @@ namespace PMS.Application.Services.User
             {
                 throw new Exception($"Error changing password: {ex.Message}", ex);
             }
+        }
+
+        public async Task<ServiceResult<object>> GetProfile(string userId, List<string> roles)
+        {
+            Object result = null;
+            //if(roles.Contains("STAFF") || roles.Contains("ACCOUNTANT"))
+            //{
+
+            //}
+            return new ServiceResult<object>
+            {
+                StatusCode = 200,
+                Data = result,
+            };
         }
     }
 }

@@ -19,5 +19,6 @@ namespace PMS.Application.Services.User
         Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string managerId);
         Task<ServiceResult<CustomerViewDTO>> GetCustomerByIdAsync(string userId);
         Task<ServiceResult<bool>> ChangePasswordAsync(string userId, string oldPasword, string newpassword);
+        Task<ServiceResult<object>> GetProfile(string userId, List<string> roles);
     }
 }

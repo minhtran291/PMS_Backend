@@ -67,7 +67,8 @@ namespace PMS.Data.DatabaseConfig
                     .HasMaxLength(256);
 
                 entity.Property(u => u.Address)
-                    .HasMaxLength(256);
+                    .HasMaxLength(256)
+                    .IsRequired();
 
                 entity.Property(u => u.Gender)
                     .HasColumnType("bit")
