@@ -39,6 +39,14 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<Quotation> Quotations { get; set; }
         public virtual DbSet<QuotationDetail> QuotationDetails { get; set; }
 
+        // Sales Quotation
+        public virtual DbSet<SalesQuotation> SalesQuotations { get; set; }
+        public virtual DbSet<SalesQuotaionDetails> SalesQuotaionDetails { get; set; }
+        public virtual DbSet<SalesQuotationComment> SalesQuotationComments { get; set; }
+        public virtual DbSet<TaxPolicy> TaxPolicies { get; set; }
+        public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities  { get; set; }
+
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseLazyLoadingProxies();
@@ -575,6 +583,102 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(q => q.QuotationDetails)
                     .HasForeignKey(qd => qd.QID)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<SalesQuotation>(entity =>
+            {
+                entity.HasKey(sq => sq.Id);
+
+                entity.Property(sq => sq.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(sq => sq.RsqId)
+                    .IsRequired();
+
+                entity.Property(sq => sq.QuotationCode)
+                    .HasMaxLength(256)
+                    .IsRequired();
+
+                entity.Property(sq => sq.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(sq => sq.Notes)
+                    .HasMaxLength(512);
+
+                entity.HasOne(sq => sq.RequestSalesQuotation)
+                    .WithMany(rsq => rsq.SalesQuotations)
+                    .HasForeignKey(sq => sq.RsqId);
+
+                entity.HasOne(sq => sq.SalesQuotationValidity)
+                    .WithOne(sqv => sqv.SalesQuotation)
+                    .HasForeignKey<SalesQuotation>(sq => sq.SqvId);
+            });
+
+            builder.Entity<SalesQuotaionDetails>(entity =>
+            {
+                entity.HasKey(sqd => new { sqd.SqId, sqd.LotId});
+
+                entity.HasOne(sqd => sqd.TaxPolicy)
+                    .WithMany(tp => tp.SalesQuotaionDetails)
+                    .HasForeignKey(sqd => sqd.TaxId);
+            });
+
+            builder.Entity<SalesQuotationComment>(entity =>
+            {
+                entity.HasKey(sqc => sqc.Id);
+
+                entity.Property(sqc => sqc.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(sqc => sqc.UserId)
+                    .HasMaxLength(450);
+
+                entity.Property(sqc => sqc.Content)
+                    .HasMaxLength(512);
+
+                entity.HasOne(sqc => sqc.SalesQuotation)
+                    .WithMany(sq => sq.SalesQuotationComments)
+                    .HasForeignKey(sqc => sqc.SqId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(sqc => sqc.User)
+                    .WithMany(u => u.SalesQuotationComments)
+                    .HasForeignKey(sqc => sqc.UserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<TaxPolicy>(entity =>
+            {
+                entity.HasKey(tp => tp.Id);
+
+                entity.Property(tp => tp.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(tp => tp.Name)
+                    .HasMaxLength(128)
+                    .IsRequired();
+
+                entity.Property(tp => tp.Rate)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(tp => tp.Description)
+                    .HasMaxLength(512);
+            });
+
+            builder.Entity<SalesQuotationValidity>(entity =>
+            {
+                entity.HasKey(sqv => sqv.Id);
+
+                entity.Property(sqv => sqv.Name)
+                    .HasMaxLength(128)
+                    .IsRequired();
+
+                entity.Property(sqv => sqv.Content)
+                    .HasMaxLength(128)
+                    .IsRequired();
             });
         }
     }

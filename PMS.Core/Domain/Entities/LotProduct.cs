@@ -29,5 +29,7 @@ namespace PMS.Core.Domain.Entities
         public int ProductID { get; set; }
         public virtual Product Product { get; set; } = null!;
         public virtual Supplier Supplier { get; set; } = null!;
+
+        public virtual ICollection<SalesQuotaionDetails> SalesQuotaionDetails { get; set; } = [];
     }
 }

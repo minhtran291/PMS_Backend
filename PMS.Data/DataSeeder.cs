@@ -1,14 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using PMS.Data.DatabaseConfig;
-using PMS.Core.Domain.Constant;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using PMS.Core.Domain.Identity;
 using Microsoft.EntityFrameworkCore;
+using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
+using PMS.Core.Domain.Enums;
+using PMS.Core.Domain.Identity;
+using PMS.Data.DatabaseConfig;
 
 namespace PMS.Data
 {
@@ -384,6 +380,228 @@ namespace PMS.Data
                 };
 
                 await context.Products.AddRangeAsync(products);
+                await context.SaveChangesAsync();
+            }
+
+
+            if (!context.Suppliers.Any())
+            {
+                var suppliers = new List<Supplier>
+                {
+                    new Supplier
+                    {
+                        Name = "Công ty Dược Phẩm Trung Ương CPC1",
+                        Email = "contact@cpc1.vn",
+                        PhoneNumber = "024-38212345",
+                        Address = "Số 356A Giải Phóng, Hà Nội",
+                        Status = SupplierStatus.Active,
+                        BankAccountNumber = "1234567890",
+                        MyDebt = "0"
+                    },
+                    new Supplier
+                    {
+                        Name = "Công ty TNHH Dược Phẩm Hoa Linh",
+                        Email = "info@hoalinh.vn",
+                        PhoneNumber = "024-37751234",
+                        Address = "Số 102 Thái Thịnh, Đống Đa, Hà Nội",
+                        Status = SupplierStatus.Active,
+                        BankAccountNumber = "2233445566",
+                        MyDebt = "0"
+                    },
+                    new Supplier
+                    {
+                        Name = "Công ty Dược Phẩm Imexpharm",
+                        Email = "support@imexpharm.vn",
+                        PhoneNumber = "0277-3856789",
+                        Address = "Số 4, QL30, TP. Cao Lãnh, Đồng Tháp",
+                        Status = SupplierStatus.Active,
+                        BankAccountNumber = "9988776655",
+                        MyDebt = "0"
+                    }
+                };
+
+                await context.Suppliers.AddRangeAsync(suppliers);
+                await context.SaveChangesAsync();
+            }
+
+            if (!context.LotProducts.Any())
+            {
+                var products = context.Products.ToList();
+
+                var lotProducts = new List<LotProduct>
+                {
+                    new LotProduct
+                    {
+                        ProductID = 1,
+                        SupplierID = 1,
+                        InputDate = DateTime.Now.AddMonths(-2),
+                        ExpiredDate = DateTime.Now.AddMonths(2),
+                        LotQuantity = 1000,
+                        InputPrice = 12000,
+                        SalePrice = 15000
+                    },
+                    new LotProduct
+                    {
+                        ProductID = 1,
+                        SupplierID = 1,
+                        InputDate = DateTime.Now.AddMonths(-1),
+                        ExpiredDate = DateTime.Now.AddMonths(3),
+                        LotQuantity = 1000,
+                        InputPrice = 15000,
+                        SalePrice = 18000
+                    },
+                    new LotProduct
+                    {
+                        ProductID = 2,
+                        SupplierID = 2,
+                        InputDate = DateTime.Now.AddMonths(-2),
+                        ExpiredDate = DateTime.Now.AddMonths(2),
+                        LotQuantity = 800,
+                        InputPrice = 25000,
+                        SalePrice = 30000
+                    },
+                    new LotProduct
+                    {
+                        ProductID = 2,
+                        SupplierID = 2,
+                        InputDate = DateTime.Now.AddMonths(-1),
+                        ExpiredDate = DateTime.Now.AddMonths(3),
+                        LotQuantity = 800,
+                        InputPrice = 27000,
+                        SalePrice = 32000
+                    },
+                    new LotProduct
+                    {
+                        ProductID = 3,
+                        SupplierID = 3,
+                        InputDate = DateTime.Now.AddMonths(-2),
+                        ExpiredDate = DateTime.Now.AddMonths(2),
+                        LotQuantity = 600,
+                        InputPrice = 18000,
+                        SalePrice = 22000
+                    },
+                    new LotProduct
+                    {
+                        ProductID = 3,
+                        SupplierID = 3,
+                        InputDate = DateTime.Now.AddMonths(-1),
+                        ExpiredDate = DateTime.Now.AddMonths(3),
+                        LotQuantity = 600,
+                        InputPrice = 20000,
+                        SalePrice = 24000
+                    },
+                    new LotProduct
+                    {
+                        ProductID = 4,
+                        SupplierID = 2,
+                        InputDate = DateTime.Now.AddMonths(-2),
+                        ExpiredDate = DateTime.Now.AddMonths(2),
+                        LotQuantity = 1200,
+                        InputPrice = 9000,
+                        SalePrice = 13000
+                    },
+                    new LotProduct
+                    {
+                        ProductID = 4,
+                        SupplierID = 2,
+                        InputDate = DateTime.Now.AddMonths(-1),
+                        ExpiredDate = DateTime.Now.AddMonths(3),
+                        LotQuantity = 1200,
+                        InputPrice = 11000,
+                        SalePrice = 15000
+                    },
+                    new LotProduct
+                    {
+                        ProductID = 5,
+                        SupplierID = 1,
+                        InputDate = DateTime.Now.AddMonths(-2),
+                        ExpiredDate = DateTime.Now.AddMonths(2),
+                        LotQuantity = 500,
+                        InputPrice = 20000,
+                        SalePrice = 25000
+                    },
+                    new LotProduct
+                    {
+                        ProductID = 5,
+                        SupplierID = 1,
+                        InputDate = DateTime.Now.AddMonths(-1),
+                        ExpiredDate = DateTime.Now.AddMonths(3),
+                        LotQuantity = 500,
+                        InputPrice = 22000,
+                        SalePrice = 27000
+                    }
+                };
+
+                await context.LotProducts.AddRangeAsync(lotProducts);
+                await context.SaveChangesAsync();
+            }
+
+            if (!context.TaxPolicies.Any())
+            {
+                var taxPolicies = new List<TaxPolicy>
+                {
+                    new TaxPolicy
+                    {
+                        Name = "VAT 10%",
+                        Rate = 0.10m,
+                        Description = "Thuế giá trị gia tăng 10%",
+                        Status = true
+                    },
+                    new TaxPolicy
+                    {
+                        Name = "VAT 5%",
+                        Rate = 0.05m,
+                        Description = "Thuế giá trị gia tăng 5%",
+                        Status = true
+                    },
+                    new TaxPolicy
+                    {
+                        Name = "Không chịu thuế",
+                        Rate = 0.00m,
+                        Description = "Miễn áp thuế giá trị gia tăng",
+                        Status = true
+                    }
+                };
+
+                await context.TaxPolicies.AddRangeAsync(taxPolicies);
+                await context.SaveChangesAsync();
+            }
+
+            if (!context.SalesQuotationValidities.Any())
+            {
+                var validities = new List<SalesQuotationValidity>
+                {
+                    new SalesQuotationValidity
+                    {
+                        Name = "Hạn 15 ngày",
+                        Content = "Báo giá có hiệu lực trong 15 ngày kể từ ngày phát hành.",
+                        Days = 15,
+                        Status = true
+                    },
+                    new SalesQuotationValidity
+                    {
+                        Name = "Hạn 30 ngày",
+                        Content = "Báo giá có hiệu lực trong 30 ngày kể từ ngày phát hành.",
+                        Days = 30,
+                        Status = true
+                    },
+                    new SalesQuotationValidity
+                    {
+                        Name = "Hạn 45 ngày",
+                        Content = "Báo giá có hiệu lực trong 45 ngày kể từ ngày phát hành.",
+                        Days = 45,
+                        Status = true
+                    },
+                    new SalesQuotationValidity
+                    {
+                        Name = "Hạn 60 ngày",
+                        Content = "Báo giá có hiệu lực trong 60 ngày kể từ ngày phát hành.",
+                        Days = 60,
+                        Status = true
+                    }
+                };
+
+                await context.SalesQuotationValidities.AddRangeAsync(validities);
                 await context.SaveChangesAsync();
             }
 
