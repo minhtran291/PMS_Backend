@@ -7,7 +7,7 @@ namespace PMS.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class WarehouseLocationController : ControllerBase
+    public class WarehouseLocationController : BaseController
     {
         private readonly IWarehouseLocationService _warehouseLocationService;
 
@@ -31,6 +31,11 @@ namespace PMS.API.Controllers
             }
         }
 
+        /// <summary>
+        /// https://localhost:7213/api/WarehouseLocation/create-warehouse-location
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
         [HttpPost]
         [Route("create-warehouse-location")]
         public async Task<IActionResult> CreateWarehouseLocation([FromBody] CreateWarehouseLocation dto)
@@ -48,6 +53,11 @@ namespace PMS.API.Controllers
             }
         }
 
+        /// <summary>
+        /// https://localhost:7213/api/WarehouseLocation/update-warehouse-location
+        /// </summary>
+        /// <param name="dto"></param>
+        /// <returns></returns>
         [HttpPut]
         [Route("update-warehouse-location")]
         public async Task<IActionResult> UpdateWarehouseLocation([FromBody] UpdateWarehouseLocation dto)
@@ -64,9 +74,13 @@ namespace PMS.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
-
+        /// <summary>
+        /// https://localhost:7213/api/WarehouseLocation/get-warehouse-location-details/{}
+        /// </summary>
+        /// <param name="warehouseLocationId"></param>
+        /// <returns></returns>
         [HttpGet]
-        [Route("get-warehouse-location-details")]
+        [Route("get-warehouse-location-details/{warehouseLocationId}")]
         public async Task<IActionResult> WarehouseLocationDetails(int warehouseLocationId)
         {
             try
@@ -93,6 +107,20 @@ namespace PMS.API.Controllers
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/WarehouseLocation/storeLot
+        /// Gán lô hàng (Lot) vào vị trí trong kho
+        /// </summary>
+        [HttpPut("storeLot")]
+        public async Task<IActionResult> StoreLotInWarehouse([FromBody] StoringLot dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _warehouseLocationService.StoringLotInWarehouseLocation(dto);
+            return HandleServiceResult(result);
         }
     }
 }

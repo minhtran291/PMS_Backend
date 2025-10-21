@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PMS.Application.Services.Base;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Data.UnitOfWork;
+using PMS.Core.Domain.Constant;
 
 namespace PMS.Application.Services.WarehouseLocation
 {
@@ -71,6 +72,51 @@ namespace PMS.Application.Services.WarehouseLocation
             _unitOfWork.WarehouseLocation.Update(isExisted);
             await _unitOfWork.CommitAsync();
         }
+
+        public async Task<ServiceResult<bool>> StoringLotInWarehouseLocation(StoringLot dto)
+        {
+            var isExisted = await _unitOfWork.WarehouseLocation.Query()
+                 .FirstOrDefaultAsync(wl => wl.WarehouseId == dto.WarehouseId
+                     && wl.ColumnNo == dto.ColumnNo
+                     && wl.LevelNo == dto.LevelNo
+                     && wl.RowNo == dto.RowNo);
+
+            if (isExisted == null)
+            {
+                _logger.LogError("Loi warehouse location id khong ton tai ham UpdateWarehouseLocation");
+                return new ServiceResult<bool>
+                {
+                    Data = false,
+                    Message = $"không tồn tại vị trí kho với ID:{dto.WarehouseId}",
+                    StatusCode = 200
+                };
+            }
+            var exLotProduct = await _unitOfWork.LotProduct.Query().FirstOrDefaultAsync(lp => lp.LotID == dto.LotID);
+            if (exLotProduct == null)
+            {
+                _logger.LogError("loi khi tim kiem lotid");
+                return new ServiceResult<bool>
+                {
+                    Data = false,
+                    Message = $"không tồn tại lô sản phẩm với LotID:{dto.LotID}",
+                    StatusCode = 200
+                };
+            }
+            isExisted.LotID = dto.LotID;
+            _unitOfWork.WarehouseLocation.Update(isExisted);
+            await _unitOfWork.CommitAsync();
+            exLotProduct.WarehouselocationID = isExisted.Id;
+            _unitOfWork.LotProduct.Update(exLotProduct);
+            await _unitOfWork.CommitAsync();
+            return new ServiceResult<bool>
+            {
+                Data = true,
+                Message = "Update Thành công",
+                StatusCode = 200
+            };
+        }
+
+
 
         public async Task<WarehouseLocationList> ViewWarehouseLocationDetails(int warehouseLocationId)
         {
