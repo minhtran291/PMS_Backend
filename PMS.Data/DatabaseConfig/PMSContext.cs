@@ -38,15 +38,12 @@ namespace PMS.Data.DatabaseConfig
         //Quotation
         public virtual DbSet<Quotation> Quotations { get; set; }
         public virtual DbSet<QuotationDetail> QuotationDetails { get; set; }
-
         // Sales Quotation
         public virtual DbSet<SalesQuotation> SalesQuotations { get; set; }
         public virtual DbSet<SalesQuotaionDetails> SalesQuotaionDetails { get; set; }
         public virtual DbSet<SalesQuotationComment> SalesQuotationComments { get; set; }
         public virtual DbSet<TaxPolicy> TaxPolicies { get; set; }
         public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities { get; set; }
-
-
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseLazyLoadingProxies();
