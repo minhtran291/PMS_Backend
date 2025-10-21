@@ -244,11 +244,18 @@ namespace PMS.Data.Migrations
                     b.Property<int>("SupplierID")
                         .HasColumnType("int");
 
+                    b.Property<int?>("WarehouselocationID")
+                        .HasColumnType("int");
+
                     b.HasKey("LotID");
 
                     b.HasIndex("ProductID");
 
                     b.HasIndex("SupplierID");
+
+                    b.HasIndex("WarehouselocationID")
+                        .IsUnique()
+                        .HasFilter("[WarehouselocationID] IS NOT NULL");
 
                     b.ToTable("LotProducts");
                 });
@@ -877,6 +884,9 @@ namespace PMS.Data.Migrations
                     b.Property<int>("LevelNo")
                         .HasColumnType("int");
 
+                    b.Property<int>("LotID")
+                        .HasColumnType("int");
+
                     b.Property<int>("RowNo")
                         .HasColumnType("int");
 
@@ -1073,9 +1083,16 @@ namespace PMS.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("PMS.Core.Domain.Entities.WarehouseLocation", "WarehouseLocation")
+                        .WithOne("LotProduct")
+                        .HasForeignKey("PMS.Core.Domain.Entities.LotProduct", "WarehouselocationID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Product");
 
                     b.Navigation("Supplier");
+
+                    b.Navigation("WarehouseLocation");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Notification", b =>
@@ -1380,6 +1397,12 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.Warehouse", b =>
                 {
                     b.Navigation("WarehouseLocations");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.WarehouseLocation", b =>
+                {
+                    b.Navigation("LotProduct")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Identity.User", b =>

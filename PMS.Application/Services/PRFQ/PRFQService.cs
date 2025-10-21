@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 using System.Globalization;
 using System.Text;
 using AutoMapper;
@@ -14,6 +15,7 @@ using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
+using PMS.Core.Domain.Enums;
 using PMS.Core.Domain.Identity;
 
 using PMS.Data.UnitOfWork;
@@ -45,7 +47,7 @@ namespace PMS.API.Services.PRFQService
                 };
             }
             var supplier = await _unitOfWork.Supplier.Query()
-                .FirstOrDefaultAsync(s => s.Id == supplierId && s.Status == 0);
+                .FirstOrDefaultAsync(s => s.Id == supplierId && s.Status == SupplierStatus.Active);
             if (supplier == null)
             {
                 return new ServiceResult<int>
@@ -54,10 +56,28 @@ namespace PMS.API.Services.PRFQService
                     StatusCode = 404
                 };
             }
-            var products = await _unitOfWork.Product.Query().Where(p => productIds.Contains(p.ProductID)).ToListAsync();
-            if (products.Count != productIds.Count) throw new Exception("Một số sản phẩm không tồn tại");
+            var products = await _unitOfWork.Product.Query()
+                 .Where(p => productIds.Contains(p.ProductID))
+                 .ToListAsync();
+
+            if (products.Count != productIds.Count)
+            {
+                return new ServiceResult<int>
+                {
+                    StatusCode = 400,
+                    Message = "Một số sản phẩm không tồn tại"
+                };
+            }
+
             var inactiveProducts = products.Where(p => p.Status == false).ToList();
-            if (inactiveProducts.Any()) throw new Exception($"Một số sản phẩm không hoạt động");
+            if (inactiveProducts.Any())
+            {
+                return new ServiceResult<int>
+                {
+                    StatusCode = 400,
+                    Message = "Một số sản phẩm không hoạt động"
+                };
+            }
 
 
             var prfq = new PurchasingRequestForQuotation
@@ -89,9 +109,9 @@ namespace PMS.API.Services.PRFQService
             await _emailService.SendEmailWithAttachmentAsync(supplier.Email, "Yêu cầu báo giá", "Kính gửi, đính kèm yêu cầu báo giá.", excelBytes, $"PRFQ_{prfq.PRFQID}.xlsx");
             return new ServiceResult<int>
             {
-                Data= prfq.PRFQID,
+                Data = prfq.PRFQID,
                 Message = "Tạo yêu cầu báo giá thành công.",
-                StatusCode = 201
+                StatusCode = 200
             };
         }
 
