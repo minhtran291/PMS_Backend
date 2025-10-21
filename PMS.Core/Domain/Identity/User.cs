@@ -23,5 +23,6 @@ namespace PMS.Core.Domain.Identity
         public virtual ICollection<PurchasingRequestForQuotation> PurchasingRequestForQuotations { get; set; } = new List<PurchasingRequestForQuotation>();
 
         public virtual ICollection<PurchasingOrder> PurchasingOrders { get; set; } = new List<PurchasingOrder>();
+        public virtual ICollection<SalesQuotationComment>? SalesQuotationComments {  get; set; } 
     }
 }

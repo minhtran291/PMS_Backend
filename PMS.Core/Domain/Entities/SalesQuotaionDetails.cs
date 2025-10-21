@@ -8,10 +8,12 @@ namespace PMS.Core.Domain.Entities
 {
     public class SalesQuotaionDetails
     {
-        public int Id { get; set; }
         public int SqId { get; set; }
-        public int ProductId { get; set; }
-        public decimal UnitPrice { get; set; }
-        public decimal Tax { get; set; }
+        public int LotId { get; set; }
+        public int TaxId { get; set; }
+
+        public virtual SalesQuotation SalesQuotation { get; set; } = null!;
+        public virtual LotProduct LotProduct { get; set; } = null!;
+        public virtual TaxPolicy TaxPolicy { get; set; } = null!;
     }
 }
