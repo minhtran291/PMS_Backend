@@ -15,7 +15,10 @@ namespace PMS.API.Controllers
         {
             _warehouseService = warehouseService;
         }
-
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/get-all-warehouse
+        /// </summary>
+        /// <returns></returns>
         [HttpGet]
         [Route("get-all-warehouse")]
         public async Task<IActionResult> WarehouseList()
@@ -62,9 +65,13 @@ namespace PMS.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
-
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/get-warehouse-details/{}
+        /// </summary>
+        /// <param name="warehouseId"></param>
+        /// <returns></returns>
         [HttpGet]
-        [Route("get-warehouse-details")]
+        [Route("get-warehouse-details/{warehouseId}")]
         public async Task<IActionResult> WarehouseDetails(int warehouseId)
         {
             try

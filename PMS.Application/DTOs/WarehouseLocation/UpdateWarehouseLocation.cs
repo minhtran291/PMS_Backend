@@ -18,5 +18,7 @@ namespace PMS.Application.DTOs.WarehouseLocation
 
         [Range(0, 1, ErrorMessage = "Trạng thái chỉ được nhận giá trị 0 (Inactive) hoặc 1 (Active)")]
         public WarehouseLocationStatus Status { get; set; }
+
+        public int LotID { get; set; }
     }
 }
