@@ -27,9 +27,13 @@ namespace PMS.Core.Domain.Entities
         public int SupplierID { get; set; }
         [ForeignKey("Product")]
         public int ProductID { get; set; }
+
+        [ForeignKey("WarehouseLocation")]
+        public int? WarehouselocationID { get; set; }
         public virtual Product Product { get; set; } = null!;
         public virtual Supplier Supplier { get; set; } = null!;
 
         public virtual ICollection<SalesQuotaionDetails> SalesQuotaionDetails { get; set; } = [];
+        public virtual WarehouseLocation WarehouseLocation { get; set; } = null!;
     }
 }

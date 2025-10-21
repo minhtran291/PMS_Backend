@@ -39,12 +39,12 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<Quotation> Quotations { get; set; }
         public virtual DbSet<QuotationDetail> QuotationDetails { get; set; }
 
-        // Sales Quotation
+        //Sales Quotation
         public virtual DbSet<SalesQuotation> SalesQuotations { get; set; }
         public virtual DbSet<SalesQuotaionDetails> SalesQuotaionDetails { get; set; }
         public virtual DbSet<SalesQuotationComment> SalesQuotationComments { get; set; }
         public virtual DbSet<TaxPolicy> TaxPolicies { get; set; }
-        public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities  { get; set; }
+        public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities { get; set; }
 
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -306,6 +306,9 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(s => s.LotProducts)
                     .HasForeignKey(lp => lp.SupplierID)
                     .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(lp => lp.WarehouseLocation)
+                .WithOne(w => w.LotProduct)
+                .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<Category>(entity =>
@@ -618,7 +621,7 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<SalesQuotaionDetails>(entity =>
             {
-                entity.HasKey(sqd => new { sqd.SqId, sqd.LotId});
+                entity.HasKey(sqd => new { sqd.SqId, sqd.LotId });
 
                 entity.HasOne(sqd => sqd.TaxPolicy)
                     .WithMany(tp => tp.SalesQuotaionDetails)
@@ -649,6 +652,19 @@ namespace PMS.Data.DatabaseConfig
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            builder.Entity<SalesQuotationValidity>(entity =>
+            {
+                entity.HasKey(sqv => sqv.Id);
+
+                entity.Property(sqv => sqv.Name)
+                    .HasMaxLength(128)
+                    .IsRequired();
+
+                entity.Property(sqv => sqv.Content)
+                    .HasMaxLength(128)
+                    .IsRequired();
+            });
+            //
             builder.Entity<TaxPolicy>(entity =>
             {
                 entity.HasKey(tp => tp.Id);
@@ -667,19 +683,9 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(tp => tp.Description)
                     .HasMaxLength(512);
             });
+            //
 
-            builder.Entity<SalesQuotationValidity>(entity =>
-            {
-                entity.HasKey(sqv => sqv.Id);
 
-                entity.Property(sqv => sqv.Name)
-                    .HasMaxLength(128)
-                    .IsRequired();
-
-                entity.Property(sqv => sqv.Content)
-                    .HasMaxLength(128)
-                    .IsRequired();
-            });
         }
     }
 }
