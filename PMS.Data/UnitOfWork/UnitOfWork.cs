@@ -19,8 +19,13 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesQuotation;
+using PMS.Data.Repositories.SalesQuotationComment;
+using PMS.Data.Repositories.SalesQuotationDetails;
+using PMS.Data.Repositories.SalesQuotationValidity;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
+using PMS.Data.Repositories.TaxPolicy;
 using PMS.Data.Repositories.User;
 using PMS.Data.Repositories.Warehouse;
 using PMS.Data.Repositories.WarehouseLocation;
@@ -46,7 +51,12 @@ namespace PMS.Data.UnitOfWork
         ILotProductRepository lotProduct, IPurchasingOrderRepository purchasingOrder,
         IPurchasingOrderDetailRepository purchasingOrderDetail,
         IQuotationRepository quotation,
-        IQuotationDetailRepository quotationDetail) : IUnitOfWork
+        IQuotationDetailRepository quotationDetail, 
+        ISalesQuotationRepository salesQuotation, 
+        ISalesQuotationDetailsRepository salesQuotationDetails, 
+        ISalesQuotationCommentRepository salesQuotationComment, 
+        ISalesQuotationValidityRepository salesQuotationValidity, 
+        ITaxPolicyRepository taxPolicy) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -76,7 +86,12 @@ namespace PMS.Data.UnitOfWork
         //PurchasingOrder
         public IPurchasingOrderRepository PurchasingOrder { get; private set; } = purchasingOrder;
         public IPurchasingOrderDetailRepository PurchasingOrderDetail { get; private set; } = purchasingOrderDetail;
-
+        //Sales Quotation
+        public ISalesQuotationRepository SalesQuotation { get; private set; } = salesQuotation;
+        public ISalesQuotationDetailsRepository SalesQuotationDetails { get; private set; } = salesQuotationDetails;
+        public ISalesQuotationCommentRepository SalesQuotationComment { get; private set; } = salesQuotationComment;
+        public ISalesQuotationValidityRepository SalesQuotationValidity { get; private set; } = salesQuotationValidity;
+        public ITaxPolicyRepository TaxPolicy { get; private set; } = taxPolicy;
         public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();
