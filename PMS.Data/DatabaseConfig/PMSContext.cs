@@ -39,7 +39,7 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<Quotation> Quotations { get; set; }
         public virtual DbSet<QuotationDetail> QuotationDetails { get; set; }
 
-        //Sales Quotation
+        // Sales Quotation
         public virtual DbSet<SalesQuotation> SalesQuotations { get; set; }
         public virtual DbSet<SalesQuotaionDetails> SalesQuotaionDetails { get; set; }
         public virtual DbSet<SalesQuotationComment> SalesQuotationComments { get; set; }
@@ -652,19 +652,6 @@ namespace PMS.Data.DatabaseConfig
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
-            builder.Entity<SalesQuotationValidity>(entity =>
-            {
-                entity.HasKey(sqv => sqv.Id);
-
-                entity.Property(sqv => sqv.Name)
-                    .HasMaxLength(128)
-                    .IsRequired();
-
-                entity.Property(sqv => sqv.Content)
-                    .HasMaxLength(128)
-                    .IsRequired();
-            });
-            //
             builder.Entity<TaxPolicy>(entity =>
             {
                 entity.HasKey(tp => tp.Id);
@@ -683,9 +670,19 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(tp => tp.Description)
                     .HasMaxLength(512);
             });
-            //
 
+            builder.Entity<SalesQuotationValidity>(entity =>
+            {
+                entity.HasKey(sqv => sqv.Id);
 
+                entity.Property(sqv => sqv.Name)
+                    .HasMaxLength(128)
+                    .IsRequired();
+
+                entity.Property(sqv => sqv.Content)
+                    .HasMaxLength(128)
+                    .IsRequired();
+            });
         }
     }
 }
