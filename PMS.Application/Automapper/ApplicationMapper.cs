@@ -1,5 +1,7 @@
 ﻿
 using PMS.Application.DTOs.Profile;
+using PMS.Application.DTOs.SalesQuotation;
+using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Identity;
 
 namespace PMS.Application.Automapper
@@ -20,6 +22,9 @@ namespace PMS.Application.Automapper
                 .ForMember(dest => dest.ImageCnkd, otp => otp.MapFrom(src => src.CustomerProfile != null ? src.CustomerProfile.ImageCnkd : null))
                 .ForMember(dest => dest.ImageByt, otp => otp.MapFrom(src => src.CustomerProfile != null ? src.CustomerProfile.ImageByt : null))
                 .ForMember(dest => dest.Mshkd, otp => otp.MapFrom(src => src.CustomerProfile != null ? src.CustomerProfile.Mshkd : null));
+
+            CreateMap<LotProduct, FormSalesQuotationDTO>()
+                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product.ProductName));
         }
     }
 }
