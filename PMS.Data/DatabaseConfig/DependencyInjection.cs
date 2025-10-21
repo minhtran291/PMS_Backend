@@ -80,7 +80,7 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<ISalesQuotationDetailsRepository, SalesQuotationDetailsRepository>();
             services.AddScoped<ISalesQuotationCommentRepository, SalesQuotationCommentRepository>();
             services.AddScoped<ISalesQuotationValidityRepository, SalesQuotationValidityRepository>();
-            services.AddScoped<ITaxPolicyRepository, ITaxPolicyRepository>();
+            services.AddScoped<ITaxPolicyRepository, TaxPolicyRepository>();
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)

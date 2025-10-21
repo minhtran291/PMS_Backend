@@ -10,6 +10,7 @@ using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.Notification;
 using PMS.Application.Services.Product;
 using PMS.Application.Services.RequestSalesQuotation;
+using PMS.Application.Services.SalesQuotation;
 using PMS.Application.Services.Supplier;
 using PMS.Application.Services.User;
 using PMS.Application.Services.Warehouse;
@@ -40,6 +41,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IRequestSalesQuotationService, RequestSalesQuotationService>();
             services.AddScoped<IPRFQService, PRFQService>();
+            services.AddScoped<ISalesQuotationService, SalesQuotationService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)

@@ -187,7 +187,7 @@ namespace PMS.Application.Services.Auth
 
                 var claims = CreateClaimForAccessToken(user, roles); // tao lai de tao moi ca jti cho an toan
 
-                var newAccessToken = GenerateToken(claims, 1);
+                var newAccessToken = GenerateToken(claims, 5);
 
                 var newRefreshToken = GenerateRefreshToken();
 
