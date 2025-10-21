@@ -21,8 +21,13 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesQuotation;
+using PMS.Data.Repositories.SalesQuotationComment;
+using PMS.Data.Repositories.SalesQuotationDetails;
+using PMS.Data.Repositories.SalesQuotationValidity;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
+using PMS.Data.Repositories.TaxPolicy;
 using PMS.Data.Repositories.User;
 using PMS.Data.Repositories.Warehouse;
 using PMS.Data.Repositories.WarehouseLocation;
@@ -70,6 +75,12 @@ namespace PMS.Data.DatabaseConfig
             //
             services.AddScoped<IPurchasingOrderRepository, PurchasingOrderRepository>();
             services.AddScoped<IPurchasingOrderDetailRepository, PurchasingOrderDetailRepository>();
+            //
+            services.AddScoped<ISalesQuotationRepository, SalesQuotationRepository>();
+            services.AddScoped<ISalesQuotationDetailsRepository, SalesQuotationDetailsRepository>();
+            services.AddScoped<ISalesQuotationCommentRepository, SalesQuotationCommentRepository>();
+            services.AddScoped<ISalesQuotationValidityRepository, SalesQuotationValidityRepository>();
+            services.AddScoped<ITaxPolicyRepository, ITaxPolicyRepository>();
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)
