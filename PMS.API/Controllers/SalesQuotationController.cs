@@ -32,10 +32,23 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
-        [Route("create-salse-quotation")]
+        [Route("create-sales-quotation")]
         public async Task<IActionResult> CreateSalesQuotation([FromBody] CreateSalesQuotationDTO dto)
         {
             var result = await _salesQuotationService.CreateSalesQuotationAsync(dto);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        [HttpPatch, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("update-sales-quotation")]
+        public async Task<IActionResult> UpdateSalesQuotation([FromBody] UpdateSalesQuotationDTO dto)
+        {
+            var result = await _salesQuotationService.UpdateSalesQuotationAsync(dto);
 
             return StatusCode(result.StatusCode, new
             {

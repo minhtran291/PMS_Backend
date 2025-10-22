@@ -10,6 +10,6 @@ namespace PMS.Application.DTOs.SalesQuotation
     {
         public int RsqId { get; set; }
         public int ValidityId { get; set; }
-        public List<CreateSalesQuotationDetailsDTO> Details { get; set; } = [];
+        public List<SalesQuotationDetailsDTO> Details { get; set; } = [];
     }
 }
