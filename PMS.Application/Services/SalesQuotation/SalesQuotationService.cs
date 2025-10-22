@@ -42,27 +42,42 @@ namespace PMS.Application.Services.SalesQuotation
                         Message = "Không thể tạo báo giá cho yêu cầu báo giá chưa được gửi"
                     };
 
-                var listRequest = rsq.RequestSalesQuotationDetails;
+                var productIds = rsq.RequestSalesQuotationDetails
+                    .Select(r => r.ProductId)
+                    .ToList();
 
-                List<LotProduct> listLot = [];
-
-                foreach (var item in listRequest)
-                {
-                    var lotProduct = await _unitOfWork.LotProduct
+                var listLot = await _unitOfWork.LotProduct
                     .Query()
                     .Include(lp => lp.Product)
-                    .Where(lp => lp.ProductID == item.ProductId)
+                    .AsNoTracking()
+                    .Where(lp => productIds.Contains(lp.ProductID) && lp.ExpiredDate > DateTime.Now && lp.LotQuantity > 0)
                     .ToListAsync();
 
-                    listLot.AddRange(lotProduct);
-                }
+                var listTax = await _unitOfWork.TaxPolicy.Query()
+                    .AsNoTracking()
+                    .Where(tp => tp.Status == true)
+                    .ToListAsync();
 
-                var result = _mapper.Map<List<FormSalesQuotationDTO>>(listLot);
+                var listExpired = await _unitOfWork.SalesQuotationValidity.Query()
+                    .AsNoTracking()
+                    .Where(sqv => sqv.Status == true)
+                    .ToListAsync();
+
+                var lotDtos = _mapper.Map<List<LotDTO>>(listLot);
+                var taxDtos = _mapper.Map<List<TaxPolicyDTO>>(listTax);
+                var validityDtos = _mapper.Map<List<SalesQuotationValidityDTO>>(listExpired);
+
+                var form = new FormSalesQuotationDTO
+                {
+                    Validities = validityDtos,
+                    Taxes = taxDtos,
+                    LotProducts = lotDtos,
+                };
 
                 return new ServiceResult<object>
                 {
                     StatusCode = 200,
-                    Data = result
+                    Data = form
                 };
             }
             catch (Exception ex)
