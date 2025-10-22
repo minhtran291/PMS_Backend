@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace PMS.Application.DTOs.SalesQuotation
 {
-    public class CreateSalesQuotationDetailsDTO
+    public class SalesQuotationDetailsDTO
     {
         public int LotId { get; set; }
         public int TaxId { get; set; }

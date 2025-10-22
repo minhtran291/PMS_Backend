@@ -12,5 +12,6 @@ namespace PMS.Application.Services.SalesQuotation
     {
         Task<ServiceResult<object>> GenerateFormAsync(int rsqId);
         Task<ServiceResult<object>> CreateSalesQuotationAsync(CreateSalesQuotationDTO dto);
+        Task<ServiceResult<object>> UpdateSalesQuotationAsync(UpdateSalesQuotationDTO dto);
     }
 }

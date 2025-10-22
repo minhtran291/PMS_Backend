@@ -620,8 +620,8 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(sq => sq.RsqId);
 
                 entity.HasOne(sq => sq.SalesQuotationValidity)
-                    .WithOne(sqv => sqv.SalesQuotation)
-                    .HasForeignKey<SalesQuotation>(sq => sq.SqvId);
+                    .WithMany(sqv => sqv.SalesQuotations)
+                    .HasForeignKey(sq => sq.SqvId);
             });
 
             builder.Entity<SalesQuotaionDetails>(entity =>

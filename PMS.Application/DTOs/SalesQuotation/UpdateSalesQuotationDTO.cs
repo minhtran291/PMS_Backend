@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace PMS.Application.DTOs.SalesQuotation
 {
-    public class CreateSalesQuotationDTO
+    public class UpdateSalesQuotationDTO
     {
-        public int RsqId { get; set; }
-        public int ValidityId { get; set; }
+        public int SqId {  get; set; }
+        public int SqvId { get; set; }
         public List<SalesQuotationDetailsDTO> Details { get; set; } = [];
     }
 }
