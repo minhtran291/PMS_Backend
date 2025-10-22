@@ -14,6 +14,6 @@ namespace PMS.Core.Domain.Entities
         public int Days { get; set; } // 15, 30, 60
         public bool Status { get; set; }
 
-        public virtual SalesQuotation SalesQuotation { get; set; } = null!;
+        public virtual ICollection<SalesQuotation> SalesQuotations { get; set; } = [];
     }
 }

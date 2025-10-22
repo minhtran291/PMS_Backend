@@ -10,6 +10,5 @@ namespace PMS.Application.DTOs.SalesQuotation
     {
         public int LotId { get; set; }
         public int TaxId { get; set; }
-
     }
 }
