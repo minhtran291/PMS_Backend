@@ -23,8 +23,13 @@ namespace PMS.Application.Automapper
                 .ForMember(dest => dest.ImageByt, otp => otp.MapFrom(src => src.CustomerProfile != null ? src.CustomerProfile.ImageByt : null))
                 .ForMember(dest => dest.Mshkd, otp => otp.MapFrom(src => src.CustomerProfile != null ? src.CustomerProfile.Mshkd : null));
 
-            CreateMap<LotProduct, FormSalesQuotationDTO>()
-                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product.ProductName));
+            CreateMap<LotProduct, LotDTO>()
+                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product.ProductName))
+                .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => src.Product.Unit));
+
+            CreateMap<TaxPolicy, TaxPolicyDTO>();
+
+            CreateMap<SalesQuotationValidity, SalesQuotationValidityDTO>();
         }
     }
 }
