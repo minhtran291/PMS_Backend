@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PMS.Application.DTOs.SalesQuotation;
 using PMS.Application.Services.SalesQuotation;
 using PMS.Core.Domain.Constant;
 
@@ -22,6 +23,19 @@ namespace PMS.API.Controllers
         public async Task<IActionResult> GenerateForm(int rsqId)
         {
             var result = await _salesQuotationService.GenerateFormAsync(rsqId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("create-salse-quotation")]
+        public async Task<IActionResult> CreateSalesQuotation([FromBody] CreateSalesQuotationDTO dto)
+        {
+            var result = await _salesQuotationService.CreateSalesQuotationAsync(dto);
 
             return StatusCode(result.StatusCode, new
             {

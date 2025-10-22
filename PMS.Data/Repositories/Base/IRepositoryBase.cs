@@ -14,6 +14,7 @@ namespace PMS.Data.Repositories.Base
         Task AddAsync(T entity);
         void Update(T entity);
         void AddRange(IEnumerable<T> entities);
+        Task AddRangeAsync(IEnumerable<T> entities);
         void UpdateRange(IEnumerable<T> entities);
         void Remove(T entity);
         void RemoveRange(IEnumerable<T> entities);
