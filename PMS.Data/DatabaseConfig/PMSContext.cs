@@ -392,7 +392,15 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<RequestSalesQuotationDetails>(entity =>
             {
-                entity.HasKey(e => new { e.RequestSalesQuotationId, e.ProductId });
+                entity.HasKey(rsqd => new { rsqd.RequestSalesQuotationId, rsqd.ProductId });
+
+                entity.HasOne(rsqd => rsqd.RequestSalesQuotation)
+                    .WithMany(rsq => rsq.RequestSalesQuotationDetails)
+                    .HasForeignKey(rsqd => rsqd.RequestSalesQuotationId);
+
+                entity.HasOne(rsqd => rsqd.Product)
+                    .WithMany(p => p.RequestSalesQuotationDetails)
+                    .HasForeignKey(rsqd => rsqd.ProductId);
             });
             //
 
@@ -623,6 +631,14 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasOne(sqd => sqd.TaxPolicy)
                     .WithMany(tp => tp.SalesQuotaionDetails)
                     .HasForeignKey(sqd => sqd.TaxId);
+
+                entity.HasOne(sqd => sqd.SalesQuotation)
+                    .WithMany(sq => sq.SalesQuotaionDetails)
+                    .HasForeignKey(sqd => sqd.SqId);
+
+                entity.HasOne(sqd => sqd.LotProduct)
+                    .WithMany(lp => lp.SalesQuotaionDetails)
+                    .HasForeignKey(sqd => sqd.LotId);
             });
 
             builder.Entity<SalesQuotationComment>(entity =>
