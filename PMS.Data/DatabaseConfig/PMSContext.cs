@@ -41,9 +41,14 @@ namespace PMS.Data.DatabaseConfig
         // Sales Quotation
         public virtual DbSet<SalesQuotation> SalesQuotations { get; set; }
         public virtual DbSet<SalesQuotaionDetails> SalesQuotaionDetails { get; set; }
+        //
         public virtual DbSet<SalesQuotationComment> SalesQuotationComments { get; set; }
         public virtual DbSet<TaxPolicy> TaxPolicies { get; set; }
         public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities { get; set; }
+        //GoodReceiptNote
+        public virtual DbSet<GoodReceiptNote> GoodReceiptNotes { get; set; }
+        public virtual DbSet<GoodReceiptNoteDetail> GoodReceiptNoteDetails { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseLazyLoadingProxies();
@@ -592,6 +597,7 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(qd => qd.QID)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+            //
 
             builder.Entity<SalesQuotation>(entity =>
             {
@@ -645,6 +651,7 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(lp => lp.SalesQuotaionDetails)
                     .HasForeignKey(sqd => sqd.LotId);
             });
+            //
 
             builder.Entity<SalesQuotationComment>(entity =>
             {
@@ -701,6 +708,62 @@ namespace PMS.Data.DatabaseConfig
                     .HasMaxLength(128)
                     .IsRequired();
             });
+            //
+            builder.Entity<GoodReceiptNote>(entity =>
+            {
+                entity.HasKey(grn => grn.GRNID);
+
+                entity.Property(grn => grn.Source)
+                    .IsRequired();
+
+                entity.Property(grn => grn.CreateDate)
+                    .IsRequired()
+                    .HasColumnType("datetime");
+
+                entity.Property(grn => grn.Total)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(grn => grn.CreateBy)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(grn => grn.Description)
+                    .HasMaxLength(500);
+
+                entity.HasOne(grn => grn.PurchasingOrder)
+                    .WithMany(grn => grn.GoodReceiptNotes)
+                    .HasForeignKey(grn => grn.POID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(grn => grn.GoodReceiptNoteDetails)
+                    .WithOne(grnd => grnd.GoodReceiptNote)
+                    .HasForeignKey(grnd => grnd.GRNID)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<GoodReceiptNoteDetail>(entity =>
+            {
+                entity.HasKey(grnd => grnd.GRNDID);
+
+                entity.Property(grnd => grnd.UnitPrice)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(grnd => grnd.Quantity)
+                    .IsRequired();
+
+                entity.HasOne(grnd => grnd.GoodReceiptNote)
+                    .WithMany(grn => grn.GoodReceiptNoteDetails)
+                    .HasForeignKey(grnd => grnd.GRNID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(grnd => grnd.Product)
+                    .WithMany(p => p.GoodReceiptNoteDetails)
+                    .HasForeignKey(grnd => grnd.ProductID)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
         }
     }
 }
