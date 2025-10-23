@@ -30,7 +30,7 @@ namespace PMS.Core.Domain.Entities
         [ForeignKey("UserId")]
         public virtual User User { get; set; } = null!;
         public virtual ICollection<PurchasingOrderDetail> PurchasingOrderDetails { get; set; } = new List<PurchasingOrderDetail>();
-        //public virtual ICollection<GoodReceiptNote> GoodReceiptNotes { get; set; } = new List<GoodReceiptNote>();
+        public virtual ICollection<GoodReceiptNote> GoodReceiptNotes { get; set; } = new List<GoodReceiptNote>();
 
         public virtual Quotation Quotations { get; set; } = null;
 

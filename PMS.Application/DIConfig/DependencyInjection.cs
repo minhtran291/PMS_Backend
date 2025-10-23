@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PMS.API.Services.GRNService;
 using PMS.API.Services.POService;
 using PMS.API.Services.PRFQService;
 using PMS.Application.Automapper;
@@ -44,6 +45,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IRequestSalesQuotationService, RequestSalesQuotationService>();
             services.AddScoped<IPRFQService, PRFQService>();
             services.AddScoped<IPOService, POService>();
+            services.AddScoped<IGRNService, GRNService>();
             services.AddScoped<ISalesQuotationService, SalesQuotationService>();
         }
 

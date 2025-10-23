@@ -215,6 +215,73 @@ namespace PMS.Data.Migrations
                     b.ToTable("CustomerProfiles");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.GoodReceiptNote", b =>
+                {
+                    b.Property<int>("GRNID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GRNID"));
+
+                    b.Property<string>("CreateBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreateDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("POID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("GRNID");
+
+                    b.HasIndex("POID");
+
+                    b.ToTable("GoodReceiptNotes");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.GoodReceiptNoteDetail", b =>
+                {
+                    b.Property<int>("GRNDID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GRNDID"));
+
+                    b.Property<int>("GRNID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("GRNDID");
+
+                    b.HasIndex("GRNID");
+
+                    b.HasIndex("ProductID");
+
+                    b.ToTable("GoodReceiptNoteDetails");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
                     b.Property<int>("LotID")
@@ -1068,6 +1135,36 @@ namespace PMS.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.GoodReceiptNote", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.PurchasingOrder", "PurchasingOrder")
+                        .WithMany("GoodReceiptNotes")
+                        .HasForeignKey("POID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PurchasingOrder");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.GoodReceiptNoteDetail", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.GoodReceiptNote", "GoodReceiptNote")
+                        .WithMany("GoodReceiptNoteDetails")
+                        .HasForeignKey("GRNID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Core.Domain.Entities.Product", "Product")
+                        .WithMany("GoodReceiptNoteDetails")
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("GoodReceiptNote");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Entities.Product", "Product")
@@ -1338,6 +1435,11 @@ namespace PMS.Data.Migrations
                     b.Navigation("RequestSalesQuotations");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.GoodReceiptNote", b =>
+                {
+                    b.Navigation("GoodReceiptNoteDetails");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
                     b.Navigation("SalesQuotaionDetails");
@@ -1345,6 +1447,8 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
                 {
+                    b.Navigation("GoodReceiptNoteDetails");
+
                     b.Navigation("LotProducts");
 
                     b.Navigation("PRPS");
@@ -1354,6 +1458,8 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.PurchasingOrder", b =>
                 {
+                    b.Navigation("GoodReceiptNotes");
+
                     b.Navigation("PurchasingOrderDetails");
                 });
 

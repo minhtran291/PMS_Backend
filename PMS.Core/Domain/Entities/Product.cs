@@ -36,5 +36,6 @@ namespace PMS.Core.Domain.Entities
 
         public virtual ICollection<PurchasingRequestProduct> PRPS { get; set; } = new List<PurchasingRequestProduct>();
         public virtual ICollection<LotProduct> LotProducts { get; set; } = new List<LotProduct>();
+        public virtual ICollection<GoodReceiptNoteDetail> GoodReceiptNoteDetails { get; set; } = new List<GoodReceiptNoteDetail>();
     }
 }
