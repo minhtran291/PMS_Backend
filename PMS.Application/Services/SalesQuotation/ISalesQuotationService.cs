@@ -11,7 +11,9 @@ namespace PMS.Application.Services.SalesQuotation
     public interface ISalesQuotationService
     {
         Task<ServiceResult<object>> GenerateFormAsync(int rsqId);
-        Task<ServiceResult<object>> CreateSalesQuotationAsync(CreateSalesQuotationDTO dto);
-        Task<ServiceResult<object>> UpdateSalesQuotationAsync(UpdateSalesQuotationDTO dto);
+        Task<ServiceResult<object>> CreateSalesQuotationAsync(CreateSalesQuotationDTO dto, string ssId);
+        Task<ServiceResult<object>> UpdateSalesQuotationAsync(UpdateSalesQuotationDTO dto, string ssId);
+        Task<ServiceResult<object>> DeleteSalesQuotationAsync(int sqId, string ssId);
+        Task<ServiceResult<List<SalesQuotationDTO>>> SalesQuotationListAsync(string role, string ssId);
     }
 }

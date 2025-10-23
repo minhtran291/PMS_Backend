@@ -83,10 +83,12 @@ namespace PMS.Application.Services.SalesQuotation
             }
         }
 
-        public async Task<ServiceResult<object>> CreateSalesQuotationAsync(CreateSalesQuotationDTO dto)
+        public async Task<ServiceResult<object>> CreateSalesQuotationAsync(CreateSalesQuotationDTO dto, string ssId)
         {
             try
             {
+                var staffProfile = await ValidateSalesStaffStringId(ssId);
+
                 var rsq = await _unitOfWork.RequestSalesQuotation.Query()
                     .Include(r => r.RequestSalesQuotationDetails)
                     .FirstOrDefaultAsync(r => r.Id == dto.RsqId);
@@ -113,6 +115,7 @@ namespace PMS.Application.Services.SalesQuotation
                 {
                     RsqId = rsq.Id,
                     SqvId = dto.ValidityId,
+                    SsId = staffProfile.Id,
                     QuotationCode = GenerateQuotationCode(),
                     Status = Core.Domain.Enums.SalesQuotationStatus.Draft,
                     SalesQuotaionDetails = dto.Details.Select(item => new SalesQuotaionDetails
@@ -272,10 +275,12 @@ namespace PMS.Application.Services.SalesQuotation
             return null;
         }
 
-        public async Task<ServiceResult<object>> UpdateSalesQuotationAsync(UpdateSalesQuotationDTO dto)
+        public async Task<ServiceResult<object>> UpdateSalesQuotationAsync(UpdateSalesQuotationDTO dto, string ssId)
         {
             try
             {
+                var staffProfile = await ValidateSalesStaffStringId(ssId);
+
                 var salesQuotation = await _unitOfWork.SalesQuotation.Query()
                 .Include(sq => sq.SalesQuotaionDetails)
                 .FirstOrDefaultAsync(sq => sq.Id == dto.SqId);
@@ -283,6 +288,10 @@ namespace PMS.Application.Services.SalesQuotation
                 var sqValidation = ValidateSalesQuotation(salesQuotation);
                 if (sqValidation != null)
                     return sqValidation;
+
+                var ssValidate = ValidateSalesStaff(staffProfile, salesQuotation);
+                if (ssValidate != null)
+                    return ssValidate;
 
                 var validityValidation = await ValidateValidityAsync(dto.SqvId);
                 if (validityValidation != null)
@@ -305,7 +314,7 @@ namespace PMS.Application.Services.SalesQuotation
                     var record = salesQuotation.SalesQuotaionDetails
                         .FirstOrDefault(d => d.LotId == detailDto.LotId);
 
-                    if(record != null)
+                    if (record != null)
                         record.TaxId = detailDto.TaxId;
                 }
 
@@ -318,7 +327,7 @@ namespace PMS.Application.Services.SalesQuotation
                     Message = "Cập nhật thành công"
                 };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Loi");
 
@@ -385,6 +394,125 @@ namespace PMS.Application.Services.SalesQuotation
                 };
 
             return null;
+        }
+
+        public async Task<ServiceResult<object>> DeleteSalesQuotationAsync(int sqId, string ssId)
+        {
+            try
+            {
+                var staffProfile = await ValidateSalesStaffStringId(ssId);
+
+                var salesQuotation = await _unitOfWork.SalesQuotation.Query()
+                    .Include(sq => sq.SalesQuotaionDetails)
+                    .FirstOrDefaultAsync(sq => sq.Id == sqId);
+
+                var sqValidation = ValidateSalesQuotation(salesQuotation);
+                if (sqValidation != null)
+                    return sqValidation;
+
+                var ssValidate = ValidateSalesStaff(staffProfile, salesQuotation);
+                if (ssValidate != null)
+                    return ssValidate;
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                var details = salesQuotation.SalesQuotaionDetails;
+
+                _unitOfWork.SalesQuotationDetails.RemoveRange(details);
+
+                _unitOfWork.SalesQuotation.Remove(salesQuotation);
+
+                await _unitOfWork.CommitAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Đã xóa báo giá"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                await _unitOfWork.RollbackTransactionAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Xóa thất bại",
+                };
+            }
+        }
+
+        public async Task<ServiceResult<List<SalesQuotationDTO>>> SalesQuotationListAsync(string role, string ssId)
+        {
+            try
+            {
+                var staffProfile = await ValidateSalesStaffStringId(ssId);
+
+                var query = _unitOfWork.SalesQuotation.Query()
+                .AsNoTracking()
+                .Include(sq => sq.RequestSalesQuotation)
+                .Include(sq => sq.SalesQuotationValidity)
+                .AsQueryable();
+
+                if (role.Equals("CUSTOMER"))
+                {
+                    query = query.Where(s => s.Status != Core.Domain.Enums.SalesQuotationStatus.Draft);
+                }
+                else
+                {
+                    query = query.Where(s => s.SsId == staffProfile.Id);
+                }
+
+                var list = await query.ToListAsync();
+
+                var result = _mapper.Map<List<SalesQuotationDTO>>(list);
+
+                return new ServiceResult<List<SalesQuotationDTO>>
+                {
+                    StatusCode = 200,
+                    Data = result,
+                    Message = result.Count > 0 ? "" : "Không có báo giá nào"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<List<SalesQuotationDTO>>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi",
+                };
+            }
+        }
+
+        private static ServiceResult<object>? ValidateSalesStaff(StaffProfile staffProfile, Core.Domain.Entities.SalesQuotation salesQuotation)
+        {
+            if (staffProfile.Id != salesQuotation.SsId)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 403,
+                    Message = "Bạn không có quyền thao tác trên báo giá này"
+                };
+
+            return null;
+        }
+
+        private async Task<StaffProfile> ValidateSalesStaffStringId(string ssId)
+        {
+            if (!int.TryParse(ssId, out var intId))
+                throw new Exception("Try parse sales staff id loi");
+
+            var staffProfile = await _unitOfWork.StaffProfile.Query()
+                .Include(sp => sp.SalesQuotations)
+                .FirstOrDefaultAsync(sp => sp.Id == intId)
+                ?? throw new Exception("Khong tim thay sales staff profile hoac khong ton tai");
+
+            return staffProfile;
         }
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.SalesQuotation;
 using PMS.Application.Services.SalesQuotation;
 using PMS.Core.Domain.Constant;
+using System.Security.Claims;
 
 namespace PMS.API.Controllers
 {
@@ -35,7 +36,12 @@ namespace PMS.API.Controllers
         [Route("create-sales-quotation")]
         public async Task<IActionResult> CreateSalesQuotation([FromBody] CreateSalesQuotationDTO dto)
         {
-            var result = await _salesQuotationService.CreateSalesQuotationAsync(dto);
+            var salesStaffId = User.FindFirstValue("staff_id");
+
+            if (string.IsNullOrEmpty(salesStaffId))
+                return Unauthorized();
+
+            var result = await _salesQuotationService.CreateSalesQuotationAsync(dto, salesStaffId);
 
             return StatusCode(result.StatusCode, new
             {
@@ -48,7 +54,50 @@ namespace PMS.API.Controllers
         [Route("update-sales-quotation")]
         public async Task<IActionResult> UpdateSalesQuotation([FromBody] UpdateSalesQuotationDTO dto)
         {
-            var result = await _salesQuotationService.UpdateSalesQuotationAsync(dto);
+            var salesStaffId = User.FindFirstValue("staff_id");
+
+            if (string.IsNullOrEmpty(salesStaffId))
+                return Unauthorized();
+
+            var result = await _salesQuotationService.UpdateSalesQuotationAsync(dto, salesStaffId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        [HttpDelete, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("delete-sales-quotation")]
+        public async Task<IActionResult> DeleteSalesQuotation(int sqId)
+        {
+            var salesStaffId = User.FindFirstValue("staff_id");
+
+            if (string.IsNullOrEmpty(salesStaffId))
+                return Unauthorized();
+
+            var result = await _salesQuotationService.DeleteSalesQuotationAsync(sqId, salesStaffId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.CUSTOMER)]
+        [Route("view-list")]
+        public async Task<IActionResult> SalesQuotationList()
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+            var salesStaffId = User.FindFirstValue("staff_id");
+
+            if (string.IsNullOrEmpty(salesStaffId) || string.IsNullOrEmpty(role))
+                return Unauthorized();
+
+            var result = await _salesQuotationService.SalesQuotationListAsync(role, salesStaffId);
 
             return StatusCode(result.StatusCode, new
             {
