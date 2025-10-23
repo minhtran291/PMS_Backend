@@ -622,6 +622,11 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasOne(sq => sq.SalesQuotationValidity)
                     .WithMany(sqv => sqv.SalesQuotations)
                     .HasForeignKey(sq => sq.SqvId);
+
+                entity.HasOne(sq => sq.StaffProfile)
+                    .WithMany(sp => sp.SalesQuotations)
+                    .HasForeignKey(sq => sq.SsId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SalesQuotaionDetails>(entity =>
