@@ -8,10 +8,10 @@ namespace PMS.Application.DTOs.SalesQuotation
 {
     public class FormSalesQuotationDTO
     {
-        public string ProductName { get; set; } = string.Empty;
-        public int LotID { get; set; }
-        public DateTime InputDate { get; set; }
-        public decimal SalePrice { get; set; }
-        public DateTime ExpiredDate { get; set; }
+        public int RsqId { get; set; }
+        public string RequestCode { get; set; } = string.Empty;
+        public List<SalesQuotationValidityDTO> Validities { get; set; } = [];
+        public List<TaxPolicyDTO> Taxes { get; set; } = [];
+        public List<LotDTO> LotProducts { get; set; } = [];
     }
 }

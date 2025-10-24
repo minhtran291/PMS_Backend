@@ -41,9 +41,14 @@ namespace PMS.Data.DatabaseConfig
         // Sales Quotation
         public virtual DbSet<SalesQuotation> SalesQuotations { get; set; }
         public virtual DbSet<SalesQuotaionDetails> SalesQuotaionDetails { get; set; }
+        //
         public virtual DbSet<SalesQuotationComment> SalesQuotationComments { get; set; }
         public virtual DbSet<TaxPolicy> TaxPolicies { get; set; }
         public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities { get; set; }
+        //GoodReceiptNote
+        public virtual DbSet<GoodReceiptNote> GoodReceiptNotes { get; set; }
+        public virtual DbSet<GoodReceiptNoteDetail> GoodReceiptNoteDetails { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseLazyLoadingProxies();
@@ -392,7 +397,15 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<RequestSalesQuotationDetails>(entity =>
             {
-                entity.HasKey(e => new { e.RequestSalesQuotationId, e.ProductId });
+                entity.HasKey(rsqd => new { rsqd.RequestSalesQuotationId, rsqd.ProductId });
+
+                entity.HasOne(rsqd => rsqd.RequestSalesQuotation)
+                    .WithMany(rsq => rsq.RequestSalesQuotationDetails)
+                    .HasForeignKey(rsqd => rsqd.RequestSalesQuotationId);
+
+                entity.HasOne(rsqd => rsqd.Product)
+                    .WithMany(p => p.RequestSalesQuotationDetails)
+                    .HasForeignKey(rsqd => rsqd.ProductId);
             });
             //
 
@@ -584,6 +597,7 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(qd => qd.QID)
                     .OnDelete(DeleteBehavior.Cascade);
             });
+            //
 
             builder.Entity<SalesQuotation>(entity =>
             {
@@ -612,8 +626,13 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(sq => sq.RsqId);
 
                 entity.HasOne(sq => sq.SalesQuotationValidity)
-                    .WithOne(sqv => sqv.SalesQuotation)
-                    .HasForeignKey<SalesQuotation>(sq => sq.SqvId);
+                    .WithMany(sqv => sqv.SalesQuotations)
+                    .HasForeignKey(sq => sq.SqvId);
+
+                entity.HasOne(sq => sq.StaffProfile)
+                    .WithMany(sp => sp.SalesQuotations)
+                    .HasForeignKey(sq => sq.SsId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SalesQuotaionDetails>(entity =>
@@ -623,7 +642,16 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasOne(sqd => sqd.TaxPolicy)
                     .WithMany(tp => tp.SalesQuotaionDetails)
                     .HasForeignKey(sqd => sqd.TaxId);
+
+                entity.HasOne(sqd => sqd.SalesQuotation)
+                    .WithMany(sq => sq.SalesQuotaionDetails)
+                    .HasForeignKey(sqd => sqd.SqId);
+
+                entity.HasOne(sqd => sqd.LotProduct)
+                    .WithMany(lp => lp.SalesQuotaionDetails)
+                    .HasForeignKey(sqd => sqd.LotId);
             });
+            //
 
             builder.Entity<SalesQuotationComment>(entity =>
             {
@@ -680,6 +708,62 @@ namespace PMS.Data.DatabaseConfig
                     .HasMaxLength(128)
                     .IsRequired();
             });
+            //
+            builder.Entity<GoodReceiptNote>(entity =>
+            {
+                entity.HasKey(grn => grn.GRNID);
+
+                entity.Property(grn => grn.Source)
+                    .IsRequired();
+
+                entity.Property(grn => grn.CreateDate)
+                    .IsRequired()
+                    .HasColumnType("datetime");
+
+                entity.Property(grn => grn.Total)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(grn => grn.CreateBy)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(grn => grn.Description)
+                    .HasMaxLength(500);
+
+                entity.HasOne(grn => grn.PurchasingOrder)
+                    .WithMany(grn => grn.GoodReceiptNotes)
+                    .HasForeignKey(grn => grn.POID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(grn => grn.GoodReceiptNoteDetails)
+                    .WithOne(grnd => grnd.GoodReceiptNote)
+                    .HasForeignKey(grnd => grnd.GRNID)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<GoodReceiptNoteDetail>(entity =>
+            {
+                entity.HasKey(grnd => grnd.GRNDID);
+
+                entity.Property(grnd => grnd.UnitPrice)
+                    .IsRequired()
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(grnd => grnd.Quantity)
+                    .IsRequired();
+
+                entity.HasOne(grnd => grnd.GoodReceiptNote)
+                    .WithMany(grn => grn.GoodReceiptNoteDetails)
+                    .HasForeignKey(grnd => grnd.GRNID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(grnd => grnd.Product)
+                    .WithMany(p => p.GoodReceiptNoteDetails)
+                    .HasForeignKey(grnd => grnd.ProductID)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
         }
     }
 }

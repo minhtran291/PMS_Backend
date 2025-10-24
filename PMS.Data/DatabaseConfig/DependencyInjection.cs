@@ -9,6 +9,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.Core.Domain.Identity;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
+using PMS.Data.Repositories.GoodReceiptNoteRepository;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
@@ -81,6 +83,9 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<ISalesQuotationCommentRepository, SalesQuotationCommentRepository>();
             services.AddScoped<ISalesQuotationValidityRepository, SalesQuotationValidityRepository>();
             services.AddScoped<ITaxPolicyRepository, TaxPolicyRepository>();
+            //
+            services.AddScoped<IGoodReceiptNoteRepository, GoodReceiptNoteRepository>();
+            services.AddScoped<IGoodReceiptNoteDetailRepository, GoodReceiptNoteDetailRepository>();
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)

@@ -15,5 +15,6 @@ namespace PMS.Core.Domain.Entities
         public string? Notes { get; set; }
 
         public virtual User User { get; set; } = null!;
+        public virtual ICollection<SalesQuotation>? SalesQuotations { get; set; }
     }
 }
