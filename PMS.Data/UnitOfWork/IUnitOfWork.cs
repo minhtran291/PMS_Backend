@@ -1,4 +1,6 @@
 ﻿using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
+using PMS.Data.Repositories.GoodReceiptNoteRepository;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
@@ -56,11 +58,14 @@ namespace PMS.Data.UnitOfWork
         //Sales Quotation
         ISalesQuotationRepository SalesQuotation { get; }
         ISalesQuotationDetailsRepository SalesQuotationDetails { get; }
+        //
         ISalesQuotationCommentRepository SalesQuotationComment { get; }
         ISalesQuotationValidityRepository SalesQuotationValidity { get; }
         ITaxPolicyRepository TaxPolicy { get; }
+        //GoodReceiptNote
+        IGoodReceiptNoteRepository GoodReceiptNote { get; }
+        IGoodReceiptNoteDetailRepository GoodReceiptNoteDetail { get; }
         ISalesQuotationNoteRepository SalesQuotationNote { get; }
-
 
         Task<int> CommitAsync();
         Task BeginTransactionAsync();

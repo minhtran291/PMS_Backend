@@ -3,6 +3,8 @@ using DinkToPdf.Contracts;
 using DinkToPdf;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PMS.API.Services.GRNService;
+using PMS.API.Services.POService;
 using PMS.API.Services.PRFQService;
 using PMS.Application.Automapper;
 using PMS.Application.Services.Admin;
@@ -10,6 +12,7 @@ using PMS.Application.Services.Auth;
 using PMS.Application.Services.Category;
 using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.Notification;
+using PMS.Application.Services.PO;
 using PMS.Application.Services.Product;
 using PMS.Application.Services.RequestSalesQuotation;
 using PMS.Application.Services.SalesQuotation;
@@ -43,6 +46,8 @@ namespace PMS.Application.DIConfig
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IRequestSalesQuotationService, RequestSalesQuotationService>();
             services.AddScoped<IPRFQService, PRFQService>();
+            services.AddScoped<IPOService, POService>();
+            services.AddScoped<IGRNService, GRNService>();
             services.AddScoped<ISalesQuotationService, SalesQuotationService>();
         }
 

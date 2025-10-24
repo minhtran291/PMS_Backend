@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore.Storage;
 using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
+using PMS.Data.Repositories.GoodReceiptNoteRepository;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
@@ -57,7 +59,9 @@ namespace PMS.Data.UnitOfWork
         ISalesQuotationDetailsRepository salesQuotationDetails, 
         ISalesQuotationCommentRepository salesQuotationComment, 
         ISalesQuotationValidityRepository salesQuotationValidity, 
-        ITaxPolicyRepository taxPolicy, 
+        ITaxPolicyRepository taxPolicy,
+        IGoodReceiptNoteDetailRepository goodReceiptNoteDetail,
+        IGoodReceiptNoteRepository goodReceiptNote,
         ISalesQuotationNoteRepository salesQuotationNote) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
@@ -94,6 +98,9 @@ namespace PMS.Data.UnitOfWork
         public ISalesQuotationCommentRepository SalesQuotationComment { get; private set; } = salesQuotationComment;
         public ISalesQuotationValidityRepository SalesQuotationValidity { get; private set; } = salesQuotationValidity;
         public ITaxPolicyRepository TaxPolicy { get; private set; } = taxPolicy;
+        //
+        public IGoodReceiptNoteDetailRepository GoodReceiptNoteDetail { get; private set; } = goodReceiptNoteDetail;
+        public IGoodReceiptNoteRepository GoodReceiptNote { get; private set; } = goodReceiptNote;
         public ISalesQuotationNoteRepository SalesQuotationNote { get; private set; } = salesQuotationNote;
         public async Task<int> CommitAsync()
         {
