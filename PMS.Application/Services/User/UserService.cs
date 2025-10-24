@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.Auth;
 using PMS.Application.DTOs.Customer;
-//using PMS.Application.DTOs.Profile;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.Notification;

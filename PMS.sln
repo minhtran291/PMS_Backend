@@ -11,6 +11,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PMS.Data", "PMS.Data\PMS.Da
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PMS.Application", "PMS.Application\PMS.Application.csproj", "{8284BD19-7071-4E94-87D6-0EC166119DFF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PMS.Tests", "PMS.Tests\PMS.Tests.csproj", "{F8A6CB7C-F6E2-409B-BD52-347616225608}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{8284BD19-7071-4E94-87D6-0EC166119DFF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8284BD19-7071-4E94-87D6-0EC166119DFF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8284BD19-7071-4E94-87D6-0EC166119DFF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F8A6CB7C-F6E2-409B-BD52-347616225608}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F8A6CB7C-F6E2-409B-BD52-347616225608}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F8A6CB7C-F6E2-409B-BD52-347616225608}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F8A6CB7C-F6E2-409B-BD52-347616225608}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
