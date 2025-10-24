@@ -90,5 +90,41 @@ namespace PMS.Application.Services.ExternalService
                 throw new Exception($"Gửi email thất bại: {ex.Message}", ex);
             }
         }
+
+        public async Task SendMailWithPDFAsync(string subject, string body, string toEmail, byte[] attachmentBytes, string attachmentName)
+        {
+            using var smtpClient = new SmtpClient
+            {
+                Host = _emailConfig.Host!,
+                Port = int.Parse(_emailConfig.Port!),
+                Credentials = new System.Net.NetworkCredential(
+                    _emailConfig.Username, _emailConfig.Password),
+                EnableSsl = true
+            };
+
+            using var mailMessage = new MailMessage
+            {
+                From = new MailAddress(_emailConfig.FromEmail, _emailConfig.FromName),
+                Subject = subject,
+                Body = body,
+                IsBodyHtml = true
+            };
+
+            mailMessage.To.Add(toEmail);
+
+            var stream = new MemoryStream(attachmentBytes);
+            var attachment = new Attachment(stream, attachmentName, "application/pdf");
+            mailMessage.Attachments.Add(attachment);
+
+            try
+            {
+                await smtpClient.SendMailAsync(mailMessage);
+            }
+            finally
+            {
+                stream.Dispose();
+                attachment.Dispose();
+            }
+        }
     }
 }

@@ -605,6 +605,27 @@ namespace PMS.Data
                 await context.SaveChangesAsync();
             }
 
+            if (!context.SalesQuotationNotes.Any())
+            {
+                var notes = new SalesQuotationNote
+                {
+                    Title = "GHI CHÚ (NOTES)",
+                    Content =
+@"• Hiệu lực báo giá có giá trị 30 ngày kể từ ngày báo giá
+• Quá thời hạn trên, giá chào trong Bản báo giá này có thể được điều chỉnh theo thực tế
+• Giá trên chưa bao gồm GTGT, chi phí vận chuyển
+• Hàng hóa dự kiến giao trong thời gian 30 ngày kể từ ngày ký kết hợp đồng và chuyển tiền đợt 1
+• Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản DHG PHARMACEUTICAL JOINT-STOCK COMPANY
+
+Lịch biểu thanh toán:
+Đợt 1: Tạm ứng 70% sau khi ký hợp đồng
+Đợt 2: Thanh toán 30% trong vòng 03 ngày kể từ khi hàng được bàn giao",
+                    IsActive = true
+                };
+
+                await context.SalesQuotationNotes.AddAsync(notes);
+                await context.SaveChangesAsync();
+            }
         }
     }
 }

@@ -24,6 +24,7 @@ using PMS.Data.Repositories.RequestSalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotation;
 using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
+using PMS.Data.Repositories.SalesQuotationNote;
 using PMS.Data.Repositories.SalesQuotationValidity;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
@@ -60,7 +61,8 @@ namespace PMS.Data.UnitOfWork
         ISalesQuotationValidityRepository salesQuotationValidity, 
         ITaxPolicyRepository taxPolicy,
         IGoodReceiptNoteDetailRepository goodReceiptNoteDetail,
-        IGoodReceiptNoteRepository goodReceiptNote) : IUnitOfWork
+        IGoodReceiptNoteRepository goodReceiptNote,
+        ISalesQuotationNoteRepository salesQuotationNote) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -99,7 +101,7 @@ namespace PMS.Data.UnitOfWork
         //
         public IGoodReceiptNoteDetailRepository GoodReceiptNoteDetail { get; private set; } = goodReceiptNoteDetail;
         public IGoodReceiptNoteRepository GoodReceiptNote { get; private set; } = goodReceiptNote;
-
+        public ISalesQuotationNoteRepository SalesQuotationNote { get; private set; } = salesQuotationNote;
         public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();

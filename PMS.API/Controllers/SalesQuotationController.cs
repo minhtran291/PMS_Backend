@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.SalesQuotation;
 using PMS.Application.Services.SalesQuotation;
 using PMS.Core.Domain.Constant;
+using StackExchange.Redis;
 using System.Security.Claims;
 
 namespace PMS.API.Controllers
@@ -103,6 +104,23 @@ namespace PMS.API.Controllers
             {
                 message = result.Message,
                 data = result.Data
+            });
+        }
+
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("send-sales-quotation")]
+        public async Task<IActionResult> SendSalesQuotation(int sqId)
+        {
+            var salesStaffId = User.FindFirstValue("staff_id");
+
+            if (string.IsNullOrEmpty(salesStaffId))
+                return Unauthorized();
+
+            var result = await _salesQuotationService.SendSalesQuotationAsync(sqId, salesStaffId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
             });
         }
     }

@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using DinkToPdf.Contracts;
+using DinkToPdf;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.API.Services.GRNService;
@@ -60,6 +62,8 @@ namespace PMS.Application.DIConfig
         public static void AddExternalServices(this IServiceCollection services)
         {
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IPdfService, PdfService>();
+            services.AddSingleton<IConverter, SynchronizedConverter>(_ => new SynchronizedConverter(new PdfTools()));
         }
     }
 }

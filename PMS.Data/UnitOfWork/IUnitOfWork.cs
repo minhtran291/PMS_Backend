@@ -16,6 +16,7 @@ using PMS.Data.Repositories.RequestSalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotation;
 using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
+using PMS.Data.Repositories.SalesQuotationNote;
 using PMS.Data.Repositories.SalesQuotationValidity;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
@@ -64,7 +65,7 @@ namespace PMS.Data.UnitOfWork
         //GoodReceiptNote
         IGoodReceiptNoteRepository GoodReceiptNote { get; }
         IGoodReceiptNoteDetailRepository GoodReceiptNoteDetail { get; }
-
+        ISalesQuotationNoteRepository SalesQuotationNote { get; }
 
         Task<int> CommitAsync();
         Task BeginTransactionAsync();

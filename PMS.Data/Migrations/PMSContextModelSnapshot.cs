@@ -731,6 +731,9 @@ namespace PMS.Data.Migrations
                     b.Property<int>("RsqId")
                         .HasColumnType("int");
 
+                    b.Property<int>("SqnId")
+                        .HasColumnType("int");
+
                     b.Property<int>("SqvId")
                         .HasColumnType("int");
 
@@ -743,6 +746,8 @@ namespace PMS.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("RsqId");
+
+                    b.HasIndex("SqnId");
 
                     b.HasIndex("SqvId");
 
@@ -778,6 +783,31 @@ namespace PMS.Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SalesQuotationComments");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotationNote", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SalesQuotationNotes");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotationValidity", b =>
@@ -1365,6 +1395,12 @@ namespace PMS.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("PMS.Core.Domain.Entities.SalesQuotationNote", "SalesQuotationNote")
+                        .WithMany("SalesQuotations")
+                        .HasForeignKey("SqnId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("PMS.Core.Domain.Entities.SalesQuotationValidity", "SalesQuotationValidity")
                         .WithMany("SalesQuotations")
                         .HasForeignKey("SqvId")
@@ -1378,6 +1414,8 @@ namespace PMS.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("RequestSalesQuotation");
+
+                    b.Navigation("SalesQuotationNote");
 
                     b.Navigation("SalesQuotationValidity");
 
@@ -1487,6 +1525,11 @@ namespace PMS.Data.Migrations
                     b.Navigation("SalesQuotaionDetails");
 
                     b.Navigation("SalesQuotationComments");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotationNote", b =>
+                {
+                    b.Navigation("SalesQuotations");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotationValidity", b =>
