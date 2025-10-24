@@ -34,6 +34,8 @@ namespace PMS.Application.Automapper
             CreateMap<SalesQuotation, SalesQuotationDTO>()
                 .ForMember(dest => dest.RequestCode, opt => opt.MapFrom(src => src.RequestSalesQuotation.RequestCode))
                 .ForMember(dest => dest.ValidityName, opt => opt.MapFrom(src => src.SalesQuotationValidity.Name));
+
+            CreateMap<SalesQuotationNote, SalesQuotationNoteDTO>();
         }
     }
 }

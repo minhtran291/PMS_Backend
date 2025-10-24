@@ -39,6 +39,9 @@ namespace PMS.API
             // Services
             builder.Services.AddServices();
 
+            // Infrastructure
+            builder.Services.AddInfrastructure();
+
             // External Services
             builder.Services.AddExternalServices();
 

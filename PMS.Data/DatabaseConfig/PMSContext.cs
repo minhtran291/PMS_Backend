@@ -44,10 +44,11 @@ namespace PMS.Data.DatabaseConfig
         //
         public virtual DbSet<SalesQuotationComment> SalesQuotationComments { get; set; }
         public virtual DbSet<TaxPolicy> TaxPolicies { get; set; }
-        public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities { get; set; }
         //GoodReceiptNote
         public virtual DbSet<GoodReceiptNote> GoodReceiptNotes { get; set; }
         public virtual DbSet<GoodReceiptNoteDetail> GoodReceiptNoteDetails { get; set; }
+        public virtual DbSet<SalesQuotationNote> SalesQuotationNotes { get; set; }
+        public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -633,6 +634,11 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(sp => sp.SalesQuotations)
                     .HasForeignKey(sq => sq.SsId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(sq => sq.SalesQuotationNote)
+                    .WithMany(sqn => sqn.SalesQuotations)
+                    .HasForeignKey(sq => sq.SqnId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SalesQuotaionDetails>(entity =>
@@ -700,6 +706,9 @@ namespace PMS.Data.DatabaseConfig
             {
                 entity.HasKey(sqv => sqv.Id);
 
+                entity.Property(sqv => sqv.Id)
+                    .ValueGeneratedOnAdd();
+
                 entity.Property(sqv => sqv.Name)
                     .HasMaxLength(128)
                     .IsRequired();
@@ -708,6 +717,7 @@ namespace PMS.Data.DatabaseConfig
                     .HasMaxLength(128)
                     .IsRequired();
             });
+
             //
             builder.Entity<GoodReceiptNote>(entity =>
             {
@@ -764,6 +774,21 @@ namespace PMS.Data.DatabaseConfig
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            builder.Entity<SalesQuotationNote>(entity =>
+            {
+                entity.HasKey(sqn => sqn.Id);
+
+                entity.Property(sqn => sqn.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(sqn => sqn.Title)
+                    .HasMaxLength(128)
+                    .IsRequired();
+
+                entity.Property(sqn => sqn.Content)
+                    .HasColumnType("nvarchar(max)")
+                    .IsRequired();
+            });
         }
     }
 }
