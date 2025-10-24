@@ -44,6 +44,7 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<SalesQuotationComment> SalesQuotationComments { get; set; }
         public virtual DbSet<TaxPolicy> TaxPolicies { get; set; }
         public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities { get; set; }
+        public virtual DbSet<SalesQuotationNote> SalesQuotationNotes { get; set; }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseLazyLoadingProxies();
@@ -627,6 +628,11 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(sp => sp.SalesQuotations)
                     .HasForeignKey(sq => sq.SsId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(sq => sq.SalesQuotationNote)
+                    .WithMany(sqn => sqn.SalesQuotations)
+                    .HasForeignKey(sq => sq.SqnId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SalesQuotaionDetails>(entity =>
@@ -693,12 +699,31 @@ namespace PMS.Data.DatabaseConfig
             {
                 entity.HasKey(sqv => sqv.Id);
 
+                entity.Property(sqv => sqv.Id)
+                    .ValueGeneratedOnAdd();
+
                 entity.Property(sqv => sqv.Name)
                     .HasMaxLength(128)
                     .IsRequired();
 
                 entity.Property(sqv => sqv.Content)
                     .HasMaxLength(128)
+                    .IsRequired();
+            });
+
+            builder.Entity<SalesQuotationNote>(entity =>
+            {
+                entity.HasKey(sqn => sqn.Id);
+
+                entity.Property(sqn => sqn.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(sqn => sqn.Title)
+                    .HasMaxLength(128)
+                    .IsRequired();
+
+                entity.Property(sqn => sqn.Content)
+                    .HasColumnType("nvarchar(max)")
                     .IsRequired();
             });
         }

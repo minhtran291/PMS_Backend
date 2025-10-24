@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.SalesQuotation;
 using PMS.Application.Services.Base;
+using PMS.Application.Services.ExternalService;
+using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Data.UnitOfWork;
@@ -16,9 +18,15 @@ namespace PMS.Application.Services.SalesQuotation
 {
     public class SalesQuotationService(IUnitOfWork unitOfWork,
         IMapper mapper,
-        ILogger<SalesQuotationService> logger) : Service(unitOfWork, mapper), ISalesQuotationService
+        ILogger<SalesQuotationService> logger, 
+        IPdfService pdfService, 
+        IEmailService emailService, 
+        INotificationService notificationService) : Service(unitOfWork, mapper), ISalesQuotationService
     {
         private readonly ILogger<SalesQuotationService> _logger = logger;
+        private readonly IPdfService _pdfService = pdfService;
+        private readonly IEmailService _emailService = emailService;
+        private readonly INotificationService _notificationService = notificationService;
 
         public async Task<ServiceResult<object>> GenerateFormAsync(int rsqId)
         {
@@ -36,8 +44,7 @@ namespace PMS.Application.Services.SalesQuotation
                     .Select(r => r.ProductId)
                     .ToList();
 
-                var listLot = await _unitOfWork.LotProduct
-                    .Query()
+                var listLot = await _unitOfWork.LotProduct.Query()
                     .Include(lp => lp.Product)
                     .AsNoTracking()
                     .Where(lp => productIds.Contains(lp.ProductID) && lp.ExpiredDate > DateTime.Now && lp.LotQuantity > 0)
@@ -53,9 +60,15 @@ namespace PMS.Application.Services.SalesQuotation
                     .Where(sqv => sqv.Status == true)
                     .ToListAsync();
 
+                var listNote = await _unitOfWork.SalesQuotationNote.Query()
+                    .AsNoTracking()
+                    .Where(sqn => sqn.IsActive == true)
+                    .ToListAsync();
+
                 var lotDtos = _mapper.Map<List<LotDTO>>(listLot);
                 var taxDtos = _mapper.Map<List<TaxPolicyDTO>>(listTax);
                 var validityDtos = _mapper.Map<List<SalesQuotationValidityDTO>>(listExpired);
+                var noteDtos = _mapper.Map<List<SalesQuotationNoteDTO>>(listNote);
 
                 var form = new FormSalesQuotationDTO
                 {
@@ -63,6 +76,7 @@ namespace PMS.Application.Services.SalesQuotation
                     RequestCode = rsq.RequestCode,
                     Validities = validityDtos,
                     Taxes = taxDtos,
+                    Notes = noteDtos,
                     LotProducts = lotDtos,
                 };
 
@@ -101,6 +115,10 @@ namespace PMS.Application.Services.SalesQuotation
                 if (validityValidation != null)
                     return validityValidation;
 
+                var noteValidation = await ValidateNoteAsync(dto.NoteId);
+                if (noteValidation != null)
+                    return noteValidation;
+
                 var lotsValidation = await ValidateLotsAsync(dto, rsq);
                 if (lotsValidation != null)
                     return lotsValidation;
@@ -116,6 +134,7 @@ namespace PMS.Application.Services.SalesQuotation
                     RsqId = rsq.Id,
                     SqvId = dto.ValidityId,
                     SsId = staffProfile.Id,
+                    SqnId = dto.NoteId,
                     QuotationCode = GenerateQuotationCode(),
                     Status = Core.Domain.Enums.SalesQuotationStatus.Draft,
                     SalesQuotaionDetails = dto.Details.Select(item => new SalesQuotaionDetails
@@ -297,6 +316,10 @@ namespace PMS.Application.Services.SalesQuotation
                 if (validityValidation != null)
                     return validityValidation;
 
+                var noteValidation = await ValidateNoteAsync(dto.SqnId);
+                if (noteValidation != null)
+                    return noteValidation;
+
                 var lotValidation = await ValidateSQLotUpdate(salesQuotation, dto.Details);
                 if (lotValidation != null)
                     return lotValidation;
@@ -308,6 +331,7 @@ namespace PMS.Application.Services.SalesQuotation
                 await _unitOfWork.BeginTransactionAsync();
 
                 salesQuotation.SqvId = dto.SqvId;
+                salesQuotation.SqnId = dto.SqnId;
 
                 foreach (var detailDto in dto.Details)
                 {
@@ -513,6 +537,119 @@ namespace PMS.Application.Services.SalesQuotation
                 ?? throw new Exception("Khong tim thay sales staff profile hoac khong ton tai");
 
             return staffProfile;
+        }
+
+        public async Task<ServiceResult<object>> SendSalesQuotationAsync(int sqId, string ssId)
+        {
+            try
+            {
+                var staffProfile = await ValidateSalesStaffStringId(ssId);
+
+                var salesQuotation = await _unitOfWork.SalesQuotation.Query()
+                    .Include(sq => sq.RequestSalesQuotation)
+                        .ThenInclude(rsq => rsq.CustomerProfile)
+                            .ThenInclude(cp => cp.User)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(sqd => sqd.TaxPolicy)
+                    .Include(sq => sq.SalesQuotationValidity)
+                    .Include(sq => sq.SalesQuotationNote)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(sqd => sqd.LotProduct)
+                            .ThenInclude(lp => lp.Product)
+                    .Include(sq => sq.StaffProfile)
+                        .ThenInclude(sp => sp.User)
+                    .FirstOrDefaultAsync(sq => sq.Id == sqId);
+
+                var sqValidation = ValidateSalesQuotation(salesQuotation);
+                if (sqValidation != null)
+                    return sqValidation;
+
+                var ssValidate = ValidateSalesStaff(staffProfile, salesQuotation);
+                if (ssValidate != null)
+                    return ssValidate;
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                var rsq = salesQuotation.RequestSalesQuotation;
+
+                var expiredDate = salesQuotation.SalesQuotationValidity.Days;
+
+                var customer = rsq.CustomerProfile.User;
+
+                var staff = salesQuotation.StaffProfile.User;
+
+                rsq.Status = Core.Domain.Enums.RequestSalesQuotationStatus.Quoted;
+
+                _unitOfWork.RequestSalesQuotation.Update(rsq);
+
+                await _unitOfWork.CommitAsync();
+
+                salesQuotation.QuotationDate = DateTime.Now;
+
+                salesQuotation.ExpiredDate = DateTime.Now.AddDays(expiredDate);
+
+                salesQuotation.Status = Core.Domain.Enums.SalesQuotationStatus.Sent;
+
+                _unitOfWork.SalesQuotation.Update(salesQuotation);
+
+                await _unitOfWork.CommitAsync();
+
+                var html = QuotationTemplate.GenerateQuotationHtml(salesQuotation);
+
+                var pdfBytes = _pdfService.GeneratePdfFromHtml(html);
+
+                await SendSalesQuotationEmailAsync(pdfBytes, "Báo giá.pdf", customer.Email);
+
+                await _notificationService.SendNotificationToCustomerAsync(
+                    staff.Id, 
+                    customer.Id, 
+                    "Báo giá", 
+                    "Bạn nhận được 1 báo giá mới", 
+                    Core.Domain.Enums.NotificationType.Message);
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Gửi báo giá thành công"
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                await _unitOfWork.RollbackTransactionAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Gửi báo giá thất bại",
+                };
+            }
+        }
+
+        private async Task<ServiceResult<object>?> ValidateNoteAsync(int noteId)
+        {
+            var note = await _unitOfWork.SalesQuotationNote
+                .Query()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(v => v.Id == noteId && v.IsActive == true);
+
+            if (note == null)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = "Ghi chú báo giá không hợp lệ hoặc đã bị vô hiệu"
+                };
+
+            return null;
+        }
+
+        private async Task SendSalesQuotationEmailAsync(byte[] attachmentBytes, string attachmentName, string customerEmail)
+        {
+            var body = EmailBody.SALES_QUOTATION(customerEmail);
+            await _emailService.SendMailWithPDFAsync(EmailSubject.SALES_QUOTATION, body, customerEmail, attachmentBytes, attachmentName);
         }
     }
 }

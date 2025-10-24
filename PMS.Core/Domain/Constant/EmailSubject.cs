@@ -10,5 +10,6 @@ namespace PMS.Core.Domain.Constant
     {
         public const string CONFIRM_EMAIL = "Xác nhận tài khoản";
         public const string RESET_PASSWORD = "Đặt lại mật khẩu";
+        public const string SALES_QUOTATION = "Báo giá";
     }
 }
