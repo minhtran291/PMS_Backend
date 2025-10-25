@@ -15,7 +15,6 @@ namespace PMS.Application.DTOs.Warehouse
         [RegularExpression(@"^[\p{L}0-9\s]+$", ErrorMessage = "Địa chỉ chỉ được chứa chữ cái và số")]
         public required string Address { get; set; }
 
-        [Range(0, 1, ErrorMessage = "Trạng thái chỉ được nhận giá trị 0 (Inactive) hoặc 1 (Active)")]
-        public WarehouseStatus Status { get; set; }
+        public bool Status { get; set; }
     }
 }

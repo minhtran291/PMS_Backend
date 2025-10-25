@@ -7,18 +7,8 @@ namespace PMS.Application.DTOs.WarehouseLocation
     {
         public int WarehouseId { get; set; }
 
-        [Range(1, 100, ErrorMessage = "Số hàng phải từ 1 đến 100")]
-        public int RowNo { get; set; }
-
-        [Range(1, 100, ErrorMessage = "Số cột phải từ 1 đến 100")]
-        public int ColumnNo { get; set; }
-
-        [Range(1, 10, ErrorMessage = "Số tầng phải từ 1 đến 10")]
-        public int LevelNo { get; set; }
-
-        [Range(0, 1, ErrorMessage = "Trạng thái chỉ được nhận giá trị 0 (Inactive) hoặc 1 (Active)")]
-        public WarehouseLocationStatus Status { get; set; }
-
-        public int LotID { get; set; }
+        [Required(ErrorMessage = "Tên vị trí trong kho không được để trống")]
+        public required string LocationName { get; set; }
+        public bool Status { get; set; }
     }
 }

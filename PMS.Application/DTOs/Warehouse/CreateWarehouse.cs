@@ -11,5 +11,6 @@ namespace PMS.Application.DTOs.Warehouse
         [Required(ErrorMessage = "Địa chỉ không được để trống")]
         [RegularExpression(@"^[\p{L}0-9\s]+$", ErrorMessage = "Địa chỉ chỉ được chứa chữ cái và số")]
         public required string Address { get; set; }
+        public bool Status { get; set; } = false;
     }
 }
