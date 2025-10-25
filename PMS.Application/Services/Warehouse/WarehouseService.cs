@@ -32,17 +32,11 @@ namespace PMS.Application.Services.Warehouse
             await _unitOfWork.CommitAsync();
         }
 
-        public async Task<List<WarehouseList>> GetListWarehouseAsync()
+        public async Task<List<WarehouseDTO>> GetListWarehouseAsync()
         {
             var list = await _unitOfWork.Warehouse.Query().ToListAsync();
 
-            return list.Select(w => new WarehouseList
-            {
-                Id = w.Id,
-                Name = w.Name,
-                Address = w.Address,
-                Status = w.Status
-            }).ToList();
+            return _mapper.Map<List<WarehouseDTO>>(list);
         }
 
         public async Task UpdateWarehouseAsync(UpdateWarehouse dto)

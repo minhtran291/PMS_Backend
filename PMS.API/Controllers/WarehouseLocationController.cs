@@ -20,15 +20,13 @@ namespace PMS.API.Controllers
         [Route("get-all-warehouse-location")]
         public async Task<IActionResult> WarehouseLocationList()
         {
-            try
+            var result = await _warehouseLocationService.GetListWarehouseLocation();
+
+            return StatusCode(result.StatusCode, new
             {
-                var list = await _warehouseLocationService.GetListWarehouseLocation();
-                return Ok(list);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         /// <summary>
@@ -38,19 +36,14 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         [HttpPost]
         [Route("create-warehouse-location")]
-        public async Task<IActionResult> CreateWarehouseLocation([FromBody] CreateWarehouseLocation dto)
+        public async Task<IActionResult> CreateWarehouseLocation([FromBody] CreateWarehouseLocationDTO dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            try
+            var result =  await _warehouseLocationService.CreateWarehouseLocation(dto);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _warehouseLocationService.CreateWarehouseLocation(dto);
-                return Ok("Tạo thành công");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                message = result.Message,
+            });
         }
 
         /// <summary>
