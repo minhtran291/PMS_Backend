@@ -424,10 +424,64 @@ namespace PMS.Data
                 await context.SaveChangesAsync();
             }
 
+            if (!context.Warehouses.Any())
+            {
+                var warehouses = new List<Warehouse>
+                {
+                    new Warehouse
+                    {
+                        Name = "Kho A",
+                        Address = "Số 123 Phạm Văn Đồng, Cầu Giấy, Hà Nội",
+                        Status = true
+                    },
+                    new Warehouse
+                    {
+                        Name = "Kho B",
+                        Address = "Số 123 Phạm Văn Đồng, Cầu Giấy, Hà Nội",
+                        Status = true
+                    }
+                };
+
+                await context.Warehouses.AddRangeAsync(warehouses);
+                await context.SaveChangesAsync();
+            }
+
+            if (!context.WarehouseLocations.Any())
+            {
+                var warehouseLocations = new List<WarehouseLocation>
+                {
+                    new WarehouseLocation
+                    {
+                        WarehouseId = 1,
+                        LocationName = "Khu thuốc A1",
+                        Status = true,
+                    },
+                    new WarehouseLocation
+                    {
+                        WarehouseId = 1,
+                        LocationName = "Khu thuốc A2",
+                        Status = true,
+                    },
+                    new WarehouseLocation
+                    {
+                        WarehouseId = 2,
+                        LocationName = "Khu thuốc B1",
+                        Status = true,
+                    },
+                    new WarehouseLocation
+                    {
+                        WarehouseId = 2,
+                        LocationName = "Khu thuốc B2",
+                        Status = true,
+                    },
+                };
+
+                await context.WarehouseLocations.AddRangeAsync(warehouseLocations);
+                await context.SaveChangesAsync();
+            }
+
             if (!context.LotProducts.Any())
             {
-                var products = context.Products.ToList();
-
                 var lotProducts = new List<LotProduct>
                 {
                     new LotProduct
@@ -438,7 +492,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(2),
                         LotQuantity = 1000,
                         InputPrice = 12000,
-                        SalePrice = 15000
+                        SalePrice = 15000,
+                        WarehouselocationID = 1
                     },
                     new LotProduct
                     {
@@ -448,7 +503,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(3),
                         LotQuantity = 1000,
                         InputPrice = 15000,
-                        SalePrice = 18000
+                        SalePrice = 18000,
+                        WarehouselocationID = 2
                     },
                     new LotProduct
                     {
@@ -458,7 +514,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(2),
                         LotQuantity = 800,
                         InputPrice = 25000,
-                        SalePrice = 30000
+                        SalePrice = 30000,
+                        WarehouselocationID = 3
                     },
                     new LotProduct
                     {
@@ -468,7 +525,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(3),
                         LotQuantity = 800,
                         InputPrice = 27000,
-                        SalePrice = 32000
+                        SalePrice = 32000,
+                        WarehouselocationID = 4
                     },
                     new LotProduct
                     {
@@ -478,7 +536,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(2),
                         LotQuantity = 600,
                         InputPrice = 18000,
-                        SalePrice = 22000
+                        SalePrice = 22000,
+                        WarehouselocationID = 1
                     },
                     new LotProduct
                     {
@@ -488,7 +547,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(3),
                         LotQuantity = 600,
                         InputPrice = 20000,
-                        SalePrice = 24000
+                        SalePrice = 24000,
+                        WarehouselocationID = 2
                     },
                     new LotProduct
                     {
@@ -498,7 +558,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(2),
                         LotQuantity = 1200,
                         InputPrice = 9000,
-                        SalePrice = 13000
+                        SalePrice = 13000,
+                        WarehouselocationID = 3
                     },
                     new LotProduct
                     {
@@ -508,7 +569,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(3),
                         LotQuantity = 1200,
                         InputPrice = 11000,
-                        SalePrice = 15000
+                        SalePrice = 15000,
+                        WarehouselocationID = 4
                     },
                     new LotProduct
                     {
@@ -518,7 +580,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(2),
                         LotQuantity = 500,
                         InputPrice = 20000,
-                        SalePrice = 25000
+                        SalePrice = 25000,
+                        WarehouselocationID = 1
                     },
                     new LotProduct
                     {
@@ -528,7 +591,8 @@ namespace PMS.Data
                         ExpiredDate = DateTime.Now.AddMonths(3),
                         LotQuantity = 500,
                         InputPrice = 22000,
-                        SalePrice = 27000
+                        SalePrice = 27000,
+                        WarehouselocationID = 2
                     }
                 };
 

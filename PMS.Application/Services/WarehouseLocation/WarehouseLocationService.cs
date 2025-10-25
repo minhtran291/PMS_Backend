@@ -28,10 +28,8 @@ namespace PMS.Application.Services.WarehouseLocation
             var newWL = new Core.Domain.Entities.WarehouseLocation
             {
                 WarehouseId = dto.WarehouseId,
-                RowNo = dto.RowNo,
-                ColumnNo = dto.ColumnNo,
-                LevelNo = dto.LevelNo,
-                Status = Core.Domain.Enums.WarehouseLocationStatus.Active
+                LocationName = dto.LocationName,
+                Status = dto.Status,
             };
 
             await _unitOfWork.WarehouseLocation.AddAsync(newWL);
@@ -46,9 +44,7 @@ namespace PMS.Application.Services.WarehouseLocation
             return list.Select(w => new WarehouseLocationList
             {
                 Id = w.Id,
-                RowNo = w.RowNo,
-                ColumnNo = w.ColumnNo,
-                LevelNo = w.LevelNo,
+                LocationName= w.LocationName,
                 Status = w.Status
             }).ToList();
         }
@@ -64,57 +60,53 @@ namespace PMS.Application.Services.WarehouseLocation
                 throw new Exception("Có lỗi xảy ra");
             }
 
-            isExisted.RowNo = dto.RowNo;
-            isExisted.ColumnNo = dto.ColumnNo;
-            isExisted.LevelNo = dto.LevelNo;
+            isExisted.LocationName = dto.LocationName;
             isExisted.Status = dto.Status;
 
             _unitOfWork.WarehouseLocation.Update(isExisted);
             await _unitOfWork.CommitAsync();
         }
 
-        public async Task<ServiceResult<bool>> StoringLotInWarehouseLocation(StoringLot dto)
-        {
-            var isExisted = await _unitOfWork.WarehouseLocation.Query()
-                 .FirstOrDefaultAsync(wl => wl.WarehouseId == dto.WarehouseId
-                     && wl.ColumnNo == dto.ColumnNo
-                     && wl.LevelNo == dto.LevelNo
-                     && wl.RowNo == dto.RowNo);
+        //public async Task<ServiceResult<bool>> StoringLotInWarehouseLocation(StoringLot dto)
+        //{
+        //    var isExisted = await _unitOfWork.WarehouseLocation.Query()
+        //         .FirstOrDefaultAsync(wl => wl.WarehouseId == dto.WarehouseId
+        //             && wl.LocationName == dto.LocationName);
 
-            if (isExisted == null)
-            {
-                _logger.LogError("Loi warehouse location id khong ton tai ham UpdateWarehouseLocation");
-                return new ServiceResult<bool>
-                {
-                    Data = false,
-                    Message = $"không tồn tại vị trí kho với ID:{dto.WarehouseId}",
-                    StatusCode = 200
-                };
-            }
-            var exLotProduct = await _unitOfWork.LotProduct.Query().FirstOrDefaultAsync(lp => lp.LotID == dto.LotID);
-            if (exLotProduct == null)
-            {
-                _logger.LogError("loi khi tim kiem lotid");
-                return new ServiceResult<bool>
-                {
-                    Data = false,
-                    Message = $"không tồn tại lô sản phẩm với LotID:{dto.LotID}",
-                    StatusCode = 200
-                };
-            }
-            isExisted.LotID = dto.LotID;
-            _unitOfWork.WarehouseLocation.Update(isExisted);
-            await _unitOfWork.CommitAsync();
-            exLotProduct.WarehouselocationID = isExisted.Id;
-            _unitOfWork.LotProduct.Update(exLotProduct);
-            await _unitOfWork.CommitAsync();
-            return new ServiceResult<bool>
-            {
-                Data = true,
-                Message = "Update Thành công",
-                StatusCode = 200
-            };
-        }
+        //    if (isExisted == null)
+        //    {
+        //        _logger.LogError("Loi warehouse location id khong ton tai ham UpdateWarehouseLocation");
+        //        return new ServiceResult<bool>
+        //        {
+        //            Data = false,
+        //            Message = $"không tồn tại vị trí kho với ID:{dto.WarehouseId}",
+        //            StatusCode = 200
+        //        };
+        //    }
+        //    var exLotProduct = await _unitOfWork.LotProduct.Query().FirstOrDefaultAsync(lp => lp.LotID == dto.LotID);
+        //    if (exLotProduct == null)
+        //    {
+        //        _logger.LogError("loi khi tim kiem lotid");
+        //        return new ServiceResult<bool>
+        //        {
+        //            Data = false,
+        //            Message = $"không tồn tại lô sản phẩm với LotID:{dto.LotID}",
+        //            StatusCode = 200
+        //        };
+        //    }
+        //    isExisted.LotID = dto.LotID;
+        //    _unitOfWork.WarehouseLocation.Update(isExisted);
+        //    await _unitOfWork.CommitAsync();
+        //    exLotProduct.WarehouselocationID = isExisted.Id;
+        //    _unitOfWork.LotProduct.Update(exLotProduct);
+        //    await _unitOfWork.CommitAsync();
+        //    return new ServiceResult<bool>
+        //    {
+        //        Data = true,
+        //        Message = "Update Thành công",
+        //        StatusCode = 200
+        //    };
+        //}
 
 
 
@@ -132,9 +124,7 @@ namespace PMS.Application.Services.WarehouseLocation
             return new WarehouseLocationList
             {
                 Id = isExisted.Id,
-                RowNo = isExisted.RowNo,
-                ColumnNo = isExisted.ColumnNo,
-                LevelNo = isExisted.LevelNo,
+                LocationName = isExisted.LocationName,
                 Status = isExisted.Status,
             };
         }
@@ -157,9 +147,7 @@ namespace PMS.Application.Services.WarehouseLocation
             return list.Select(wl => new WarehouseLocationList
             {
                 Id = wl.Id,
-                RowNo = wl.RowNo,
-                ColumnNo = wl.ColumnNo,
-                LevelNo = wl.LevelNo,
+                LocationName= wl.LocationName,
                 Status = wl.Status,
             }).ToList();
         }

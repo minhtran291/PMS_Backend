@@ -207,10 +207,6 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(w => w.Address)
                     .IsRequired()
                     .HasMaxLength(100);
-
-                entity.Property(w => w.Status)
-                    .HasConversion<byte>()
-                    .HasColumnType("TINYINT");
             });
 
             builder.Entity<WarehouseLocation>(entity =>
@@ -223,18 +219,8 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(e => e.WarehouseId)
                     .IsRequired();
 
-                entity.Property(e => e.RowNo)
-                    .IsRequired();
-
-                entity.Property(e => e.ColumnNo)
-                      .IsRequired();
-
-                entity.Property(e => e.LevelNo)
-                      .IsRequired();
-
-                entity.Property(e => e.Status)
-                    .HasConversion<byte>()
-                    .HasColumnType("TINYINT")
+                entity.Property(e => e.LocationName)
+                    .HasMaxLength(256)
                     .IsRequired();
 
                 entity.HasOne(wl => wl.Warehouse)
@@ -295,10 +281,11 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(lp => lp.LotQuantity)
                     .IsRequired();
 
-                entity.Property(lp => lp.InputPrice).
-                HasColumnType("decimal(18,2)").IsRequired();
+                entity.Property(lp => lp.InputPrice)
+                    .HasColumnType("decimal(18,2)").IsRequired();
+
                 entity.Property(lp => lp.SalePrice)
-                .HasColumnType("decimal(18,2)");
+                    .HasColumnType("decimal(18,2)");
 
                 entity.HasOne(lp => lp.Product)
                     .WithMany(p => p.LotProducts)
@@ -309,9 +296,11 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(s => s.LotProducts)
                     .HasForeignKey(lp => lp.SupplierID)
                     .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasOne(lp => lp.WarehouseLocation)
-                .WithOne(w => w.LotProduct)
-                .OnDelete(DeleteBehavior.Restrict);
+                    .WithMany(w => w.LotProducts)
+                    .HasForeignKey(lp => lp.WarehouselocationID)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<Category>(entity =>

@@ -25,7 +25,7 @@ namespace PMS.Application.Services.Warehouse
             {
                 Name = NormalizeName(dto.Name),
                 Address = NormalizeName(dto.Address),
-                Status = Core.Domain.Enums.WarehouseStatus.Active
+                Status = dto.Status,
             };
 
             await _unitOfWork.Warehouse.AddAsync(warehouse);
@@ -91,9 +91,7 @@ namespace PMS.Application.Services.Warehouse
                 WarehouseLocationLists = isExisted.WarehouseLocations.Select(wl => new DTOs.WarehouseLocation.WarehouseLocationList
                 {
                     Id = wl.Id,
-                    RowNo = wl.RowNo,
-                    ColumnNo = wl.ColumnNo,
-                    LevelNo = wl.LevelNo,
+                    LocationName = wl.LocationName,
                     Status = wl.Status
                 }).ToList()
             };
