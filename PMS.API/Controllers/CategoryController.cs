@@ -58,7 +58,7 @@ namespace PMS.API.Controllers
         /// Lấy thể loại theo ID
         /// </summary>
         [HttpGet("getbyid/{id}")]
-       // [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetCategory(int id)
         {
             var result = await _categoryService.GetByIdAsync(id);
@@ -112,6 +112,7 @@ namespace PMS.API.Controllers
         /// <param name="cateId"></param>
         /// <returns></returns>
         [HttpPut("toggleStatus/{cateId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> ToggleCategoryStatus(int cateId)
         {
             try
