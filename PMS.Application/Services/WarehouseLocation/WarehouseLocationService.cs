@@ -5,6 +5,7 @@ using PMS.Application.Services.Base;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Data.UnitOfWork;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Entities;
 
 namespace PMS.Application.Services.WarehouseLocation
 {
@@ -14,39 +15,75 @@ namespace PMS.Application.Services.WarehouseLocation
     {
         private readonly ILogger<WarehouseLocationService> _logger = logger;
 
-        public async Task CreateWarehouseLocation(CreateWarehouseLocation dto)
+        public async Task<ServiceResult<object>> CreateWarehouseLocation(CreateWarehouseLocationDTO dto)
         {
-            var checkWarehouse = await _unitOfWork.Warehouse.Query()
-                .FirstOrDefaultAsync(w => w.Id == dto.WarehouseId);
-
-            if (checkWarehouse == null)
+            try
             {
-                _logger.LogError("Khong tim thay id cua warehouse ham CreateWarehouseLocation");
-                throw new Exception("Có lỗi xảy ra");
+                var warehouse = await _unitOfWork.Warehouse.Query()
+                    .FirstOrDefaultAsync(w => w.Id == dto.WarehouseId);
+
+                var warehouseValidation = ValidateWarehouse(warehouse);
+                if (warehouseValidation != null)
+                    return warehouseValidation;
+
+                var locationName = await _unitOfWork.WarehouseLocation.Query()
+                    .FirstOrDefaultAsync(wl => wl.LocationName == dto.LocationName.Trim() && wl.WarehouseId == dto.WarehouseId);
+
+                var locationNameValidation = ValidateLocationName(locationName);
+                if(locationNameValidation != null)
+                    return locationNameValidation;
+
+                var newWL = new Core.Domain.Entities.WarehouseLocation
+                {
+                    WarehouseId = dto.WarehouseId,
+                    LocationName = dto.LocationName.Trim(),
+                    Status = false
+                };
+
+                await _unitOfWork.WarehouseLocation.AddAsync(newWL);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Tạo thành công"
+                };
             }
-
-            var newWL = new Core.Domain.Entities.WarehouseLocation
+            catch (Exception ex)
             {
-                WarehouseId = dto.WarehouseId,
-                LocationName = dto.LocationName,
-                Status = dto.Status,
-            };
-
-            await _unitOfWork.WarehouseLocation.AddAsync(newWL);
-            await _unitOfWork.CommitAsync();
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
         }
 
-        public async Task<List<WarehouseLocationList>> GetListWarehouseLocation()
+        public async Task<ServiceResult<List<WarehouseLocationDTO>>> GetListWarehouseLocation()
         {
-            var list = await _unitOfWork.WarehouseLocation.Query()
+            try
+            {
+                var list = await _unitOfWork.WarehouseLocation.Query()
                 .ToListAsync();
 
-            return list.Select(w => new WarehouseLocationList
+                var result = _mapper.Map<List<WarehouseLocationDTO>>(list);
+
+                return new ServiceResult<List<WarehouseLocationDTO>>
+                {
+                    StatusCode = 200,
+                    Data = result
+                };
+            }
+            catch (Exception ex)
             {
-                Id = w.Id,
-                LocationName= w.LocationName,
-                Status = w.Status
-            }).ToList();
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<List<WarehouseLocationDTO>>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
         }
 
         public async Task UpdateWarehouseLocation(UpdateWarehouseLocation dto)
@@ -150,6 +187,37 @@ namespace PMS.Application.Services.WarehouseLocation
                 LocationName= wl.LocationName,
                 Status = wl.Status,
             }).ToList();
+        }
+
+        private static ServiceResult<object>? ValidateWarehouse(Core.Domain.Entities.Warehouse? warehouse)
+        {
+            if (warehouse == null)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 404,
+                    Message = "Không tìm thấy nhà kho"
+                };
+
+            if (warehouse.Status == false)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = "Nhà kho đã dùng hoạt động"
+                };
+            
+            return null;
+        }
+
+        private static ServiceResult<object>? ValidateLocationName(Core.Domain.Entities.WarehouseLocation? warehouseLocation)
+        {
+            if (warehouseLocation != null)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = "Tên vị trí trong kho đã tồn tại"
+                };
+
+            return null;
         }
     }
 }

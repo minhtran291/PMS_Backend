@@ -1,6 +1,8 @@
 ﻿
 using PMS.Application.DTOs.Profile;
 using PMS.Application.DTOs.SalesQuotation;
+using PMS.Application.DTOs.Warehouse;
+using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Identity;
 
@@ -36,6 +38,11 @@ namespace PMS.Application.Automapper
                 .ForMember(dest => dest.ValidityName, opt => opt.MapFrom(src => src.SalesQuotationValidity.Name));
 
             CreateMap<SalesQuotationNote, SalesQuotationNoteDTO>();
+
+            CreateMap<Warehouse, WarehouseDTO>();
+
+            CreateMap<WarehouseLocation, WarehouseLocationDTO>();
+
         }
     }
 }
