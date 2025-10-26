@@ -22,16 +22,20 @@ namespace PMS.Application.Services.WarehouseLocation
                 var warehouse = await _unitOfWork.Warehouse.Query()
                     .FirstOrDefaultAsync(w => w.Id == dto.WarehouseId);
 
-                var warehouseValidation = ValidateWarehouse(warehouse);
+                var warehouseValidation = ValidateWarehouse(warehouse); // check kho ton tai
                 if (warehouseValidation != null)
                     return warehouseValidation;
 
                 var locationName = await _unitOfWork.WarehouseLocation.Query()
-                    .FirstOrDefaultAsync(wl => wl.LocationName == dto.LocationName.Trim() && wl.WarehouseId == dto.WarehouseId);
+                    .AnyAsync(wl => wl.LocationName == dto.LocationName.Trim() && wl.WarehouseId == dto.WarehouseId);
 
-                var locationNameValidation = ValidateLocationName(locationName);
-                if(locationNameValidation != null)
-                    return locationNameValidation;
+                // check trung name trong cung 1 kho
+                if (locationName)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Tên vị trí trong kho đã tồn tại"
+                    };
 
                 var newWL = new Core.Domain.Entities.WarehouseLocation
                 {
@@ -65,7 +69,8 @@ namespace PMS.Application.Services.WarehouseLocation
             try
             {
                 var list = await _unitOfWork.WarehouseLocation.Query()
-                .ToListAsync();
+                    .AsNoTracking()
+                    .ToListAsync();
 
                 var result = _mapper.Map<List<WarehouseLocationDTO>>(list);
 
@@ -86,22 +91,66 @@ namespace PMS.Application.Services.WarehouseLocation
             }
         }
 
-        public async Task UpdateWarehouseLocation(UpdateWarehouseLocation dto)
+        public async Task<ServiceResult<object>> UpdateWarehouseLocation(UpdateWarehouseLocationDTO dto)
         {
-            var isExisted = await _unitOfWork.WarehouseLocation.Query()
-                .FirstOrDefaultAsync(wl => wl.Id == dto.WarehouseId);
-
-            if (isExisted == null)
+            try
             {
-                _logger.LogError("Loi warehouse location id khong ton tai ham UpdateWarehouseLocation");
-                throw new Exception("Có lỗi xảy ra");
+                var isExisted = await _unitOfWork.WarehouseLocation.Query()
+                .FirstOrDefaultAsync(wl => wl.Id == dto.Id);
+
+                var warehouseLocationValidation = ValidateWarehouseLocation(isExisted); // check location ton tai
+                if (warehouseLocationValidation != null)
+                    return warehouseLocationValidation;
+
+                var warehouse = await _unitOfWork.Warehouse.Query()
+                    .AnyAsync(w => w.Id == dto.WarehouseId);
+
+                if (!warehouse)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy nhà kho"
+                    };
+
+                if(isExisted.WarehouseId !=  dto.WarehouseId)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Vị trí kho và kho không khớp"
+                    };
+
+                var locationName = await _unitOfWork.WarehouseLocation.Query()
+                    .AnyAsync(wl => wl.LocationName == dto.LocationName.Trim() && wl.WarehouseId == dto.WarehouseId && wl.Id != dto.Id);
+
+                // check trung name trong cung kho nhung khac chinh ban than
+                if (locationName)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Tên vị trí trong kho đã tồn tại"
+                    };
+
+                isExisted.LocationName = dto.LocationName.Trim();
+                isExisted.Status = dto.Status;
+
+                _unitOfWork.WarehouseLocation.Update(isExisted);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật thành công"
+                };
             }
-
-            isExisted.LocationName = dto.LocationName;
-            isExisted.Status = dto.Status;
-
-            _unitOfWork.WarehouseLocation.Update(isExisted);
-            await _unitOfWork.CommitAsync();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
         }
 
         //public async Task<ServiceResult<bool>> StoringLotInWarehouseLocation(StoringLot dto)
@@ -147,46 +196,74 @@ namespace PMS.Application.Services.WarehouseLocation
 
 
 
-        public async Task<WarehouseLocationList> ViewWarehouseLocationDetails(int warehouseLocationId)
+        public async Task<ServiceResult<object>> ViewWarehouseLocationDetails(int warehouseLocationId)
         {
-            var isExisted = await _unitOfWork.WarehouseLocation.Query()
-                .FirstOrDefaultAsync(wl => wl.Id == warehouseLocationId);
-
-            if (isExisted == null)
+            try
             {
-                _logger.LogError("Loi warehouse location id khong ton tai ham ViewWarehouseLocationDetails");
-                throw new Exception("Có lỗi xảy ra");
+                var warehouseLocation = await _unitOfWork.WarehouseLocation.Query()
+                    .AsNoTracking()
+                    .Include(wl => wl.LotProducts)
+                        .ThenInclude(lp => lp.Product)
+                    .Include(wl => wl.LotProducts)
+                        .ThenInclude(lp => lp.Supplier)
+                    .FirstOrDefaultAsync(wl => wl.Id == warehouseLocationId);
+
+                var warehouseLocationValidation = ValidateWarehouseLocation(warehouseLocation); // check location ton tai
+                if (warehouseLocationValidation != null)
+                    return warehouseLocationValidation;
+
+                var result = _mapper.Map<WarehouseLocationDetailsDTO>(warehouseLocation);
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = result
+                };
             }
-
-            return new WarehouseLocationList
+            catch (Exception ex)
             {
-                Id = isExisted.Id,
-                LocationName = isExisted.LocationName,
-                Status = isExisted.Status,
-            };
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
         }
 
-        public async Task<List<WarehouseLocationList>> GetListByWarehouseId(int warehouseId)
+        public async Task<ServiceResult<object>> GetListByWarehouseId(int warehouseId)
         {
-            var isExisted = await _unitOfWork.Warehouse.Query()
-                .FirstOrDefaultAsync(w => w.Id == warehouseId);
-
-            if (isExisted == null)
+            try
             {
-                _logger.LogError("Loi warehouse id khong ton tai ham GetListByWarehouseId");
-                throw new Exception("Có lỗi xảy ra");
+                var warehouse = await _unitOfWork.Warehouse.Query()
+                    .AsNoTracking()
+                    .Include(w => w.WarehouseLocations)
+                    .FirstOrDefaultAsync(w => w.Id == warehouseId);
+
+                if (warehouse == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Nhà kho không tồn tại"
+                    };
+
+                var result = _mapper.Map<List<WarehouseLocationDTO>>(warehouse.WarehouseLocations.ToList());
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = result
+                };
             }
-
-            var list = await _unitOfWork.WarehouseLocation.Query()
-                .Where(wl => wl.WarehouseId == warehouseId)
-                .ToListAsync();
-
-            return list.Select(wl => new WarehouseLocationList
+            catch (Exception ex)
             {
-                Id = wl.Id,
-                LocationName= wl.LocationName,
-                Status = wl.Status,
-            }).ToList();
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
         }
 
         private static ServiceResult<object>? ValidateWarehouse(Core.Domain.Entities.Warehouse? warehouse)
@@ -204,7 +281,7 @@ namespace PMS.Application.Services.WarehouseLocation
                     StatusCode = 400,
                     Message = "Nhà kho đã dùng hoạt động"
                 };
-            
+
             return null;
         }
 
@@ -219,5 +296,18 @@ namespace PMS.Application.Services.WarehouseLocation
 
             return null;
         }
+
+        private static ServiceResult<object>? ValidateWarehouseLocation(Core.Domain.Entities.WarehouseLocation? warehouseLocation)
+        {
+            if (warehouseLocation == null)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 404,
+                    Message = "Vị trí trong kho không tồn tại"
+                };
+
+            return null;
+        }
+
     }
 }

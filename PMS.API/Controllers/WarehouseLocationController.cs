@@ -38,7 +38,7 @@ namespace PMS.API.Controllers
         [Route("create-warehouse-location")]
         public async Task<IActionResult> CreateWarehouseLocation([FromBody] CreateWarehouseLocationDTO dto)
         {
-            var result =  await _warehouseLocationService.CreateWarehouseLocation(dto);
+            var result = await _warehouseLocationService.CreateWarehouseLocation(dto);
 
             return StatusCode(result.StatusCode, new
             {
@@ -53,19 +53,14 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         [HttpPut]
         [Route("update-warehouse-location")]
-        public async Task<IActionResult> UpdateWarehouseLocation([FromBody] UpdateWarehouseLocation dto)
+        public async Task<IActionResult> UpdateWarehouseLocation([FromBody] UpdateWarehouseLocationDTO dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            try
+            var result = await _warehouseLocationService.UpdateWarehouseLocation(dto);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _warehouseLocationService.UpdateWarehouseLocation(dto);
-                return Ok("Cập nhật thành công");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                message = result.Message,
+            });
         }
         /// <summary>
         /// https://localhost:7213/api/WarehouseLocation/get-warehouse-location-details/{}
@@ -76,30 +71,26 @@ namespace PMS.API.Controllers
         [Route("get-warehouse-location-details/{warehouseLocationId}")]
         public async Task<IActionResult> WarehouseLocationDetails(int warehouseLocationId)
         {
-            try
+            var result = await _warehouseLocationService.ViewWarehouseLocationDetails(warehouseLocationId);
+
+            return StatusCode(result.StatusCode, new
             {
-                var result = await _warehouseLocationService.ViewWarehouseLocationDetails(warehouseLocationId);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                message = result.Message,
+                data = result.Data,
+            });
         }
 
         [HttpGet]
         [Route("get-warehouse-location-by-warehouse-id")]
         public async Task<IActionResult> WarehouseLocationListByWarehouseId(int warehouseId)
         {
-            try
+            var result = await _warehouseLocationService.GetListByWarehouseId(warehouseId);
+            
+            return StatusCode(result.StatusCode, new
             {
-                var result = await _warehouseLocationService.GetListByWarehouseId(warehouseId);
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                message = result.Message,
+                data = result.Data,
+            });
         }
 
         /// <summary>
