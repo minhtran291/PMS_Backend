@@ -43,6 +43,13 @@ namespace PMS.Application.Automapper
 
             CreateMap<WarehouseLocation, WarehouseLocationDTO>();
 
+            CreateMap<WarehouseLocation, WarehouseLocationDetailsDTO>()
+                .IncludeBase<WarehouseLocation, WarehouseLocationDTO>()
+                .ForMember(dest => dest.LotProduct, opt => opt.MapFrom(src => src.LotProducts));
+
+            CreateMap<LotProduct, LotProductDTO>()
+                .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.Supplier.Name))
+                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product.ProductName));
         }
     }
 }

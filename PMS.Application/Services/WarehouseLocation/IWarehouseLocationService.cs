@@ -6,10 +6,10 @@ namespace PMS.Application.Services.WarehouseLocation
     public interface IWarehouseLocationService
     {
         Task<ServiceResult<object>> CreateWarehouseLocation(CreateWarehouseLocationDTO dto);
-        Task UpdateWarehouseLocation(UpdateWarehouseLocation dto);
-        Task<WarehouseLocationList> ViewWarehouseLocationDetails(int warehouseLocationId);
+        Task <ServiceResult<object>>UpdateWarehouseLocation(UpdateWarehouseLocationDTO dto);
+        Task<ServiceResult<object>> ViewWarehouseLocationDetails(int warehouseLocationId);
         Task<ServiceResult<List<WarehouseLocationDTO>>> GetListWarehouseLocation();
-        Task<List<WarehouseLocationList>> GetListByWarehouseId(int warehouseId);
+        Task<ServiceResult<object>> GetListByWarehouseId(int warehouseId);
         //Task<ServiceResult<bool>> StoringLotInWarehouseLocation(StoringLot dto);
     }
 }
