@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 
 namespace PMS.Core.Domain.Enums
 {
-    public enum PRFQStatus
+    public enum PurchasingOrderStatus
     {
-        Sent =1,
-        Approved =2,
-        Rejected =3,
-        Draft=4
+        approved = 0,
+        rejected = 1,
+        deposited = 3,
+        paid = 4,
+        compeleted=5,
     }
 }

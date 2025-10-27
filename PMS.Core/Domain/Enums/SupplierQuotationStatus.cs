@@ -6,11 +6,9 @@ using System.Threading.Tasks;
 
 namespace PMS.Core.Domain.Enums
 {
-    public enum PRFQStatus
+    public enum SupplierQuotationStatus
     {
-        Sent =1,
-        Approved =2,
-        Rejected =3,
-        Draft=4
+        InDate = 0,
+        OutOfDate = 1
     }
 }

@@ -20,7 +20,8 @@ namespace PMS.Core.DTO.Content
         public required decimal Total { get; set; }
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters.")]
         public string? Description { get; set; }
-
+        [Required(ErrorMessage = "Nhà chứa không được để trống")]
+        public required int WarehouseLocationID {get; set; }
         public virtual ICollection<GRNDManuallyDTO> GRNDManuallyDTOs { get; set; } = new List<GRNDManuallyDTO>();
     }
 }

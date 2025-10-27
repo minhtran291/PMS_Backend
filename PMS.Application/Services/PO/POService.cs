@@ -15,7 +15,7 @@ namespace PMS.API.Services.POService
         public async Task<ServiceResult<IEnumerable<POViewDTO>>> GetAllPOAsync()
         {
             var poList = await _unitOfWork.PurchasingOrder.Query()
-                .Include(p => p.User) 
+                .Include(p => p.User)
                 .ToListAsync();
 
             var userList = await _unitOfWork.Users.Query()
@@ -48,7 +48,7 @@ namespace PMS.API.Services.POService
             };
         }
 
-        public async Task<ServiceResult<bool>> UpdatePOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
+        public async Task<ServiceResult<bool>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
         {
             try
             {
@@ -64,9 +64,9 @@ namespace PMS.API.Services.POService
                     };
                 }
 
-                existingPO.Status = true;
-                existingPO.Deposit = pOUpdateDTO.Deposit;
-                if (pOUpdateDTO.Deposit > existingPO.Total)
+                existingPO.Status = Core.Domain.Enums.PurchasingOrderStatus.deposited;
+                existingPO.Deposit = pOUpdateDTO.paid;
+                if (pOUpdateDTO.paid > existingPO.Total)
                 {
                     return new ServiceResult<bool>
                     {
@@ -75,8 +75,8 @@ namespace PMS.API.Services.POService
                         Data = false
                     };
                 }
-                existingPO.Debt = existingPO.Total - pOUpdateDTO.Deposit;
-                existingPO.PaymentDate = pOUpdateDTO.PaymentDate;
+                existingPO.Debt = existingPO.Total - pOUpdateDTO.paid;
+                existingPO.PaymentDate = DateTime.Now.Date;
                 existingPO.PaymentBy = userId;
 
                 _unitOfWork.PurchasingOrder.Update(existingPO);
@@ -176,5 +176,69 @@ namespace PMS.API.Services.POService
                 };
             }
         }
+
+        public async Task<ServiceResult<bool>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var existingPO = await _unitOfWork.PurchasingOrder.Query().FirstOrDefaultAsync(po => po.POID == poid);
+
+                if (existingPO == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 200,
+                        Message = $"Không tìm thấy đơn hàng với POID = {poid}",
+                        Data = false
+                    };
+                }
+
+
+                existingPO.Deposit = pOUpdateDTO.paid + existingPO.Deposit;
+                if (pOUpdateDTO.paid > existingPO.Debt)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 200,
+                        Message = "Thanh toán quá mức",
+                        Data = false
+                    };
+                }
+                _unitOfWork.PurchasingOrder.Update(existingPO);
+                await _unitOfWork.CommitAsync();
+                existingPO.Debt = existingPO.Total - existingPO.Deposit;
+                if (existingPO.Debt == 0)
+                {
+                    existingPO.Status = Core.Domain.Enums.PurchasingOrderStatus.compeleted;
+                }
+                existingPO.Status = Core.Domain.Enums.PurchasingOrderStatus.paid;
+                existingPO.PaymentDate = DateTime.Now.Date;
+                existingPO.PaymentBy = userId;
+
+                _unitOfWork.PurchasingOrder.Update(existingPO);
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật thành công.",
+                    Data = true
+                };
+
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
+                    Data = false
+                };
+            }
+        }
+
+        
     }
 }

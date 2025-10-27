@@ -111,6 +111,40 @@ namespace PMS.Application.Services.Category
             }
         }
 
+        public async Task<ServiceResult<bool>> DeleteCategoriesWithNoReference(int cateId)
+        {
+            var cate = await _unitOfWork.Category.Query().Include(c => c.Products).FirstOrDefaultAsync(ct => ct.CategoryID == cateId);
+            if (cate == null)
+            {
+                return new ServiceResult<bool>
+                {
+                    Data = false,
+                    StatusCode = 404,
+                    Message = $"Danh mục với {cateId} không tồn tại",
+                    Success = false,
+                };
+            }
+            if (cate.Products != null && cate.Products.Any())
+            {
+                return new ServiceResult<bool>
+                {
+                    Data = false,
+                    StatusCode = 400,
+                    Message = "Không thể xóa danh mục vì vẫn còn sản phẩm liên quan",
+                    Success = false
+                };
+            }
+            _unitOfWork.Category.Remove(cate);
+            await _unitOfWork.CommitAsync();
+            return new ServiceResult<bool>
+            {
+                Data = true,
+                StatusCode = 200,
+                Message = "Thành công",
+                Success = true,
+            };
+        }
+
         public async Task<ServiceResult<IEnumerable<CategoryDTO>>> GetAllAsync()
         {
 

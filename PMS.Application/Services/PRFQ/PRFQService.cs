@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using PMS.Application.DTOs.PRFQ;
@@ -26,16 +27,17 @@ namespace PMS.API.Services.PRFQService
     {
         private readonly IEmailService _emailService;
         private readonly IDistributedCache _cache;
-
-        public PRFQService(IUnitOfWork unitOfWork, IMapper mapper, IEmailService emailService, IDistributedCache cache)
+        private readonly ILogger<PRFQService> _logger;
+        public PRFQService(IUnitOfWork unitOfWork, IMapper mapper, IEmailService emailService, IDistributedCache cache, ILogger<PRFQService> logger)
             : base(unitOfWork, mapper)
         {
 
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _cache = cache;
+            _logger = logger;
         }
 
-        public async Task<ServiceResult<int>> CreatePRFQAsync(string userId, int supplierId, string taxCode, string myPhone, string myAddress, List<int> productIds)
+        public async Task<ServiceResult<int>> CreatePRFQAsync(string userId, int supplierId, string taxCode, string myPhone, string myAddress, List<int> productIds, PRFQStatus status)
         {
             var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
             if (user == null)
@@ -88,6 +90,7 @@ namespace PMS.API.Services.PRFQService
                 MyAddress = myAddress,
                 SupplierID = supplierId,
                 UserId = userId,
+                Status = status,
             };
 
             await _unitOfWork.PurchasingRequestForQuotation.AddAsync(prfq);
@@ -106,13 +109,85 @@ namespace PMS.API.Services.PRFQService
 
             // Generate Excel và gửi email
             var excelBytes = GenerateExcel(prfq);
-            await _emailService.SendEmailWithAttachmentAsync(supplier.Email, "Yêu cầu báo giá", "Kính gửi, đính kèm yêu cầu báo giá.", excelBytes, $"PRFQ_{prfq.PRFQID}.xlsx");
+            if (status == PRFQStatus.Sent)
+            {
+                await _emailService.SendEmailWithAttachmentAsync(supplier.Email, "Yêu cầu báo giá", "Kính gửi, đính kèm yêu cầu báo giá.", excelBytes, $"PRFQ_{prfq.PRFQID}.xlsx");
+            } 
             return new ServiceResult<int>
             {
                 Data = prfq.PRFQID,
                 Message = "Tạo yêu cầu báo giá thành công.",
                 StatusCode = 200
             };
+        }
+
+        public async Task<ServiceResult<bool>> DeletePRFQAsync(int prfqId, string userId)
+        {
+            try
+            {
+                var prfq = await _unitOfWork.PurchasingRequestForQuotation
+                    .Query()
+                    .Include(p => p.PRPS)
+                    .FirstOrDefaultAsync(p => p.PRFQID == prfqId);
+
+                if (prfq == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        Data = false,
+                        StatusCode = 404,
+                        Message = $"Không tìm thấy yêu cầu báo giá với ID: {prfqId}"
+                    };
+                }
+
+                if (prfq.UserId != userId)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        Data = false,
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền xóa yêu cầu báo giá này."
+                    };
+                }
+
+                if (prfq.Status != PRFQStatus.Draft)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        Data = false,
+                        StatusCode = 400,
+                        Message = "Chỉ có thể xóa yêu cầu báo giá ở trạng thái 'Draft'."
+                    };
+                }
+
+
+                if (prfq.PRPS != null && prfq.PRPS.Any())
+                {
+                    _unitOfWork.PurchasingRequestProduct.RemoveRange(prfq.PRPS);
+                }
+
+
+                _unitOfWork.PurchasingRequestForQuotation.Remove(prfq);
+
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    Data = true,
+                    StatusCode = 200,
+                    Message = "Xóa yêu cầu báo giá thành công."
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi xóa PRFQ ID: {prfqId}", prfqId);
+                return new ServiceResult<bool>
+                {
+                    Data = false,
+                    StatusCode = 500,
+                    Message = "Đã xảy ra lỗi hệ thống khi xóa yêu cầu báo giá."
+                };
+            }
         }
 
         public async Task<PreviewExcelResponse> PreviewExcelProductsAsync(IFormFile file)
@@ -708,7 +783,7 @@ namespace PMS.API.Services.PRFQService
                     QID = qId,
                     SupplierID = supplier.Id,
                     SendDate = qSDate,
-                    Status = true,
+                    Status = SupplierQuotationStatus.InDate,
                     QuotationExpiredDate = qEDate
                 };
 
@@ -918,5 +993,128 @@ namespace PMS.API.Services.PRFQService
             }
         }
 
+        public async Task<ServiceResult<object>> GetPRFQDetailAsync(int prfqId)
+        {
+            try
+            {
+                var prfq = await _unitOfWork.PurchasingRequestForQuotation
+                    .Query()
+                    .Include(p => p.Supplier)
+                    .Include(p => p.User)
+                    .Include(p => p.PRPS)
+                        .ThenInclude(prp => prp.Product)
+                    .FirstOrDefaultAsync(p => p.PRFQID == prfqId);
+
+                if (prfq == null)
+                {
+                    return new ServiceResult<object>
+                    {
+                        Data = null,
+                        StatusCode = 404,
+                        Message = $"Không tìm thấy yêu cầu báo giá với ID: {prfqId}"
+                    };
+                }
+
+                var detail = new
+                {
+                    prfq.PRFQID,
+                    prfq.RequestDate,
+                    prfq.Status,
+                    prfq.TaxCode,
+                    prfq.MyPhone,
+                    prfq.MyAddress,
+                    Supplier = new
+                    {
+                        prfq.Supplier.Id,
+                        prfq.Supplier.Name,
+                        prfq.Supplier.Email,
+                        prfq.Supplier.PhoneNumber,
+                        prfq.Supplier.Address
+                    },
+                    CreatedBy = new
+                    {
+                        prfq.User.Id,
+                        prfq.User.UserName,
+                        prfq.User.Email
+                    },
+                    Products = prfq.PRPS.Select(x => new
+                    {
+                        x.ProductID,
+                        x.Product.ProductName,
+                        x.Product.ProductDescription,                      
+                        x.Product.Status
+                    })
+                };
+
+                return new ServiceResult<object>
+                {
+                    Data = detail,
+                    StatusCode = 200,
+                    Message = "Lấy thông tin yêu cầu báo giá thành công."
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy chi tiết PRFQ ID: {prfqId}", prfqId);
+                return new ServiceResult<object>
+                {
+                    Data = null,
+                    StatusCode = 500,
+                    Message = "Đã xảy ra lỗi hệ thống khi lấy chi tiết yêu cầu báo giá."
+                };
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<object>>> GetAllPRFQAsync()
+        {
+            try
+            {
+                var prfqs = await _unitOfWork.PurchasingRequestForQuotation
+                    .Query()
+                    .Include(p => p.Supplier)
+                    .Include(p => p.User)
+                    .Select(p => new
+                    {
+                        p.PRFQID,
+                        p.RequestDate,
+                        p.Status,
+                        p.TaxCode,
+                        p.MyPhone,
+                        p.MyAddress,
+                        SupplierName = p.Supplier.Name,
+                        SupplierEmail = p.Supplier.Email,
+                        CreatedBy = p.User.UserName
+                    })
+                    .OrderByDescending(p => p.RequestDate)
+                    .ToListAsync();
+
+                if(prfqs.Count == 0)
+                {
+                    return new ServiceResult<IEnumerable<object>>
+                    {
+                        Data = null,
+                        StatusCode = 200,
+                        Message = "Hiện tại không tìm thấy bất kỳ yêu cầu báo giá nào"
+                    };
+                }
+
+                return new ServiceResult<IEnumerable<object>>
+                {
+                    Data = prfqs,
+                    StatusCode = 200,
+                    Message = "Lấy danh sách yêu cầu báo giá thành công."
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy danh sách PRFQ.");
+                return new ServiceResult<IEnumerable<object>>
+                {
+                    Data = null,
+                    StatusCode = 500,
+                    Message = "Đã xảy ra lỗi hệ thống khi lấy danh sách yêu cầu báo giá."
+                };
+            }
+        }
     }
 }

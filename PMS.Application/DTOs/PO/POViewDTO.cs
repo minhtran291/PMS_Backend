@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using PMS.Core.Domain.Entities;
+using PMS.Core.Domain.Enums;
 
 namespace PMS.Application.DTOs.PO
 {
@@ -13,7 +14,7 @@ namespace PMS.Application.DTOs.PO
         public decimal Total { get; set; }
         public required DateTime OrderDate
         { get; set; }
-        public bool Status { get; set; } = false;
+        public PurchasingOrderStatus Status { get; set; }
         public decimal Deposit { get; set; }
         public decimal Debt { get; set; }
         public DateTime PaymentDate { get; set; }

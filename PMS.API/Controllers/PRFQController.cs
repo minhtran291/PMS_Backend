@@ -44,7 +44,8 @@ namespace PMS.API.Controllers
                 dto.TaxCode,
                 dto.MyPhone,
                 dto.MyAddress,
-                dto.ProductIds
+                dto.ProductIds,
+                dto.PRFQStatus
             );
 
             return HandleServiceResult(result);
@@ -105,7 +106,7 @@ namespace PMS.API.Controllers
         [HttpPost("previewExcel")]
         [Consumes("multipart/form-data")]
         [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> PreviewExcel([FromForm] IFormFile excelFile)
+        public async Task<IActionResult> PreviewSupplierQuotationExcel([FromForm] IFormFile excelFile)
         {
             if (excelFile == null || excelFile.Length == 0)
                 return BadRequest("File Excel không hợp lệ");
@@ -120,6 +121,52 @@ namespace PMS.API.Controllers
             {
                 return BadRequest(new { Message = ex.Message });
             }
+        }
+
+        /// <summary>
+        /// delete PRFQ with status=4 (draft)
+        /// https://localhost:7213/api/PRFQ/deletePRFQ/{prfqId}
+        /// </summary>
+        /// <param name="prfqId"></param>
+        /// <returns></returns>
+        [HttpDelete("deletePRFQ/{prfqId:int}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> DeletePRFQ(int prfqId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { message = "Không thể xác thực người dùng." });
+
+            var result = await _iPRFQService.DeletePRFQAsync(prfqId, userId);
+            return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
+        /// view detail PRFQ
+        /// https://localhost:7213/api/PRFQ/detail/{prfqId}
+        /// </summary>
+        /// <param name="prfqId"></param>
+        /// <returns></returns>
+        [HttpGet("detail/{prfqId:int}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> GetPRFQDetail(int prfqId)
+        {
+            var result = await _iPRFQService.GetPRFQDetailAsync(prfqId);
+            return HandleServiceResult(result);
+        }
+
+        /// <summary>
+        /// Getall PRFQ
+        /// https://localhost:7213/api/PRFQ/getAll
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("getAll")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> GetAllPRFQ()
+        {
+            var result = await _iPRFQService.GetAllPRFQAsync();
+            return HandleServiceResult(result);
         }
     }
 }

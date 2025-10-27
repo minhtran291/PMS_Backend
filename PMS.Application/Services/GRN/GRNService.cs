@@ -12,7 +12,7 @@ namespace PMS.API.Services.GRNService
     public class GRNService(IUnitOfWork unitOfWork, IMapper mapper)
         : Service(unitOfWork, mapper), IGRNService
     {
-        public async Task<ServiceResult<int>> CreateGoodReceiptNoteFromPOAsync(string userId, int poId)
+        public async Task<ServiceResult<int>> CreateGoodReceiptNoteFromPOAsync(string userId, int poId,int WarehouseLocationID)
         {
             await _unitOfWork.BeginTransactionAsync();
 
@@ -88,7 +88,7 @@ namespace PMS.API.Services.GRNService
 
 
                 _unitOfWork.GoodReceiptNoteDetail.AddRange(grnDetailEntities);
-                await HandleLotProductsAsync(grnDetailsForLot, quotation.SupplierID, grn.CreateDate);
+                await HandleLotProductsAsync(grnDetailsForLot, quotation.SupplierID, grn.CreateDate, WarehouseLocationID);
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -186,7 +186,7 @@ namespace PMS.API.Services.GRNService
                 }).ToList();
 
                 _unitOfWork.GoodReceiptNoteDetail.AddRange(GRND);
-                await HandleLotProductsAsync(GRNManuallyDTO.GRNDManuallyDTOs.Cast<IGRNDetail>(), po.Quotations.SupplierID, newGRN.CreateDate);
+                await HandleLotProductsAsync(GRNManuallyDTO.GRNDManuallyDTOs.Cast<IGRNDetail>(), po.Quotations.SupplierID, newGRN.CreateDate, GRNManuallyDTO.WarehouseLocationID);
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -208,7 +208,7 @@ namespace PMS.API.Services.GRNService
             }
         }
 
-        private async Task HandleLotProductsAsync(IEnumerable<IGRNDetail> grnDetails, int supplierId, DateTime inputDate)
+        private async Task HandleLotProductsAsync(IEnumerable<IGRNDetail> grnDetails, int supplierId, DateTime inputDate, int WarehouseLocationID)
         {
             var productIds = grnDetails.Select(d => d.ProductID).Distinct().ToList();
 
@@ -224,7 +224,8 @@ namespace PMS.API.Services.GRNService
                 var existingLot = existingLots.FirstOrDefault(lp =>
                     lp.ProductID == detail.ProductID &&
                     lp.SupplierID == supplierId &&
-                    lp.ExpiredDate.Date == detail.ExpiredDate.Date);
+                    lp.ExpiredDate.Date == detail.ExpiredDate.Date &&
+                    lp.WarehouselocationID==WarehouseLocationID);
 
                 if (existingLot != null)
                 {
@@ -243,6 +244,7 @@ namespace PMS.API.Services.GRNService
                     {
                         existingLot.LotQuantity += detail.Quantity;
                         existingLot.InputPrice = detail.UnitPrice;
+                        existingLot.InputDate = inputDate;
                         updatedLots.Add(existingLot);
                     }
                     else
@@ -254,7 +256,8 @@ namespace PMS.API.Services.GRNService
                             LotQuantity = detail.Quantity,
                             ProductID = detail.ProductID,
                             SupplierID = supplierId,
-                            InputPrice = detail.UnitPrice
+                            InputPrice = detail.UnitPrice,
+                            WarehouselocationID= WarehouseLocationID
                         });
                     }
                 }
@@ -264,7 +267,6 @@ namespace PMS.API.Services.GRNService
                 }
 
 
-                // Cập nhật tồn kho sản phẩm
                 var product = await _unitOfWork.Product.Query()
                     .FirstOrDefaultAsync(p => p.ProductID == detail.ProductID);
 
