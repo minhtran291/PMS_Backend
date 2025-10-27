@@ -64,7 +64,7 @@ namespace PMS.Application.Services.Admin
                     return new ServiceResult<bool>
                     {
                         StatusCode = 500,
-                        Message = "Có lỗi xảy ra",
+                        Message = "Mật khẩu phải từ 8 kí tự và phải chứ ít nhất một kí tự đặc biệt, một chữ cái thường và một chữ cái in hoa.",
                         Data = false
                     };
                 }
@@ -100,7 +100,7 @@ namespace PMS.Application.Services.Admin
                     return new ServiceResult<bool>
                     {
                         StatusCode = 500,
-                        Message = "Có lỗi xảy ra",
+                        Message = "Không gán được vai trò cho nhân viên.",
                         Data = false
                     };
                 }
@@ -140,9 +140,6 @@ namespace PMS.Application.Services.Admin
                     Data = null
                 };
             }
-            var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
-            var staffRole = MapToSingleStaffRole(roleNames);
-
             var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
             var staffRole = MapToSingleStaffRole(roleNames);
 
@@ -347,7 +344,7 @@ namespace PMS.Application.Services.Admin
 
         //Generate EmployeeCode acording to roles
         private static string GenerateEmployeeCode(string role )
-           => $"{role}{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+           => $"{role}{DateTime.Now:yyyyMMddHHmmssfff}";
 
         //Change account status to Active
         public async Task <ServiceResult<bool>> ActiveAccountAsync(string userID)
