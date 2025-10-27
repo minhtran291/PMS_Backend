@@ -137,5 +137,20 @@ namespace PMS.API.Controllers
             }
         }
 
+
+        /// <summary>
+        /// Xóa danh mục khi không có sản phẩm liên quan
+        /// https://localhost:7213/api/Category/Delete/{cateId}
+        /// </summary>
+        /// <param name="cateId">ID của danh mục cần xóa</param>
+        /// <returns>Kết quả xóa danh mục</returns>
+        [HttpDelete("Delete/{cateId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> DeleteCategory(int cateId)
+        {
+            var result = await _categoryService.DeleteCategoriesWithNoReference(cateId);
+            return HandleServiceResult(result);
+        }
+
     }
 }

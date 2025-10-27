@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.API.Services.GRNService;
+using PMS.Application.DTOs.GRN;
 using PMS.Core.DTO.Content;
 
 namespace PMS.API.Controllers
@@ -19,20 +20,28 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// https://localhost:7213/api/GRN/createFromPo/{poid}
+        /// https://localhost:7213/api/GRN/createGRNFromPo/{poid}
         /// </summary>
         /// <param name="poid"></param>
         /// <returns></returns>
-        [HttpPost("createFromPo/{poId:int}")]
-        public async Task<IActionResult> CreateGoodReceiptNoteFromPO(int poId)
+        [HttpPost("createGRNFromPo/{poId:int}")]
+        public async Task<IActionResult> CreateGoodReceiptNoteFromPO(int poId, CreateGrnFromPoDto dto)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new
+                {
+                    Message = "Dữ liệu gửi lên không hợp lệ.",
+                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
+                });
+            }
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { message = "Không thể xác thực người dùng." });
 
             try
             {
-                var result = await _IGRNService.CreateGoodReceiptNoteFromPOAsync(userId, poId);
+                var result = await _IGRNService.CreateGoodReceiptNoteFromPOAsync(userId, poId, dto.WarehouseLocationID);
                 return HandleServiceResult(result);
             }
             catch (Exception ex)

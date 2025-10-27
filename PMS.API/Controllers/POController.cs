@@ -31,14 +31,15 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// https://localhost:7213/api/PO/updatePo/{id}
+        /// https://localhost:7213/api/PO/DepositedPurchaseOrder/{id}
+        /// ghi nhận tiền gửi
         /// </summary>
         /// <param name="id"></param>
         /// <param name="dto"></param>
         /// <returns></returns>
-        [HttpPut("updatePo/{poid}")]
+        [HttpPut("DepositedPurchaseOrder/{poid}")]
         [Authorize(Roles = UserRoles.ACCOUNTANT)]
-        public async Task<IActionResult> UpdatePurchaseOrder(int poid, [FromBody] POUpdateDTO dto)
+        public async Task<IActionResult> DepositedPurchaseOrder(int poid, [FromBody] POUpdateDTO dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(new { Message = "Dữ liệu không hợp lệ.", Errors = ModelState });
@@ -47,7 +48,30 @@ namespace PMS.API.Controllers
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { Message = "Không thể xác thực người dùng." });
 
-            var result = await _poService.UpdatePOAsync(userId, poid, dto);
+            var result = await _poService.DepositedPOAsync(userId, poid, dto);
+            return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
+        /// https://localhost:7213/api/PO/DebtAccountantPurchaseOrder/{id}
+        /// ghi nhận thanh toán
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPut("DebtAccountantPurchaseOrder/{poid}")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> DebtAccountantPurchaseOrder(int poid, [FromBody] POUpdateDTO dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new { Message = "Dữ liệu không hợp lệ.", Errors = ModelState });
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+
+            var result = await _poService.DebtAccountantPOAsync(userId, poid, dto);
             return HandleServiceResult(result);
         }
 
