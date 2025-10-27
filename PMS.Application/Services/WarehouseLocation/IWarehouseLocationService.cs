@@ -11,5 +11,6 @@ namespace PMS.Application.Services.WarehouseLocation
         Task<ServiceResult<List<WarehouseLocationDTO>>> GetListWarehouseLocation();
         Task<ServiceResult<object>> GetListByWarehouseId(int warehouseId);
         //Task<ServiceResult<bool>> StoringLotInWarehouseLocation(StoringLot dto);
+        Task<ServiceResult<object>> DeleteWarehouseLocation(int warehouseLocationId);
     }
 }
