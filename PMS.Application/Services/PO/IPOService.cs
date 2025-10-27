@@ -11,8 +11,11 @@ namespace PMS.Application.Services.PO
     public interface IPOService
     {
         Task<ServiceResult<IEnumerable<POViewDTO>>> GetAllPOAsync();
-        Task<ServiceResult<bool>> UpdatePOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO);
+        Task<ServiceResult<bool>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO);
 
         Task<ServiceResult<POViewDTO>> ViewDetailPObyID(int poid);
+
+        Task<ServiceResult<bool>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO);
+
     }
 }
