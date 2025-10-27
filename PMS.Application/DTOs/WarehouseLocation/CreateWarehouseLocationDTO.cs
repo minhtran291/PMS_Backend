@@ -11,7 +11,6 @@ namespace PMS.Application.DTOs.WarehouseLocation
     {
         public int WarehouseId { get; set; }
         [Required(ErrorMessage = "Tên vị trí trong kho không được để trống")]
-        [RegularExpression(@"^[\p{L}0-9\s]+$", ErrorMessage = "Tên vị trí trong kho chỉ được chứa chữ cái và số")]
         public required string LocationName { get; set; }
     }
 }

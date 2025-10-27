@@ -106,5 +106,17 @@ namespace PMS.API.Controllers
         //    var result = await _warehouseLocationService.StoringLotInWarehouseLocation(dto);
         //    return HandleServiceResult(result);
         //}
+
+        [HttpDelete]
+        [Route("delete")]
+        public async Task<IActionResult> DeleteWarehouseLocation(int warehouseLocationId)
+        {
+            var result = await _warehouseLocationService.DeleteWarehouseLocation(warehouseLocationId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message
+            });
+        }
     }
 }
