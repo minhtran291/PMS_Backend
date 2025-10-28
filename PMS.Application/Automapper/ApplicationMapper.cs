@@ -31,11 +31,8 @@ namespace PMS.Application.Automapper
 
             CreateMap<TaxPolicy, TaxPolicyDTO>();
 
-            CreateMap<SalesQuotationValidity, SalesQuotationValidityDTO>();
-
             CreateMap<SalesQuotation, SalesQuotationDTO>()
-                .ForMember(dest => dest.RequestCode, opt => opt.MapFrom(src => src.RequestSalesQuotation.RequestCode))
-                .ForMember(dest => dest.ValidityName, opt => opt.MapFrom(src => src.SalesQuotationValidity.Name));
+                .ForMember(dest => dest.RequestCode, opt => opt.MapFrom(src => src.RequestSalesQuotation.RequestCode));
 
             CreateMap<SalesQuotationNote, SalesQuotationNoteDTO>();
 

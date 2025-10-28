@@ -55,11 +55,6 @@ namespace PMS.Application.Services.SalesQuotation
                     .Where(tp => tp.Status == true)
                     .ToListAsync();
 
-                var listExpired = await _unitOfWork.SalesQuotationValidity.Query()
-                    .AsNoTracking()
-                    .Where(sqv => sqv.Status == true)
-                    .ToListAsync();
-
                 var listNote = await _unitOfWork.SalesQuotationNote.Query()
                     .AsNoTracking()
                     .Where(sqn => sqn.IsActive == true)
@@ -67,14 +62,12 @@ namespace PMS.Application.Services.SalesQuotation
 
                 var lotDtos = _mapper.Map<List<LotDTO>>(listLot);
                 var taxDtos = _mapper.Map<List<TaxPolicyDTO>>(listTax);
-                var validityDtos = _mapper.Map<List<SalesQuotationValidityDTO>>(listExpired);
                 var noteDtos = _mapper.Map<List<SalesQuotationNoteDTO>>(listNote);
 
                 var form = new FormSalesQuotationDTO
                 {
                     RsqId = rsq.Id,
                     RequestCode = rsq.RequestCode,
-                    Validities = validityDtos,
                     Taxes = taxDtos,
                     Notes = noteDtos,
                     LotProducts = lotDtos,
@@ -111,10 +104,6 @@ namespace PMS.Application.Services.SalesQuotation
                 if (rsqValidation != null)
                     return rsqValidation;
 
-                var validityValidation = await ValidateValidityAsync(dto.ValidityId);
-                if (validityValidation != null)
-                    return validityValidation;
-
                 var noteValidation = await ValidateNoteAsync(dto.NoteId);
                 if (noteValidation != null)
                     return noteValidation;
@@ -127,15 +116,22 @@ namespace PMS.Application.Services.SalesQuotation
                 if (taxValidation != null)
                     return taxValidation;
 
+                if (dto.ExpiredDate.Date < DateTime.Now.Date)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Ngày hết hạn không hợp lệ"
+                    };
+
                 await _unitOfWork.BeginTransactionAsync();
 
                 var salesQuotation = new Core.Domain.Entities.SalesQuotation
                 {
                     RsqId = rsq.Id,
-                    SqvId = dto.ValidityId,
                     SsId = staffProfile.Id,
                     SqnId = dto.NoteId,
                     QuotationCode = GenerateQuotationCode(),
+                    ExpiredDate = dto.ExpiredDate.Date.AddDays(1).AddTicks(-1),
                     Status = Core.Domain.Enums.SalesQuotationStatus.Draft,
                     SalesQuotaionDetails = dto.Details.Select(item => new SalesQuotaionDetails
                     {
@@ -186,29 +182,11 @@ namespace PMS.Application.Services.SalesQuotation
                     Message = "Không tìm thấy yêu cầu báo giá"
                 };
 
-            if (rsq.Status != Core.Domain.Enums.RequestSalesQuotationStatus.Sent)
+            if (rsq.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Draft)
                 return new ServiceResult<object>
                 {
                     StatusCode = 400,
                     Message = "Không thể tạo báo giá cho yêu cầu báo giá chưa được gửi"
-                };
-
-            return null;
-        }
-
-
-        private async Task<ServiceResult<object>?> ValidateValidityAsync(int validityId)
-        {
-            var validity = await _unitOfWork.SalesQuotationValidity
-                .Query()
-                .AsNoTracking()
-                .FirstOrDefaultAsync(v => v.Id == validityId && v.Status == true);
-
-            if (validity == null)
-                return new ServiceResult<object>
-                {
-                    StatusCode = 400,
-                    Message = "Thời hạn báo giá không hợp lệ hoặc đã bị vô hiệu"
                 };
 
             return null;
@@ -312,10 +290,6 @@ namespace PMS.Application.Services.SalesQuotation
                 if (ssValidate != null)
                     return ssValidate;
 
-                var validityValidation = await ValidateValidityAsync(dto.SqvId);
-                if (validityValidation != null)
-                    return validityValidation;
-
                 var noteValidation = await ValidateNoteAsync(dto.SqnId);
                 if (noteValidation != null)
                     return noteValidation;
@@ -328,10 +302,18 @@ namespace PMS.Application.Services.SalesQuotation
                 if (taxValidation != null)
                     return taxValidation;
 
+                if (dto.ExpiredDate.Date < DateTime.Now.Date)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Ngày hết hạn không hợp lệ"
+                    };
+
                 await _unitOfWork.BeginTransactionAsync();
 
-                salesQuotation.SqvId = dto.SqvId;
                 salesQuotation.SqnId = dto.SqnId;
+
+                salesQuotation.ExpiredDate = dto.ExpiredDate.Date.AddDays(1).AddTicks(-1);
 
                 foreach (var detailDto in dto.Details)
                 {
@@ -477,10 +459,9 @@ namespace PMS.Application.Services.SalesQuotation
                 var staffProfile = await ValidateSalesStaffStringId(ssId);
 
                 var query = _unitOfWork.SalesQuotation.Query()
-                .AsNoTracking()
-                .Include(sq => sq.RequestSalesQuotation)
-                .Include(sq => sq.SalesQuotationValidity)
-                .AsQueryable();
+                    .AsNoTracking()
+                    .Include(sq => sq.RequestSalesQuotation)
+                    .AsQueryable();
 
                 if (role.Equals("CUSTOMER"))
                 {
@@ -551,7 +532,6 @@ namespace PMS.Application.Services.SalesQuotation
                             .ThenInclude(cp => cp.User)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.TaxPolicy)
-                    .Include(sq => sq.SalesQuotationValidity)
                     .Include(sq => sq.SalesQuotationNote)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.LotProduct)
@@ -568,11 +548,16 @@ namespace PMS.Application.Services.SalesQuotation
                 if (ssValidate != null)
                     return ssValidate;
 
+                if (salesQuotation.ExpiredDate.Date < DateTime.Now.Date)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Ngày hết hạn không còn hợp lệ nữa"
+                    };
+
                 await _unitOfWork.BeginTransactionAsync();
 
                 var rsq = salesQuotation.RequestSalesQuotation;
-
-                var expiredDate = salesQuotation.SalesQuotationValidity.Days;
 
                 var customer = rsq.CustomerProfile.User;
 
@@ -585,8 +570,6 @@ namespace PMS.Application.Services.SalesQuotation
                 await _unitOfWork.CommitAsync();
 
                 salesQuotation.QuotationDate = DateTime.Now;
-
-                salesQuotation.ExpiredDate = DateTime.Now.AddDays(expiredDate);
 
                 salesQuotation.Status = Core.Domain.Enums.SalesQuotationStatus.Sent;
 

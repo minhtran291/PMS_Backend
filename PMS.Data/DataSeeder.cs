@@ -631,44 +631,6 @@ namespace PMS.Data
                 await context.SaveChangesAsync();
             }
 
-            if (!context.SalesQuotationValidities.Any())
-            {
-                var validities = new List<SalesQuotationValidity>
-                {
-                    new SalesQuotationValidity
-                    {
-                        Name = "Hạn 15 ngày",
-                        Content = "Báo giá có hiệu lực trong 15 ngày kể từ ngày phát hành.",
-                        Days = 15,
-                        Status = true
-                    },
-                    new SalesQuotationValidity
-                    {
-                        Name = "Hạn 30 ngày",
-                        Content = "Báo giá có hiệu lực trong 30 ngày kể từ ngày phát hành.",
-                        Days = 30,
-                        Status = true
-                    },
-                    new SalesQuotationValidity
-                    {
-                        Name = "Hạn 45 ngày",
-                        Content = "Báo giá có hiệu lực trong 45 ngày kể từ ngày phát hành.",
-                        Days = 45,
-                        Status = true
-                    },
-                    new SalesQuotationValidity
-                    {
-                        Name = "Hạn 60 ngày",
-                        Content = "Báo giá có hiệu lực trong 60 ngày kể từ ngày phát hành.",
-                        Days = 60,
-                        Status = true
-                    }
-                };
-
-                await context.SalesQuotationValidities.AddRangeAsync(validities);
-                await context.SaveChangesAsync();
-            }
-
             if (!context.SalesQuotationNotes.Any())
             {
                 var notes = new SalesQuotationNote
