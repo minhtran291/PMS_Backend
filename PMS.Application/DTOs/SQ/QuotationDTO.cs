@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PMS.Core.Domain.Enums;
 
 namespace PMS.Application.DTOs.SQ
 {
@@ -18,10 +19,12 @@ namespace PMS.Application.DTOs.SQ
         public required int SupplierID { get; set; }
 
         [Required(ErrorMessage = "Trạng thái không được phép bỏ trống")]
-        public bool Status { get; set; }
+        public SupplierQuotationStatus Status { get; set; }
 
         [Required(ErrorMessage = "Ngày hết hạn không được phép bỏ trống")]
 
         public required DateTime QuotationExpiredDate { get; set; }
+
+        public virtual ICollection<QuotationDetailDTO> QuotationDetailDTOs { get; set; }= new List<QuotationDetailDTO>();
     }
 }

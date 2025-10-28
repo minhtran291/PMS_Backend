@@ -6,6 +6,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,7 @@ using OfficeOpenXml.Style;
 using PMS.Application.DTOs.PRFQ;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
+using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
@@ -26,15 +28,18 @@ namespace PMS.API.Services.PRFQService
     public class PRFQService : Service, IPRFQService
     {
         private readonly IEmailService _emailService;
+        private readonly INotificationService _notificationService;
         private readonly IDistributedCache _cache;
         private readonly ILogger<PRFQService> _logger;
-        public PRFQService(IUnitOfWork unitOfWork, IMapper mapper, IEmailService emailService, IDistributedCache cache, ILogger<PRFQService> logger)
+
+        public PRFQService(IUnitOfWork unitOfWork, IMapper mapper, IEmailService emailService, IDistributedCache cache, ILogger<PRFQService> logger, INotificationService notificationService )
             : base(unitOfWork, mapper)
         {
 
             _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
             _cache = cache;
             _logger = logger;
+            _notificationService = notificationService;
         }
 
         public async Task<ServiceResult<int>> CreatePRFQAsync(string userId, int supplierId, string taxCode, string myPhone, string myAddress, List<int> productIds, PRFQStatus status)
@@ -746,6 +751,7 @@ namespace PMS.API.Services.PRFQService
                 using var package = new ExcelPackage(new FileInfo(excelPath));
                 var worksheet = package.Workbook.Worksheets[0];
                 var supplierName = worksheet.Cells[4, 6].Text?.Trim();
+                var SenderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
                 var supplier = _unitOfWork.Supplier.Query().FirstOrDefault(sp => sp.Name == supplierName);
                 if (supplier == null)
                 {
@@ -971,6 +977,13 @@ namespace PMS.API.Services.PRFQService
                     poExcelBytes,
                     $"PO_{po.POID}.xlsx"
                 );
+                await _notificationService.SendNotificationToRolesAsync(
+                   userId,
+                   ["ACCOUNTANT"],
+                   "Yêu cầu nhập hàng",
+                   $"Nhân viên {SenderUser.UserName} đã gửi mail đặt hàng đến NCC:{supplier.Name}",
+                   Core.Domain.Enums.NotificationType.Reminder
+                   );
 
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -1115,6 +1128,65 @@ namespace PMS.API.Services.PRFQService
                     Message = "Đã xảy ra lỗi hệ thống khi lấy danh sách yêu cầu báo giá."
                 };
             }
+        }
+
+        public async Task<byte[]> GenerateExcelAsync(int prfqId)
+        {
+            var fullPrfq = await _unitOfWork.PurchasingRequestForQuotation.Query()
+                .Include(p => p.Supplier)
+                .Include(p => p.User)
+                .Include(p => p.PRPS).ThenInclude(prp => prp.Product)
+                .FirstOrDefaultAsync(p => p.PRFQID == prfqId);
+
+            if (fullPrfq == null)
+                return null;
+
+            return GenerateExcel(fullPrfq); 
+        }
+
+        public async Task<ServiceResult<object>> PreviewPRFQAsync(int id)
+        {
+            var prfq = await _unitOfWork.PurchasingRequestForQuotation.Query()
+                .Include(p => p.Supplier)
+                .Include(p => p.User)
+                .Include(p => p.PRPS)
+                    .ThenInclude(prp => prp.Product)
+                .FirstOrDefaultAsync(p => p.PRFQID == id);
+
+            if (prfq == null)
+            {
+                return ServiceResult<object>.Fail($"Không tìm thấy PRFQ với ID {id}", 404);
+            }
+
+            var result = new
+            {
+                prfq.PRFQID,
+                prfq.RequestDate,
+                prfq.TaxCode,
+                prfq.MyPhone,
+                prfq.MyAddress,
+                Supplier = new
+                {
+                    prfq.Supplier?.Name,
+                    prfq.Supplier?.Email,
+                    prfq.Supplier?.Address,
+                    prfq.Supplier?.PhoneNumber,
+                },
+                User = new
+                {
+                    prfq.User?.UserName,
+                    prfq.User?.Email
+                },
+                Products = prfq.PRPS.Select(x => new
+                {
+                    x.Product.ProductID,
+                    x.Product.ProductName,
+                    x.Product.ProductDescription,
+                    x.Product.Unit
+                })
+            };
+
+            return ServiceResult<object>.SuccessResult(result, "Lấy thông tin preview PRFQ thành công", 200);
         }
     }
 }
