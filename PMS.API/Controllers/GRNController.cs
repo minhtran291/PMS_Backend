@@ -1,8 +1,10 @@
 ﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.API.Services.GRNService;
 using PMS.Application.DTOs.GRN;
+using PMS.Core.Domain.Constant;
 using PMS.Core.DTO.Content;
 
 namespace PMS.API.Controllers
@@ -25,6 +27,7 @@ namespace PMS.API.Controllers
         /// <param name="poid"></param>
         /// <returns></returns>
         [HttpPost("createGRNFromPo/{poId:int}")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> CreateGoodReceiptNoteFromPO(int poId, CreateGrnFromPoDto dto)
         {
             if (!ModelState.IsValid)
@@ -58,6 +61,7 @@ namespace PMS.API.Controllers
         /// <param name="poId">ID của đơn mua hàng</param>
         /// <param name="dto">Thông tin phiếu nhập kho</param>
         [HttpPost("CreateGRNManually/{poId}")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> CreateGRNByManually(int poId, [FromBody] GRNManuallyDTO dto)
         {
             if (!ModelState.IsValid)

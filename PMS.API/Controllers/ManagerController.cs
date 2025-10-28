@@ -27,6 +27,7 @@ namespace PMS.API.Controllers
         [ProducesResponseType(typeof(ServiceResult<IEnumerable<CustomerDTO>>), 200)]
         [ProducesResponseType(401)]
         [ProducesResponseType(500)]
+        [Authorize(Roles = UserRoles.MANAGER)]
         public async Task<IActionResult> GetAllInactiveCustomers()
         {
             var result = await _userService.GetAllCustomerWithInactiveStatus();
@@ -48,6 +49,7 @@ namespace PMS.API.Controllers
         [ProducesResponseType(401)]
         [ProducesResponseType(403)]
         [ProducesResponseType(500)]
+        [Authorize(Roles = UserRoles.MANAGER)]
         public async Task<IActionResult> UpdateCustomerStatus(string userId)
         {
             var managerId = User.FindFirstValue(ClaimTypes.NameIdentifier);

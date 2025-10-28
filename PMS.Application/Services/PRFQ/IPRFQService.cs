@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.PRFQ;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Enums;
@@ -17,5 +18,9 @@ namespace PMS.API.Services.PRFQService
         Task<ServiceResult<object>> GetPRFQDetailAsync(int prfqId);
 
         Task<ServiceResult<IEnumerable<object>>> GetAllPRFQAsync();
+
+        Task<byte[]> GenerateExcelAsync(int prfqId);
+
+        Task<ServiceResult<object>> PreviewPRFQAsync(int id);
     }
 }
