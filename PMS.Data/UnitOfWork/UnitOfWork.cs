@@ -25,7 +25,6 @@ using PMS.Data.Repositories.SalesQuotation;
 using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotationNote;
-using PMS.Data.Repositories.SalesQuotationValidity;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.TaxPolicy;
@@ -58,7 +57,6 @@ namespace PMS.Data.UnitOfWork
         ISalesQuotationRepository salesQuotation, 
         ISalesQuotationDetailsRepository salesQuotationDetails, 
         ISalesQuotationCommentRepository salesQuotationComment, 
-        ISalesQuotationValidityRepository salesQuotationValidity, 
         ITaxPolicyRepository taxPolicy,
         IGoodReceiptNoteDetailRepository goodReceiptNoteDetail,
         IGoodReceiptNoteRepository goodReceiptNote,
@@ -96,7 +94,6 @@ namespace PMS.Data.UnitOfWork
         public ISalesQuotationRepository SalesQuotation { get; private set; } = salesQuotation;
         public ISalesQuotationDetailsRepository SalesQuotationDetails { get; private set; } = salesQuotationDetails;
         public ISalesQuotationCommentRepository SalesQuotationComment { get; private set; } = salesQuotationComment;
-        public ISalesQuotationValidityRepository SalesQuotationValidity { get; private set; } = salesQuotationValidity;
         public ITaxPolicyRepository TaxPolicy { get; private set; } = taxPolicy;
         //
         public IGoodReceiptNoteDetailRepository GoodReceiptNoteDetail { get; private set; } = goodReceiptNoteDetail;

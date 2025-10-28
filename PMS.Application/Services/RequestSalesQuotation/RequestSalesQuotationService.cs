@@ -95,7 +95,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 }
                 else
                 {
-                    query = query.Where(r => r.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Sent);
+                    query = query.Where(r => r.Status != Core.Domain.Enums.RequestSalesQuotationStatus.Draft);
                 }
 
                 var list = await query.Select(r => new ViewRsqDTO

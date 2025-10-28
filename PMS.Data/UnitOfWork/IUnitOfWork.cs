@@ -17,7 +17,6 @@ using PMS.Data.Repositories.SalesQuotation;
 using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotationNote;
-using PMS.Data.Repositories.SalesQuotationValidity;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.TaxPolicy;
@@ -60,7 +59,6 @@ namespace PMS.Data.UnitOfWork
         ISalesQuotationDetailsRepository SalesQuotationDetails { get; }
         //
         ISalesQuotationCommentRepository SalesQuotationComment { get; }
-        ISalesQuotationValidityRepository SalesQuotationValidity { get; }
         ITaxPolicyRepository TaxPolicy { get; }
         //GoodReceiptNote
         IGoodReceiptNoteRepository GoodReceiptNote { get; }

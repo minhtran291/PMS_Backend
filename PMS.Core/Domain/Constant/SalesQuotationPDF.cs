@@ -14,6 +14,40 @@ namespace PMS.Core.Domain.Constant
         {
             var rows = new StringBuilder();
 
+            var validityTimeSpan = sq.QuotationDate.HasValue ? sq.ExpiredDate - sq.QuotationDate : null;
+
+            if (sq.QuotationDate.HasValue)
+            {
+                validityTimeSpan = sq.ExpiredDate - sq.QuotationDate.Value;
+            }
+
+            string validityText;
+
+            if (validityTimeSpan.HasValue)
+            {
+                var ts = validityTimeSpan.Value;
+
+                if(ts.TotalDays >= 1)
+                {
+                    int days = (int)Math.Floor(ts.TotalDays);
+                    validityText = $"{days} ngày";
+                }
+                else if(ts.TotalHours >= 1)
+                {
+                    int hours = (int)Math.Floor(ts.TotalHours);
+                    validityText = $"{hours} giờ";
+                }
+                else
+                {
+                    int minutes = (int)Math.Ceiling(ts.TotalMinutes); // làm tròn lên
+                    validityText = $"{minutes} phút";
+                }
+            }
+            else
+            {
+                validityText = "Chưa xác định";
+            }
+
             decimal subTotal = 0;   // Tổng chưa thuế
             decimal taxTotal = 0;   // Tổng thuế
 
@@ -21,8 +55,8 @@ namespace PMS.Core.Domain.Constant
             {
                 var productName = HttpUtility.HtmlEncode(item.LotProduct?.Product?.ProductName ?? "N/A");
                 var unit = HttpUtility.HtmlEncode(item.LotProduct?.Product?.Unit ?? "N/A");
+                var taxText = HttpUtility.HtmlEncode(item.TaxPolicy.Name);
                 decimal tax = item.TaxPolicy.Rate;
-                var inputDate = item.LotProduct?.InputDate.ToString("dd/MM/yyyy") ?? "N/A";
                 var expiredDate = item.LotProduct?.ExpiredDate.ToString("dd/MM/yyyy") ?? "N/A";
                 var quantity = 1;
                 decimal salePrice = item.LotProduct?.SalePrice ?? 0;
@@ -38,8 +72,7 @@ namespace PMS.Core.Domain.Constant
                     <tr>
                         <td>{productName}</td>
                         <td>{unit}</td>
-                        <td>{tax}</td>
-                        <td>{inputDate}</td>
+                        <td>{taxText}</td>
                         <td>{expiredDate}</td>
                         <td>{quantity}</td>
                         <td>{salePrice:N0} ₫</td>
@@ -77,7 +110,6 @@ namespace PMS.Core.Domain.Constant
                 <th>Tên sản phẩm</th>
                 <th>Đơn vị</th>
                 <th>Thuế</th>
-                <th>Ngày nhập</th>
                 <th>Ngày hết hạn</th>
                 <th>Số lượng tối thiểu</th>
                 <th>Đơn giá</th>
@@ -89,21 +121,22 @@ namespace PMS.Core.Domain.Constant
         </tbody>
         <tfoot>
             <tr>
-                <td colspan=""7"" class=""total"">Tổng chưa thuế:</td>
+                <td colspan=""6"" class=""total"">Tổng chưa thuế:</td>
                 <td class=""total"">{subTotal:N0} ₫</td>
             </tr>
             <tr>
-                <td colspan=""7"" class=""total"">Thuế:</td>
+                <td colspan=""6"" class=""total"">Thuế:</td>
                 <td class=""total"">{taxTotal:N0} ₫</td>
             </tr>
             <tr>
-                <td colspan=""7"" class=""total"">Tổng cộng (đã bao gồm thuế):</td>
+                <td colspan=""6"" class=""total"">Tổng cộng (đã bao gồm thuế):</td>
                 <td class=""total"">{grandTotal:N0} ₫</td>
             </tr>
         </tfoot>
     </table>
 
     <p><strong>Ghi chú</strong></p>
+    <p>Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá</p>
     <p style=""white-space: pre-line;"">{HttpUtility.HtmlEncode(sq.SalesQuotationNote?.Content ?? "")}</p>
 
     <div class=""footer"">
