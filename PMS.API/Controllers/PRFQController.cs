@@ -98,12 +98,12 @@ namespace PMS.API.Controllers
 
 
         /// <summary>
-        /// https://localhost:7213/api/PRFQ/previewExcel
+        /// https://localhost:7213/api/PRFQ/previewSupplierQuotaionExcel
         /// Xem trước danh sách sản phẩm trong file báo giá Excel của supplier.
         /// </summary>
         /// <param name="excelFile">File Excel do supplier gửi</param>
         /// <returns>Danh sách sản phẩm gồm ProductID, Mô tả, ĐVT, Giá báo...</returns>
-        [HttpPost("previewExcel")]
+        [HttpPost("previewSupplierQuotaionExcel")]
         [Consumes("multipart/form-data")]
         [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> PreviewSupplierQuotationExcel([FromForm] IFormFile excelFile)
@@ -167,6 +167,39 @@ namespace PMS.API.Controllers
         {
             var result = await _iPRFQService.GetAllPRFQAsync();
             return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
+        /// Xem trước file Excel PRFQ 
+        /// https://localhost:7213/api/PRFQ/preview/{prfqId}
+        /// </summary>
+        /// <param name="prfqId">ID của PRFQ</param>
+        [HttpGet("preview/{prfqId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> PreviewExcel(int prfqId)
+        {
+            var result = await _iPRFQService.PreviewPRFQAsync(prfqId);
+            return StatusCode(result.StatusCode, result);
+        }
+
+        /// <summary>
+        /// Tải xuống file Excel PRFQ 
+        /// https://localhost:7213/api/PRFQ/download/{prfqId}
+        /// </summary>
+        /// <param name="prfqId">ID của PRFQ</param>
+        [HttpGet("download/{prfqId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> DownloadExcel(int prfqId)
+        {
+            var result = await _iPRFQService.GenerateExcelAsync(prfqId);
+            if (result == null)
+                return NotFound("Không tìm thấy PRFQ.");
+
+            
+            Response.Headers.Append("Content-Disposition", $"attachment; filename=PRFQ_{prfqId}.xlsx");
+            return File(result,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         }
     }
 }
