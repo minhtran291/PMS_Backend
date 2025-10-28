@@ -14,5 +14,10 @@ namespace PMS.Application.DTOs.PRFQ
         public string DVT { get; set; } // Đơn vị tính
         public decimal UnitPrice { get; set; } // Giá nhập do supplier báo
         public string ExpiredDateDisplay { get; set; }
+
+        public int CurrentQuantity { get; set; }
+        public int MinQuantity { get; set; }
+        public int MaxQuantity { get; set; }
+        public int SuggestedQuantity { get; set; }
     }
 }

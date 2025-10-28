@@ -225,9 +225,30 @@ namespace PMS.API.Services.PRFQService
                 row++;
             }
 
-            var productDict = await _unitOfWork.Product.Query()
+            var productInfoDict = await _unitOfWork.Product.Query()
                 .Where(p => productIds.Contains(p.ProductID))
-                .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
+                .Select(p => new
+                {
+                    p.ProductID,
+                    p.ProductName,
+                    p.MinQuantity,
+                    p.MaxQuantity,
+                    p.TotalCurrentQuantity
+                })
+                .ToDictionaryAsync(p => p.ProductID, p => p);
+
+            // quantity
+            var approvedOrderedQuantities = await _unitOfWork.PurchasingOrderDetail.Query()
+                .Include(pod => pod.PurchasingOrder)
+                .Where(pod => productIds.Contains(pod.ProductNameNavigation.ProductID)
+                    && pod.PurchasingOrder.Status == PurchasingOrderStatus.approved)
+                .GroupBy(pod => pod.ProductNameNavigation.ProductID)
+                .Select(g => new
+                {
+                    ProductID = g.Key,
+                    TotalApprovedOrderedQuantity = g.Sum(x => x.Quantity)
+                })
+                .ToDictionaryAsync(x => x.ProductID, x => x.TotalApprovedOrderedQuantity);
 
 
             row = 11;
@@ -250,16 +271,28 @@ namespace PMS.API.Services.PRFQService
 
                     decimal.TryParse(unitPriceText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal unitPrice);
 
-                    var productName = productDict.TryGetValue(productId, out var name) ? name : "Unknown";
+                    var approvedQty = approvedOrderedQuantities.TryGetValue(productId, out var orderedQty) ? orderedQty : 0;
+                    var info = productInfoDict.TryGetValue(productId, out var product) ? product : null;
+
+                    var suggestedQuantity = 0;
+
+                    if (info != null)
+                    {
+                        suggestedQuantity = Math.Max(0, info.MaxQuantity - (info.TotalCurrentQuantity + approvedQty));
+                    }
 
                     products.Add(new PreviewProductDto
                     {
                         ProductID = productId,
-                        ProductName = productName,
+                        ProductName = info?.ProductName ?? "Unknown",
                         Description = description,
                         DVT = dvt,
                         UnitPrice = unitPrice,
-                        ExpiredDateDisplay = expiredDateDisplay
+                        ExpiredDateDisplay = expiredDateDisplay,
+                        CurrentQuantity = info?.TotalCurrentQuantity ?? 0,
+                        MinQuantity = info?.MinQuantity ?? 0,
+                        MaxQuantity = info?.MaxQuantity ?? 0,
+                        SuggestedQuantity = suggestedQuantity
                     });
                 }
                 catch (Exception ex)

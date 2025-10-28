@@ -23,6 +23,9 @@ namespace PMS.Core.Domain.Entities
         [ForeignKey("POID")]
         public virtual PurchasingOrder PurchasingOrder { get; set; } = null!;
 
+        [ForeignKey("ProductID")]
+        public virtual Product ProductNameNavigation { get; set; } = null!;
+
         public DateTime ExpiredDate { get; set; }
     }
 }

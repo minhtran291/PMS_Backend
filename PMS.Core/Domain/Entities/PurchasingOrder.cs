@@ -34,7 +34,5 @@ namespace PMS.Core.Domain.Entities
         public virtual ICollection<GoodReceiptNote> GoodReceiptNotes { get; set; } = new List<GoodReceiptNote>();
 
         public virtual Quotation Quotations { get; set; } = null;
-
-        //public virtual ICollection<SupplierInvoice> SupplierInvoices { get; set; } = new List<SupplierInvoice>();
     }
 }
