@@ -12,7 +12,6 @@ namespace PMS.Application.DTOs.SalesQuotation
         public int Id { get; set; }
         public string RequestCode {  get; set; } = string.Empty;
         public string QuotationCode { get; set; } = string.Empty;
-        public string ValidityName {  get; set; } = string.Empty;
         public SalesQuotationStatus Status { get; set; }
     }
 }

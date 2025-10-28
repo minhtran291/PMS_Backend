@@ -48,7 +48,6 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<GoodReceiptNote> GoodReceiptNotes { get; set; }
         public virtual DbSet<GoodReceiptNoteDetail> GoodReceiptNoteDetails { get; set; }
         public virtual DbSet<SalesQuotationNote> SalesQuotationNotes { get; set; }
-        public virtual DbSet<SalesQuotationValidity> SalesQuotationValidities { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -615,10 +614,6 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(rsq => rsq.SalesQuotations)
                     .HasForeignKey(sq => sq.RsqId);
 
-                entity.HasOne(sq => sq.SalesQuotationValidity)
-                    .WithMany(sqv => sqv.SalesQuotations)
-                    .HasForeignKey(sq => sq.SqvId);
-
                 entity.HasOne(sq => sq.StaffProfile)
                     .WithMany(sp => sp.SalesQuotations)
                     .HasForeignKey(sq => sq.SsId)
@@ -689,22 +684,6 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.Property(tp => tp.Description)
                     .HasMaxLength(512);
-            });
-
-            builder.Entity<SalesQuotationValidity>(entity =>
-            {
-                entity.HasKey(sqv => sqv.Id);
-
-                entity.Property(sqv => sqv.Id)
-                    .ValueGeneratedOnAdd();
-
-                entity.Property(sqv => sqv.Name)
-                    .HasMaxLength(128)
-                    .IsRequired();
-
-                entity.Property(sqv => sqv.Content)
-                    .HasMaxLength(128)
-                    .IsRequired();
             });
 
             //

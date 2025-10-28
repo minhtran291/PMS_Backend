@@ -9,8 +9,8 @@ namespace PMS.Application.DTOs.SalesQuotation
     public class CreateSalesQuotationDTO
     {
         public int RsqId { get; set; }
-        public int ValidityId { get; set; }
         public int NoteId { get; set; }
+        public DateTime ExpiredDate { get; set; }
         public List<SalesQuotationDetailsDTO> Details { get; set; } = [];
     }
 }
