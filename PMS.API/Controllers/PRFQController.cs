@@ -123,6 +123,7 @@ namespace PMS.API.Controllers
             }
         }
 
+        //ok
         /// <summary>
         /// delete PRFQ with status=4 (draft)
         /// https://localhost:7213/api/PRFQ/deletePRFQ/{prfqId}
@@ -141,10 +142,10 @@ namespace PMS.API.Controllers
             return HandleServiceResult(result);
         }
 
-
+        //ok
         /// <summary>
         /// view detail PRFQ
-        /// https://localhost:7213/api/PRFQ/detail/{prfqId}
+        /// https://localhost:7213/api/PRFQ/detail/{prfqId}   
         /// </summary>
         /// <param name="prfqId"></param>
         /// <returns></returns>
@@ -156,6 +157,7 @@ namespace PMS.API.Controllers
             return HandleServiceResult(result);
         }
 
+        //ok
         /// <summary>
         /// Getall PRFQ
         /// https://localhost:7213/api/PRFQ/getAll
@@ -169,7 +171,7 @@ namespace PMS.API.Controllers
             return HandleServiceResult(result);
         }
 
-
+        //ok
         /// <summary>
         /// Xem trước file Excel PRFQ 
         /// https://localhost:7213/api/PRFQ/preview/{prfqId}
@@ -183,6 +185,7 @@ namespace PMS.API.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
+        //ok
         /// <summary>
         /// Tải xuống file Excel PRFQ 
         /// https://localhost:7213/api/PRFQ/download/{prfqId}

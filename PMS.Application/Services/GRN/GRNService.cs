@@ -208,38 +208,27 @@ namespace PMS.API.Services.GRNService
             }
         }
 
-        private async Task HandleLotProductsAsync(IEnumerable<IGRNDetail> grnDetails, int supplierId, DateTime inputDate, int WarehouseLocationID)
+        private async Task HandleLotProductsAsync(IEnumerable<IGRNDetail> grnDetails, int supplierId, DateTime inputDate, int warehouseLocationID)
         {
-            var productIds = grnDetails.Select(d => d.ProductID).Distinct().ToList();
-
-            var existingLots = await _unitOfWork.LotProduct.Query()
-                .Where(lp => productIds.Contains(lp.ProductID) && lp.SupplierID == supplierId)
-                .ToListAsync();
-
-            var newLots = new List<LotProduct>();
-            var updatedLots = new List<LotProduct>();
-
-            foreach (var detail in grnDetails)
+            try
             {
-                var existingLot = existingLots.FirstOrDefault(lp =>
-                    lp.ProductID == detail.ProductID &&
-                    lp.SupplierID == supplierId &&
-                    lp.ExpiredDate.Date == detail.ExpiredDate.Date &&
-                    lp.WarehouselocationID==WarehouseLocationID);
+                var productIds = grnDetails.Select(d => d.ProductID).Distinct().ToList();
 
-                if (existingLot != null)
+                var existingLots = await _unitOfWork.LotProduct.Query()
+                    .Where(lp => productIds.Contains(lp.ProductID) && lp.SupplierID == supplierId)
+                    .ToListAsync();
+
+                var newLots = new List<LotProduct>();
+                var updatedLots = new List<LotProduct>();
+
+                foreach (var detail in grnDetails)
                 {
-                    if (existingLot.LotQuantity == 0)
-                    {
-                        existingLot.ExpiredDate=detail.ExpiredDate;
-                        existingLot.SupplierID = supplierId;
-                        existingLot.InputDate = inputDate;
-                        existingLot.LotQuantity = detail.Quantity;
-                        existingLot.ProductID=detail.ProductID;
-                        existingLot.InputPrice=detail.UnitPrice;
-                        updatedLots.Add(existingLot);
+                    var existingLot = existingLots.FirstOrDefault(lp =>
+                        lp.ProductID == detail.ProductID &&
+                        lp.SupplierID == supplierId &&
+                        lp.ExpiredDate.Date == detail.ExpiredDate.Date &&
+                        lp.WarehouselocationID == warehouseLocationID);
 
-                    }
                     if (existingLot != null)
                     {
                         existingLot.LotQuantity += detail.Quantity;
@@ -257,28 +246,45 @@ namespace PMS.API.Services.GRNService
                             ProductID = detail.ProductID,
                             SupplierID = supplierId,
                             InputPrice = detail.UnitPrice,
-                            WarehouselocationID= WarehouseLocationID
+                            WarehouselocationID = warehouseLocationID
                         });
                     }
                 }
-                else
+
+                if (newLots.Any()) _unitOfWork.LotProduct.AddRange(newLots);
+                if (updatedLots.Any()) _unitOfWork.LotProduct.UpdateRange(updatedLots);
+                await _unitOfWork.CommitAsync();
+
+                var allLots = await _unitOfWork.LotProduct.Query()
+                    .Where(lp => productIds.Contains(lp.ProductID))
+                    .GroupBy(lp => lp.ProductID)
+                    .Select(g => new
+                    {
+                        ProductID = g.Key,
+                        TotalQuantity = g.Sum(lp => lp.LotQuantity)
+                    })
+                    .ToListAsync();
+
+                foreach (var lotInfo in allLots)
                 {
-                    throw new Exception("Lỗi khi tìm kiếm lô sản phẩm");
+                    var product = await _unitOfWork.Product.Query()
+                        .FirstOrDefaultAsync(p => p.ProductID == lotInfo.ProductID);
+
+                    if (product != null)
+                    {
+                        product.TotalCurrentQuantity = lotInfo.TotalQuantity;
+                        _unitOfWork.Product.Update(product);
+                    }
                 }
 
-
-                var product = await _unitOfWork.Product.Query()
-                    .FirstOrDefaultAsync(p => p.ProductID == detail.ProductID);
-
-                if (product != null)
-                {
-                    product.TotalCurrentQuantity += detail.Quantity;
-                    _unitOfWork.Product.Update(product);
-                }
+                await _unitOfWork.CommitAsync();
             }
-
-            if (newLots.Any()) _unitOfWork.LotProduct.AddRange(newLots);
-            if (updatedLots.Any()) _unitOfWork.LotProduct.UpdateRange(updatedLots);
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[HandleLotProductsAsync] Lỗi: {ex.Message}");
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception($"Đã xảy ra lỗi khi xử lý lô hàng: {ex.Message}", ex);
+            }
         }
     }
 }

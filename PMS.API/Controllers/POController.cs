@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.PO;
 using PMS.Application.Services.PO;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Enums;
 
 namespace PMS.API.Controllers
 {
@@ -84,6 +85,21 @@ namespace PMS.API.Controllers
         public async Task<IActionResult> GetPurchaseOrderDetail(int poid)
         {
             var result = await _poService.ViewDetailPObyID(poid);
+            return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
+        /// https://localhost:7213/api/PO/{poid}/status?newStatus=approved
+        /// </summary>
+        /// <param name="poid"></param>
+        /// <param name="newStatus"></param>
+        /// <returns></returns>
+        [HttpPut("{poid}/status")]
+        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF}")]
+        public async Task<IActionResult> ChangeStatus(int poid, [FromQuery] PurchasingOrderStatus newStatus)
+        {
+            var result = await _poService.ChangeStatusAsync(poid, newStatus);
             return HandleServiceResult(result);
         }
     }

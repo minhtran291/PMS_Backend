@@ -12,6 +12,8 @@ namespace PMS.Core.Domain.Enums
         rejected = 1,
         deposited = 3,
         paid = 4,
-        compeleted=5,
+        compeleted = 5,
+        sent = 6,
+        draft = 7
     }
 }
