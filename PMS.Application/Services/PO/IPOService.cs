@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using PMS.Application.DTOs.PO;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Enums;
 
 namespace PMS.Application.Services.PO
 {
@@ -16,6 +17,8 @@ namespace PMS.Application.Services.PO
         Task<ServiceResult<POViewDTO>> ViewDetailPObyID(int poid);
 
         Task<ServiceResult<bool>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO);
+
+        Task<ServiceResult<bool>> ChangeStatusAsync(int poid, PurchasingOrderStatus newStatus);
 
     }
 }

@@ -481,6 +481,8 @@ namespace PMS.Data.DatabaseConfig
             {
                 entity.HasKey(pod => pod.PODID);
 
+                entity.Property(pod => pod.ProductID).IsRequired();
+
                 entity.Property(pod => pod.ProductName)
                     .IsRequired()
                     .HasMaxLength(255);
