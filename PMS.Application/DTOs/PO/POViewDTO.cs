@@ -11,6 +11,7 @@ namespace PMS.Application.DTOs.PO
     public class POViewDTO
     {
         public int POID { get; set; }
+        public int productId { get; set; }
         public decimal Total { get; set; }
         public required DateTime OrderDate
         { get; set; }

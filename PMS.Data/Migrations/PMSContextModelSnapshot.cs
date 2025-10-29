@@ -486,6 +486,9 @@ namespace PMS.Data.Migrations
                     b.Property<int>("POID")
                         .HasColumnType("int");
 
+                    b.Property<int>("ProductID")
+                        .HasColumnType("int");
+
                     b.Property<string>("ProductName")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -503,6 +506,8 @@ namespace PMS.Data.Migrations
                     b.HasKey("PODID");
 
                     b.HasIndex("POID");
+
+                    b.HasIndex("ProductID");
 
                     b.ToTable("PurchasingOrderDetails");
                 });
@@ -1235,6 +1240,14 @@ namespace PMS.Data.Migrations
                         .HasForeignKey("POID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("PMS.Core.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
 
                     b.Navigation("PurchasingOrder");
                 });

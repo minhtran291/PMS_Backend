@@ -32,7 +32,7 @@ namespace PMS.API.Services.PRFQService
         private readonly IDistributedCache _cache;
         private readonly ILogger<PRFQService> _logger;
 
-        public PRFQService(IUnitOfWork unitOfWork, IMapper mapper, IEmailService emailService, IDistributedCache cache, ILogger<PRFQService> logger, INotificationService notificationService )
+        public PRFQService(IUnitOfWork unitOfWork, IMapper mapper, IEmailService emailService, IDistributedCache cache, ILogger<PRFQService> logger, INotificationService notificationService)
             : base(unitOfWork, mapper)
         {
 
@@ -117,7 +117,7 @@ namespace PMS.API.Services.PRFQService
             if (status == PRFQStatus.Sent)
             {
                 await _emailService.SendEmailWithAttachmentAsync(supplier.Email, "Yêu cầu báo giá", "Kính gửi, đính kèm yêu cầu báo giá.", excelBytes, $"PRFQ_{prfq.PRFQID}.xlsx");
-            } 
+            }
             return new ServiceResult<int>
             {
                 Data = prfq.PRFQID,
@@ -197,127 +197,130 @@ namespace PMS.API.Services.PRFQService
 
         public async Task<PreviewExcelResponse> PreviewExcelProductsAsync(IFormFile file)
         {
-            var products = new List<PreviewProductDto>();
-
-
-            var tempDir = Path.Combine(Path.GetTempPath(), "po_excel");
-            Directory.CreateDirectory(tempDir);
-
-            var excelKey = $"excel_{Guid.NewGuid()}";
-            var excelPath = Path.Combine(tempDir, $"{excelKey}.xlsx");
-
-
-            using (var stream = new FileStream(excelPath, FileMode.Create))
-                await file.CopyToAsync(stream);
-
-
-            using var package = new ExcelPackage(new FileInfo(excelPath));
-            var worksheet = package.Workbook.Worksheets[0];
-
-            var productIds = new List<int>();
-            int row = 11;
-
-
-            while (!string.IsNullOrEmpty(worksheet.Cells[row, 1].Text))
+            try
             {
-                if (int.TryParse(worksheet.Cells[row, 1].Text?.Trim(), out int productId))
-                    productIds.Add(productId);
-                row++;
-            }
+                var products = new List<PreviewProductDto>();
 
-            var productInfoDict = await _unitOfWork.Product.Query()
-                .Where(p => productIds.Contains(p.ProductID))
-                .Select(p => new
+                var tempDir = Path.Combine(Path.GetTempPath(), "po_excel");
+                Directory.CreateDirectory(tempDir);
+
+                var excelKey = $"excel_{Guid.NewGuid()}";
+                var excelPath = Path.Combine(tempDir, $"{excelKey}.xlsx");
+
+                using (var stream = new FileStream(excelPath, FileMode.Create))
+                    await file.CopyToAsync(stream);
+
+                using var package = new ExcelPackage(new FileInfo(excelPath));
+                var worksheet = package.Workbook.Worksheets[0];
+
+                var productIds = new List<int>();
+                int row = 11;
+
+                while (!string.IsNullOrEmpty(worksheet.Cells[row, 1].Text))
                 {
-                    p.ProductID,
-                    p.ProductName,
-                    p.MinQuantity,
-                    p.MaxQuantity,
-                    p.TotalCurrentQuantity
-                })
-                .ToDictionaryAsync(p => p.ProductID, p => p);
+                    if (int.TryParse(worksheet.Cells[row, 1].Text?.Trim(), out int productId))
+                        productIds.Add(productId);
+                    row++;
+                }
 
-            // quantity
-            var approvedOrderedQuantities = await _unitOfWork.PurchasingOrderDetail.Query()
-                .Include(pod => pod.PurchasingOrder)
-                .Where(pod => productIds.Contains(pod.ProductNameNavigation.ProductID)
-                    && pod.PurchasingOrder.Status == PurchasingOrderStatus.approved)
-                .GroupBy(pod => pod.ProductNameNavigation.ProductID)
-                .Select(g => new
-                {
-                    ProductID = g.Key,
-                    TotalApprovedOrderedQuantity = g.Sum(x => x.Quantity)
-                })
-                .ToDictionaryAsync(x => x.ProductID, x => x.TotalApprovedOrderedQuantity);
-
-
-            row = 11;
-            while (!string.IsNullOrEmpty(worksheet.Cells[row, 1].Text))
-            {
-                try
-                {
-                    if (!int.TryParse(worksheet.Cells[row, 1].Text?.Trim(), out int productId))
+                var productInfoDict = await _unitOfWork.Product.Query()
+                    .Where(p => productIds.Contains(p.ProductID))
+                    .Select(p => new
                     {
-                        row++;
-                        continue;
+                        p.ProductID,
+                        p.ProductName,
+                        p.MinQuantity,
+                        p.MaxQuantity,
+                        p.TotalCurrentQuantity
+                    })
+                    .ToDictionaryAsync(p => p.ProductID, p => p);
+
+                // Lấy tổng số lượng đã được phê duyệt
+                var approvedOrderedQuantities = await _unitOfWork.PurchasingOrderDetail.Query()
+                    .Include(pod => pod.PurchasingOrder)
+                    .Where(pod => productIds.Contains(pod.ProductID)
+                        && pod.PurchasingOrder.Status == PurchasingOrderStatus.approved)
+                    .GroupBy(pod => pod.ProductID)
+                    .Select(g => new
+                    {
+                        ProductID = g.Key,
+                        TotalApprovedOrderedQuantity = g.Sum(x => x.Quantity)
+                    })
+                    .ToDictionaryAsync(x => x.ProductID, x => x.TotalApprovedOrderedQuantity);
+
+
+                // Đọc dữ liệu từng dòng trong Excel
+                row = 11;
+                while (!string.IsNullOrEmpty(worksheet.Cells[row, 1].Text))
+                {
+                    try
+                    {
+                        if (!int.TryParse(worksheet.Cells[row, 1].Text?.Trim(), out int productId))
+                        {
+                            row++;
+                            continue;
+                        }
+
+                        var description = worksheet.Cells[row, 3].Text?.Trim();
+                        var dvt = worksheet.Cells[row, 4].Text?.Trim();
+                        var unitPriceText = worksheet.Cells[row, 5].Text?.Trim();
+
+                        var expiredCell = worksheet.Cells[row, 6];
+                        var expiredDateDisplay = expiredCell.Text?.Trim();
+
+                        decimal.TryParse(unitPriceText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal unitPrice);
+
+                        var approvedQty = approvedOrderedQuantities.TryGetValue(productId, out var orderedQty) ? orderedQty : 0;
+                        var info = productInfoDict.TryGetValue(productId, out var product) ? product : null;
+
+                        var suggestedQuantity = 0;
+
+                        if (info != null)
+                        {
+                            suggestedQuantity = Math.Max(0, info.MaxQuantity - (info.TotalCurrentQuantity + approvedQty));
+                        }
+
+                        products.Add(new PreviewProductDto
+                        {
+                            ProductID = productId,
+                            ProductName = info?.ProductName ?? "Unknown",
+                            Description = description,
+                            DVT = dvt,
+                            UnitPrice = unitPrice,
+                            ExpiredDateDisplay = expiredDateDisplay,
+                            CurrentQuantity = info?.TotalCurrentQuantity ?? 0,
+                            MinQuantity = info?.MinQuantity ?? 0,
+                            MaxQuantity = info?.MaxQuantity ?? 0,
+                            SuggestedQuantity = suggestedQuantity
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error processing row {row}: {ex.Message}");
                     }
 
-                    var description = worksheet.Cells[row, 3].Text?.Trim();
-                    var dvt = worksheet.Cells[row, 4].Text?.Trim();
-                    var unitPriceText = worksheet.Cells[row, 6].Text?.Trim();
+                    row++;
+                }
 
-                    var expiredCell = worksheet.Cells[row, 7];
-                    var expiredDateDisplay = expiredCell.Text?.Trim();
-
-                    decimal.TryParse(unitPriceText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal unitPrice);
-
-                    var approvedQty = approvedOrderedQuantities.TryGetValue(productId, out var orderedQty) ? orderedQty : 0;
-                    var info = productInfoDict.TryGetValue(productId, out var product) ? product : null;
-
-                    var suggestedQuantity = 0;
-
-                    if (info != null)
+                await _cache.SetStringAsync(
+                    excelKey,
+                    excelPath,
+                    new DistributedCacheEntryOptions
                     {
-                        suggestedQuantity = Math.Max(0, info.MaxQuantity - (info.TotalCurrentQuantity + approvedQty));
-                    }
-
-                    products.Add(new PreviewProductDto
-                    {
-                        ProductID = productId,
-                        ProductName = info?.ProductName ?? "Unknown",
-                        Description = description,
-                        DVT = dvt,
-                        UnitPrice = unitPrice,
-                        ExpiredDateDisplay = expiredDateDisplay,
-                        CurrentQuantity = info?.TotalCurrentQuantity ?? 0,
-                        MinQuantity = info?.MinQuantity ?? 0,
-                        MaxQuantity = info?.MaxQuantity ?? 0,
-                        SuggestedQuantity = suggestedQuantity
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
                     });
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error processing row {row}: {ex.Message}");
-                }
 
-                row++;
+                return new PreviewExcelResponse
+                {
+                    ExcelKey = excelKey,
+                    Products = products
+                };
             }
-
-
-            await _cache.SetStringAsync(
-                excelKey,
-                excelPath,
-                new DistributedCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
-                });
-
-
-            return new PreviewExcelResponse
+            catch (Exception ex)
             {
-                ExcelKey = excelKey,
-                Products = products
-            };
+                Console.WriteLine($"Error in PreviewExcelProductsAsync: {ex.Message}");
+                throw new Exception("Đã xảy ra lỗi trong quá trình xem trước file Excel. Vui lòng kiểm tra lại file hoặc thử lại sau.", ex);
+            }
         }
 
         private byte[] GenerateExcel(PurchasingRequestForQuotation prfq)
@@ -809,12 +812,12 @@ namespace PMS.API.Services.PRFQService
                 }
                 else
                 {
-                    throw new Exception("Đọc thất bại.");
+                    throw new Exception("Đọc ngày hết hạn thất bại.");
                 }
                 DateTime qSDate;
                 if (!DateTime.TryParse(worksheet.Cells[7, 2].Text?.Trim(), out qSDate))
                 {
-                    throw new Exception("Đọc thất bại.");
+                    throw new Exception("Đọc ngày gửi thất bại.");
                 }
                 // tạo quotation
                 var Quotation = new Quotation
@@ -832,7 +835,8 @@ namespace PMS.API.Services.PRFQService
                     OrderDate = DateTime.Now,
                     QID = Quotation.QID,
                     UserId = userId,
-                    Total = 0
+                    Total = 0,
+                    Status = PurchasingOrderStatus.sent,
                 };
                 await _unitOfWork.Quotation.AddAsync(Quotation);
                 await _unitOfWork.PurchasingOrder.AddAsync(po);
@@ -870,8 +874,8 @@ namespace PMS.API.Services.PRFQService
 
                     var description = worksheet.Cells[row, 3].Text?.Trim();
                     var dvt = worksheet.Cells[row, 4].Text?.Trim();
-                    var unitPriceText = worksheet.Cells[row, 6].Text?.Trim();
-                    var expiredDateText = worksheet.Cells[row, 7].Text?.Trim();
+                    var unitPriceText = worksheet.Cells[row, 5].Text?.Trim();
+                    var expiredDateText = worksheet.Cells[row, 6].Text?.Trim();
 
                     if (!decimal.TryParse(unitPriceText, out decimal unitPrice))
                         unitPrice = 0;
@@ -919,14 +923,12 @@ namespace PMS.API.Services.PRFQService
                                 }
                             }
 
-                            // Nếu vẫn chưa parse được -> thử parse tự do
                             if (!parsedSuccess && DateTime.TryParse(expiredDateText, new CultureInfo("en-US"), DateTimeStyles.None, out DateTime parsedLoose))
                             {
                                 expectedExpiredDate = parsedLoose;
                                 parsedSuccess = true;
                             }
 
-                            //  Nếu vẫn không parse được -> log lỗi
                             if (!parsedSuccess)
                             {
                                 return new ServiceResult<int>
@@ -960,7 +962,8 @@ namespace PMS.API.Services.PRFQService
                         Quantity = quantity,
                         UnitPrice = unitPrice,
                         UnitPriceTotal = total,
-                        ExpiredDate = expectedExpiredDate
+                        ExpiredDate = expectedExpiredDate,
+                        ProductID = productId,
                     });
 
                     po.Total += total;
@@ -1087,7 +1090,7 @@ namespace PMS.API.Services.PRFQService
                     {
                         x.ProductID,
                         x.Product.ProductName,
-                        x.Product.ProductDescription,                      
+                        x.Product.ProductDescription,
                         x.Product.Status
                     })
                 };
@@ -1134,7 +1137,7 @@ namespace PMS.API.Services.PRFQService
                     .OrderByDescending(p => p.RequestDate)
                     .ToListAsync();
 
-                if(prfqs.Count == 0)
+                if (prfqs.Count == 0)
                 {
                     return new ServiceResult<IEnumerable<object>>
                     {
@@ -1174,7 +1177,7 @@ namespace PMS.API.Services.PRFQService
             if (fullPrfq == null)
                 return null;
 
-            return GenerateExcel(fullPrfq); 
+            return GenerateExcel(fullPrfq);
         }
 
         public async Task<ServiceResult<object>> PreviewPRFQAsync(int id)

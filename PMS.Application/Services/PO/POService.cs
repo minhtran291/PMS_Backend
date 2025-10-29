@@ -5,6 +5,7 @@ using PMS.Application.Services.Base;
 using PMS.Application.Services.PO;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
+using PMS.Core.Domain.Enums;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Services.POService
@@ -152,6 +153,7 @@ namespace PMS.API.Services.POService
                         Description = d.Description,
                         ExpiredDate = d.ExpiredDate,
                         PODID = d.PODID,
+                        ProductID = d.ProductID,
 
                     }).ToList()
                 };
@@ -189,6 +191,7 @@ namespace PMS.API.Services.POService
                     return new ServiceResult<bool>
                     {
                         StatusCode = 200,
+                        Success = false,
                         Message = $"Không tìm thấy đơn hàng với POID = {poid}",
                         Data = false
                     };
@@ -201,6 +204,7 @@ namespace PMS.API.Services.POService
                     return new ServiceResult<bool>
                     {
                         StatusCode = 200,
+                        Success = false,
                         Message = "Thanh toán quá mức",
                         Data = false
                     };
@@ -210,9 +214,13 @@ namespace PMS.API.Services.POService
                 existingPO.Debt = existingPO.Total - existingPO.Deposit;
                 if (existingPO.Debt == 0)
                 {
-                    existingPO.Status = Core.Domain.Enums.PurchasingOrderStatus.compeleted;
+                    existingPO.Status = PurchasingOrderStatus.compeleted;
                 }
-                existingPO.Status = Core.Domain.Enums.PurchasingOrderStatus.paid;
+                else
+                {
+                    existingPO.Status = PurchasingOrderStatus.paid;
+                }
+                
                 existingPO.PaymentDate = DateTime.Now.Date;
                 existingPO.PaymentBy = userId;
 
@@ -222,6 +230,7 @@ namespace PMS.API.Services.POService
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
+                    Success = true,
                     Message = "Cập nhật thành công.",
                     Data = true
                 };
@@ -233,12 +242,73 @@ namespace PMS.API.Services.POService
                 return new ServiceResult<bool>
                 {
                     StatusCode = 500,
+                    Success = false,
                     Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
                     Data = false
                 };
             }
         }
 
-        
+        public async Task<ServiceResult<bool>> ChangeStatusAsync(int poid, PurchasingOrderStatus newStatus)
+        {
+            try
+            {
+                var existingPO = await _unitOfWork.PurchasingOrder
+                    .Query()
+                    .FirstOrDefaultAsync(po => po.POID == poid);
+
+                if (existingPO == null)
+                {
+                    return ServiceResult<bool>.Fail($"Không tìm thấy đơn hàng với ID: {poid}", 404);
+                }
+
+                if (existingPO.Status == newStatus)
+                {
+                    return ServiceResult<bool>.Fail("Đơn hàng đã ở trạng thái này rồi", 400);
+                }
+
+                if (!IsValidStatusTransition(existingPO.Status, newStatus))
+                {
+                    return ServiceResult<bool>.Fail(
+                        $"Không thể chuyển trạng thái từ {existingPO.Status} sang {newStatus}", 400);
+                }
+
+
+                existingPO.Status = newStatus;
+
+
+                if (newStatus == PurchasingOrderStatus.paid)
+                {
+                    existingPO.PaymentDate = DateTime.Now;
+                    existingPO.Debt = 0;
+                }
+
+                _unitOfWork.PurchasingOrder.Update(existingPO);
+                await _unitOfWork.CommitAsync();
+
+                return ServiceResult<bool>.SuccessResult(true,
+                    $"Cập nhật trạng thái đơn hàng {poid} thành công: {newStatus}", 200);
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<bool>.Fail($"Lỗi khi cập nhật trạng thái: {ex.Message}", 500);
+            }
+        }
+
+        //thứ tự trạng thái
+        private bool IsValidStatusTransition(PurchasingOrderStatus current, PurchasingOrderStatus next)
+        {
+            return (current, next) switch
+            {
+                (PurchasingOrderStatus.draft, PurchasingOrderStatus.sent) => true,
+                (PurchasingOrderStatus.sent, PurchasingOrderStatus.approved) => true,
+                (PurchasingOrderStatus.sent, PurchasingOrderStatus.rejected) => true,
+                (PurchasingOrderStatus.approved, PurchasingOrderStatus.deposited) => true,
+                (PurchasingOrderStatus.deposited, PurchasingOrderStatus.paid) => true,
+                (PurchasingOrderStatus.paid, PurchasingOrderStatus.compeleted) => true,
+                _ => false
+            };
+        }
+
     }
 }
