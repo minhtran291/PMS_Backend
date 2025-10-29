@@ -629,19 +629,33 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<SalesQuotaionDetails>(entity =>
             {
-                entity.HasKey(sqd => new { sqd.SqId, sqd.LotId });
+                entity.HasKey(sqd => sqd.Id);
+
+                entity.Property(sqd => sqd.Id)
+                    .ValueGeneratedOnAdd();
 
                 entity.HasOne(sqd => sqd.TaxPolicy)
                     .WithMany(tp => tp.SalesQuotaionDetails)
-                    .HasForeignKey(sqd => sqd.TaxId);
+                    .HasForeignKey(sqd => sqd.TaxId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(sqd => sqd.SalesQuotation)
                     .WithMany(sq => sq.SalesQuotaionDetails)
-                    .HasForeignKey(sqd => sqd.SqId);
+                    .HasForeignKey(sqd => sqd.SqId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(sqd => sqd.LotProduct)
                     .WithMany(lp => lp.SalesQuotaionDetails)
-                    .HasForeignKey(sqd => sqd.LotId);
+                    .HasForeignKey(sqd => sqd.LotId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(sqd => sqd.Product)
+                    .WithMany(p => p.SalesQuotaionDetails)
+                    .HasForeignKey(sqd => sqd.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(sqd => sqd.Note)
+                    .HasMaxLength(500);
             });
             //
 
