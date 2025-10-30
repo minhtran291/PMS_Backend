@@ -138,7 +138,9 @@ namespace PMS.Application.Services.SalesQuotation
                 if (lotsValidation != null)
                     return lotsValidation;
 
-                var taxValidation = await ValidateTaxesAsync(dto.Details);
+                var listTax = dto.Details.Select(d => d.TaxId).ToList();
+
+                var taxValidation = await ValidateTaxesAsync(listTax);
                 if (taxValidation != null)
                     return taxValidation;
 
@@ -393,11 +395,11 @@ namespace PMS.Application.Services.SalesQuotation
         }
 
 
-        private async Task<ServiceResult<object>?> ValidateTaxesAsync(List<SalesQuotationDetailsDTO> dto)
+        private async Task<ServiceResult<object>?> ValidateTaxesAsync(List<int?> dto)
         {
             var taxIds = dto
-                .Where(d => d.TaxId.HasValue)
-                .Select(d => d.TaxId!.Value)
+                .Where(d => d.HasValue)
+                .Select(d => d!.Value)
                 .Distinct()
                 .ToList();
 
@@ -426,8 +428,8 @@ namespace PMS.Application.Services.SalesQuotation
                 var staffProfile = await ValidateSalesStaffStringId(ssId);
 
                 var salesQuotation = await _unitOfWork.SalesQuotation.Query()
-                .Include(sq => sq.SalesQuotaionDetails)
-                .FirstOrDefaultAsync(sq => sq.Id == dto.SqId);
+                    .Include(sq => sq.SalesQuotaionDetails)
+                    .FirstOrDefaultAsync(sq => sq.Id == dto.SqId);
 
                 var sqValidation = ValidateSalesQuotation(salesQuotation);
                 if (sqValidation != null)
@@ -441,11 +443,13 @@ namespace PMS.Application.Services.SalesQuotation
                 if (noteValidation != null)
                     return noteValidation;
 
-                var lotValidation = await ValidateSQLotUpdate(salesQuotation, dto.Details);
+                var lotValidation = ValidateDetailsUpdate(salesQuotation.SalesQuotaionDetails.ToList(), dto.Details);
                 if (lotValidation != null)
                     return lotValidation;
 
-                var taxValidation = await ValidateTaxesAsync(dto.Details);
+                var listTax = dto.Details.Select(d => d.TaxId).ToList();
+
+                var taxValidation = await ValidateTaxesAsync(listTax);
                 if (taxValidation != null)
                     return taxValidation;
 
@@ -465,10 +469,13 @@ namespace PMS.Application.Services.SalesQuotation
                 foreach (var detailDto in dto.Details)
                 {
                     var record = salesQuotation.SalesQuotaionDetails
-                        .FirstOrDefault(d => d.LotId == detailDto.LotId);
+                        .FirstOrDefault(d => d.Id == detailDto.sqdId);
 
                     if (record != null)
+                    {
                         record.TaxId = detailDto.TaxId;
+                        record.Note = detailDto.Note;
+                    }
                 }
 
                 await _unitOfWork.CommitAsync();
@@ -513,42 +520,44 @@ namespace PMS.Application.Services.SalesQuotation
             return null;
         }
 
-        private async Task<ServiceResult<object>?> ValidateSQLotUpdate(Core.Domain.Entities.SalesQuotation sq, List<SalesQuotationDetailsDTO> details)
+        private static ServiceResult<object>? ValidateDetailsUpdate(List<SalesQuotaionDetails> list, List<UpdateSalesQuotationDetailsDTO> details)
         {
-            var lotIds = details
-                .Where(d => d.LotId.HasValue)
-                .Select(d => d.LotId!.Value)
-                .ToList();
+            var sqdIds = details.Select(d => d.sqdId).ToList();
 
-            if (lotIds.Count != lotIds.Distinct().Count())
+            if (sqdIds.Distinct().Count() != sqdIds.Count)
                 return new ServiceResult<object>
                 {
                     StatusCode = 400,
-                    Message = "Danh sách cập nhật có lô trùng lặp"
+                    Message = "Có báo giá chi tiết bị trùng lặp"
                 };
 
-            if (lotIds.Any())
-            {
-                var lots = await _unitOfWork.LotProduct.Query()
-                .Where(lp => lotIds.Contains(lp.LotID))
-                .ToListAsync();
-
-                if (lots.Count != lotIds.Count)
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Có lô hàng không tồn tại"
-                    };
-
-                var outOfScope = sq.SalesQuotaionDetails
-                .Where(d => d.LotId.HasValue && lotIds.Contains(d.LotId.Value))
+            var sqdId = list
+                .Where(d => sqdIds.Contains(d.Id))
                 .ToList();
 
-                if (outOfScope.Count != lotIds.Count)
+            if (sqdIds.Count != sqdId.Count)
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = "Có chi tiết báo giá không thuộc phạm vi báo giá"
+                };
+
+            foreach(var dto in details)
+            {
+                var entity = sqdId.Find(d => d.Id == dto.sqdId);
+
+                if (entity.LotId == null && dto.TaxId != null)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Danh sách lô hàng có lô không thuộc phạm vi báo giá"
+                        Message = "Sản phẩm đã hết hàng không thể áp thuế"
+                    };
+
+                if (entity.LotId != null && dto.TaxId == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Thuế không được để chống với các sản phẩm còn hàng"
                     };
             }
 
