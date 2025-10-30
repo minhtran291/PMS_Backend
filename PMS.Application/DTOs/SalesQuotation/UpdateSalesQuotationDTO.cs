@@ -11,6 +11,6 @@ namespace PMS.Application.DTOs.SalesQuotation
         public int SqId {  get; set; }
         public int SqnId { get; set; }
         public DateTime ExpiredDate { get; set; }
-        public List<SalesQuotationDetailsDTO> Details { get; set; } = [];
+        public List<UpdateSalesQuotationDetailsDTO> Details { get; set; } = [];
     }
 }
