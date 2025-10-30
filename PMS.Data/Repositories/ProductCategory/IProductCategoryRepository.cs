@@ -10,5 +10,6 @@ namespace PMS.Data.Repositories.ProductCategoryRepository
 {
     public interface IProductCategoryRepository :  IRepositoryBase<Category>
     {
+        Task ReseedIdentityToMaxAsync();
     }
 }

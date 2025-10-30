@@ -56,7 +56,7 @@ namespace PMS.API
             {
                 options.AddPolicy("AllowFrontend", policy =>
                 {
-                    policy.WithOrigins("http://localhost:4200")
+                    policy.WithOrigins("http://localhost:3000", "http://localhost:4200")
                             .AllowAnyHeader()
                             .AllowAnyMethod();
                 });
@@ -107,6 +107,9 @@ namespace PMS.API
             app.UseCors("AllowFrontend");
 
             app.UseHttpsRedirection();
+
+            // Enable static files serving
+            app.UseStaticFiles();
 
             app.UseAuthentication(); // tu them vao
             // kt thong tin dang nhap cua ng dung => ng nay la ai?

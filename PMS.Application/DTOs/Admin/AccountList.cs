@@ -12,11 +12,13 @@ namespace PMS.Application.DTOs.Admin
         public UserStatus UserStatus { get; set; }
         public DateTime CreateAt { get; set; }
         public StaffRole Role { get; set; }
+        public string? RoleName { get; set; } // Thêm trường này để lưu tên role dạng string
         public string? Address { get; set; }
         public string? FullName { get; set; }
         public bool? Gender { get; set; }
         public string? EmployeeCode { get; set; }
         public bool IsStaff { get; set; }
         public bool IsCustomer { get; set; }
+        public bool EmailConfirmed { get; set; }
     }
 }

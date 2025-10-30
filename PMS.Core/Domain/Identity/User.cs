@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace PMS.Core.Domain.Identity
 {

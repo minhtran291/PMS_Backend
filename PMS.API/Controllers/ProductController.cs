@@ -5,6 +5,8 @@ using PMS.Application.Services.Product;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Application.DTOs.Product;
+using Microsoft.AspNetCore.Hosting;
+using System.IO;
 
 namespace PMS.API.Controllers
 {
@@ -14,9 +16,11 @@ namespace PMS.API.Controllers
     {
 
         private readonly  IProductService _productService;
-        public ProductController(IProductService productService)
+        private readonly IWebHostEnvironment _env;
+        public ProductController(IProductService productService, IWebHostEnvironment env)
         {
             _productService = productService;
+            _env = env;
         }
 
         /// <summary>
@@ -131,6 +135,41 @@ namespace PMS.API.Controllers
                 message = result.Message,
                 data = result.Data
             });
+        }
+
+        /// <summary>
+        /// Upload product image and return relative path
+        /// POST: /api/Product/upload-image
+        /// </summary>
+        [HttpPost("upload-image")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> UploadImage([FromForm] IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return StatusCode(400, new { success = false, message = "File không hợp lệ", data = (string?)null });
+            }
+
+            var allowedExt = new[] { ".jpg", ".jpeg", ".png" };
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExt.Contains(ext))
+            {
+                return StatusCode(400, new { success = false, message = "Định dạng không hỗ trợ (chỉ jpg, jpeg, png)", data = (string?)null });
+            }
+
+            var imagesDir = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images");
+            if (!Directory.Exists(imagesDir)) Directory.CreateDirectory(imagesDir);
+
+            var fileName = $"product_{Guid.NewGuid():N}{ext}";
+            var physicalPath = Path.Combine(imagesDir, fileName);
+            await using (var stream = new FileStream(physicalPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var relativePath = $"/images/{fileName}";
+            var fullUrl = $"{Request.Scheme}://{Request.Host}{relativePath}";
+            return StatusCode(200, new { success = true, message = "Tải ảnh thành công", data = relativePath, fullUrl });
         }
 
     }

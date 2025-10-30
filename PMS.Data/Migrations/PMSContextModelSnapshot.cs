@@ -558,8 +558,8 @@ namespace PMS.Data.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("Avatar")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()

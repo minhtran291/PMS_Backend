@@ -52,6 +52,22 @@ namespace PMS.API.Controllers
             });
         }
 
+        /// <summary>
+        /// https://localhost:7213/api/Category/public
+        /// Lấy tất cả thể loại (public endpoint)
+        /// </summary>
+        [HttpGet("public")]
+        public async Task<IActionResult> GetAllCategoriesPublic()
+        {
+            var result = await _categoryService.GetAllAsync();
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
 
         /// <summary>
         /// https://localhost:7213/api/Category/getbyid/{id}
@@ -132,6 +148,35 @@ namespace PMS.API.Controllers
                 {
                     Data = false,
                     Message = $"Đã xảy ra lỗi trong quá trình xử lý: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/Category/delete/{cateId}
+        /// Xóa danh mục nếu không có sản phẩm
+        /// </summary>
+        [HttpDelete("delete/{cateId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> DeleteCategory(int cateId)
+        {
+            try
+            {
+                var result = await _categoryService.DeleteAsync(cateId);
+                return StatusCode(result.StatusCode, new
+                {
+                    success = result.Success,
+                    message = result.Message,
+                    data = result.Data
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = $"Đã xảy ra lỗi trong quá trình xử lý: {ex.Message}",
+                    data = false
                 });
             }
         }

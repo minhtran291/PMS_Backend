@@ -20,11 +20,11 @@ namespace PMS.API.Controllers
 
         [HttpPost]
         [Route("refresh")]
-        public async Task<ActionResult<string>> RefreshAccessToken(TokenRequest tokenRequest)
+        public async Task<ActionResult<TokenResponse>> RefreshAccessToken(TokenRequest tokenRequest)
         {
             try
             {
-                string refreshToken = Request.Cookies["X-Refresh-Token"];
+                string? refreshToken = Request.Cookies["X-Refresh-Token"];
 
                 if (string.IsNullOrEmpty(refreshToken))
                     return Unauthorized("Missing refresh token");
@@ -39,7 +39,7 @@ namespace PMS.API.Controllers
                     Expires = DateTimeOffset.UtcNow.AddDays(10)
                 });
 
-                return Ok(tokenResponse.AccessToken);
+                return Ok(tokenResponse);
             }
             catch (Exception ex)
             {

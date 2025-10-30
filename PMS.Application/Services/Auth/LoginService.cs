@@ -74,7 +74,7 @@ namespace PMS.Application.Services.Auth
             }
 
             var authClaims = _tokenService.CreateClaimForAccessToken(account, roles);
-            var accessToken = _tokenService.GenerateToken(authClaims, 5);
+            var accessToken = _tokenService.GenerateToken(authClaims, 1);
             var newRefreshToken = _tokenService.GenerateRefreshToken();
 
             account.RefreshToken = newRefreshToken;

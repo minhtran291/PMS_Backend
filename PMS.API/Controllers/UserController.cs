@@ -10,6 +10,8 @@ using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Identity;
 using PMS.Data.UnitOfWork;
+using Microsoft.AspNetCore.Hosting;
+using System.IO;
 
 namespace PMS.API.Controllers
 {
@@ -19,9 +21,11 @@ namespace PMS.API.Controllers
     {
 
         private readonly IUserService _userService;
-        public UserController(IUserService userService)
+        private readonly IWebHostEnvironment _env;
+        public UserController(IUserService userService, IWebHostEnvironment env)
         {
             _userService = userService;
+            _env = env;
         }
 
         //https://localhost:7213/api/User/register
@@ -55,9 +59,47 @@ namespace PMS.API.Controllers
 
                 _ => Ok(new
                 {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
+            };
+        }
+
+        //https://localhost:7213/api/User/resend-confirm-email
+        [HttpPost("resend-confirm-email")]
+        public async Task<IActionResult> ResendConfirmEmail([FromBody] ResendConfirmEmailRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _userService.ReSendEmailConfirmAsync(request);
+
+            return result.StatusCode switch
+            {
+                200 => Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                }),
+                400 => BadRequest(new
+                {
                     success = false,
                     message = result.Message
                 }),
+                500 => StatusCode(500, new
+                {
+                    success = false,
+                    message = result.Message
+                }),
+
+                _ => Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
             };
         }
 
@@ -65,14 +107,36 @@ namespace PMS.API.Controllers
         [HttpGet("confirm-email")]
         public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
         {
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+                return BadRequest(new { Message = "UserId và Token không được để trống." });
+
             var result = await _userService.ConfirmEmailAsync(userId, token);
 
             return result.StatusCode switch
             {
-                200 => Ok(new { success = true, message = result.Message, data = result.Data }),
-                400 => BadRequest(new { success = false, message = result.Message }),
-                404 => NotFound(new { success = false, message = result.Message }),
-                _ => BadRequest(new { success = false, message = result.Message })
+                200 => Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                }),
+                400 => BadRequest(new
+                {
+                    success = false,
+                    message = result.Message
+                }),
+                500 => StatusCode(500, new
+                {
+                    success = false,
+                    message = result.Message
+                }),
+
+                _ => Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
             };
         }
 
@@ -85,12 +149,31 @@ namespace PMS.API.Controllers
 
             var result = await _userService.SendEmailResetPasswordAsync(request.Email);
 
-            // Map StatusCode sang HTTP status code phù hợp
             return result.StatusCode switch
             {
-                200 => Ok(new { success = true, message = result.Message, data = result.Data }),
-                404 => NotFound(new { success = false, message = result.Message }),
-                _ => BadRequest(new { success = false, message = result.Message }),
+                200 => Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                }),
+                400 => BadRequest(new
+                {
+                    success = false,
+                    message = result.Message
+                }),
+                500 => StatusCode(500, new
+                {
+                    success = false,
+                    message = result.Message
+                }),
+
+                _ => Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
             };
         }
 
@@ -105,85 +188,64 @@ namespace PMS.API.Controllers
 
             return result.StatusCode switch
             {
-                200 => Ok(new { success = true, message = result.Message, data = result.Data }),
-                404 => NotFound(new { success = false, message = result.Message }),
-                500 => BadRequest(new { success = false, message = result.Message }),
-                _ => BadRequest(new { success = false, message = result.Message })
+                200 => Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                }),
+                400 => BadRequest(new
+                {
+                    success = false,
+                    message = result.Message
+                }),
+                500 => StatusCode(500, new
+                {
+                    success = false,
+                    message = result.Message
+                }),
+
+                _ => Ok(new
+                {
+                    success = true,
+                    message = result.Message,
+                    data = result.Data
+                })
             };
         }
 
-        //https://localhost:7213/api/User/resend-confirm-email
-
-        [HttpPost("resend-confirm-email")]
-        public async Task<IActionResult> ResendConfirmEmail([FromBody] ResendConfirmEmailRequest request)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var result = await _userService.ReSendEmailConfirmAsync(request);
-
-            return StatusCode(result.StatusCode, new
-            {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
-            });
-        }
-
         /// <summary>
-        /// Cập nhật thông tin hồ sơ khách hàng.
-        /// https://localhost:7213/api/User/CustomerProfileUpdate
+        /// https://localhost:7213/api/User/upload-avatar
+        /// Upload avatar cho user
         /// </summary>
-        /// <param name="request">Thông tin hồ sơ khách hàng cần cập nhật</param>
-        [HttpPut("CustomerProfileUpdate")]
-        public async Task<IActionResult> UpdateCustomerProfile([FromBody] CustomerProfileDTO request)
+        [HttpPost("upload-avatar")]
+        public async Task<IActionResult> UploadAvatar(IFormFile file)
         {
-            if (!ModelState.IsValid)
+            if (file == null || file.Length == 0)
             {
-                var errors = ModelState
-                    .Where(e => e.Value?.Errors.Count > 0)
-                    .Select(e => new
-                    {
-                        Field = e.Key,
-                        Errors = e.Value!.Errors.Select(er => er.ErrorMessage).ToArray()
-                    });
-
-                return BadRequest(new
-                {
-                    Message = "Dữ liệu không hợp lệ.",
-                    Errors = errors
-                });
+                return StatusCode(400, new { success = false, message = "File không hợp lệ", data = (string?)null });
             }
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
-            var result = await _userService.UpdateCustomerProfile(userId, request);
-            if (result.Data)
-                return Ok(result);
-            else
-                return BadRequest(result);
-        }
 
+            var allowedExt = new[] { ".jpg", ".jpeg", ".png" };
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExt.Contains(ext))
+            {
+                return StatusCode(400, new { success = false, message = "Định dạng không hỗ trợ (chỉ jpg, jpeg, png)", data = (string?)null });
+            }
 
-        /// <summary>
-        /// Lấy thông tin khách hàng theo userId
-        /// </summary>
-        /// <param name="userId">Id của người dùng</param>
-        /// <returns>Thông tin khách hàng</returns>
-        /// <remarks>GET: https://localhost:7213/api/User/viewprofile</remarks>
-        [HttpGet("viewprofile")]
-        public async Task<IActionResult> GetCustomerById()
-        {
+            var imagesDir = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images");
+            if (!Directory.Exists(imagesDir)) Directory.CreateDirectory(imagesDir);
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
-            var result = await _userService.GetCustomerByIdAsync(userId);
+            var fileName = $"avatar_{Guid.NewGuid():N}{ext}";
+            var physicalPath = Path.Combine(imagesDir, fileName);
+            await using (var stream = new FileStream(physicalPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
 
-            if (result.StatusCode == 404)
-                return NotFound(result);
-
-            return Ok(result);
+            var relativePath = $"/images/{fileName}";
+            var fullUrl = $"{Request.Scheme}://{Request.Host}{relativePath}";
+            return StatusCode(200, new { success = true, message = "Tải ảnh thành công", data = relativePath, fullUrl });
         }
 
         /// <summary>
@@ -202,7 +264,38 @@ namespace PMS.API.Controllers
             var result = await _userService.ChangePasswordAsync(userId, model.OldPassword, model.NewPassword);
             return HandleServiceResult(result);
         }
+
+        /// <summary>
+        /// https://localhost:7213/api/User/submit-additional-info
+        /// Customer submit thông tin bổ sung (mã số thuế, mã số kinh doanh)
+        /// </summary>
+        [HttpPost("submit-additional-info")]
+        public async Task<IActionResult> SubmitCustomerAdditionalInfo([FromBody] CustomerAdditionalInfoDTO additionalInfo)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+
+            var result = await _userService.SubmitCustomerAdditionalInfoAsync(userId, additionalInfo);
+            return HandleServiceResult(result);
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/User/customer-status
+        /// Kiểm tra trạng thái customer và thông tin bổ sung
+        /// </summary>
+        [HttpGet("customer-status")]
+        public async Task<IActionResult> GetCustomerStatus()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+
+            var result = await _userService.GetCustomerStatusAsync(userId);
+            return HandleServiceResult(result);
+        }
     }
-
 }
-

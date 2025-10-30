@@ -192,11 +192,11 @@ namespace PMS.Application.Services.Product
         {
             try
             {
-                if (id < 0)
+                if (id <= 0)
                 {
                     return new ServiceResult<ProductDTO?>
                     {
-                        StatusCode = 200,
+                        StatusCode = 400,
                         Message = "ID sản phẩm không hợp lệ",
                         Data = null,
                     };
@@ -225,7 +225,7 @@ namespace PMS.Application.Services.Product
                 return new ServiceResult<ProductDTO?>
                 {
                     StatusCode = 200,
-                    Message = "ID sản phẩm không hợp lệ",
+                    Message = "Lấy thông tin sản phẩm thành công",
                     Data = productUpdate,
                 };
             }

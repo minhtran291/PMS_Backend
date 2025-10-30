@@ -11,6 +11,54 @@ namespace PMS.Application.Services.Category
 {
     public class CategoryService(IUnitOfWork unitOfWork, IMapper mapper, IConfiguration configuration) : Service(unitOfWork, mapper), ICategoryService
     {
+        public async Task<ServiceResult<bool>> DeleteAsync(int cateId)
+        {
+            try
+            {
+                var existingCategory = await _unitOfWork.Category.Query()
+                    .Include(c => c.Products)
+                    .FirstOrDefaultAsync(c => c.CategoryID == cateId);
+
+                if (existingCategory == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        Data = false,
+                        Message = $"Không tìm thấy loại sản phẩm với ID: {cateId}",
+                        StatusCode = 404
+                    };
+                }
+
+                if (existingCategory.Products != null && existingCategory.Products.Any())
+                {
+                    return new ServiceResult<bool>
+                    {
+                        Data = false,
+                        Message = "Danh mục này đang có sản phẩm. Không thể xóa.",
+                        StatusCode = 400
+                    };
+                }
+
+                _unitOfWork.Category.Remove(existingCategory);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    Data = true,
+                    Message = "Xóa danh mục thành công.",
+                    StatusCode = 200
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult<bool>
+                {
+                    Data = false,
+                    Message = $"Đã xảy ra lỗi khi xóa danh mục: {ex.Message}",
+                    StatusCode = 500
+                };
+            }
+        }
         public async Task<ServiceResult<bool>> ActiveSupplierAsync(int cateId)
         {
             try
@@ -80,6 +128,9 @@ namespace PMS.Application.Services.Category
                     };
                 }
 
+                // Reseed identity to MAX(CategoryID) so next is MAX+1 (avoid large gaps)
+                await _unitOfWork.Category.ReseedIdentityToMaxAsync();
+
                 var newcategory = new Core.Domain.Entities.Category
                 {
                     Name = category.Name,
@@ -116,13 +167,29 @@ namespace PMS.Application.Services.Category
 
             try
             {
-                var category = await _unitOfWork.Category.GetAllAsync();
+                var category = await _unitOfWork.Category.Query()
+                    .Include(c => c.Products)
+                    .ToListAsync();
+                    
                 var categoryList = category.Select(p => new CategoryDTO
                 {
                     CategoryID = p.CategoryID,
                     Name = p.Name,
                     Description = p.Description,
                     Status = p.Status,
+                    Products = p.Products.Select(prod => new ProductDTO
+                    {
+                        ProductID = prod.ProductID,
+                        ProductName = prod.ProductName,
+                        ProductDescription = prod.ProductDescription,
+                        Unit = prod.Unit,
+                        CategoryID = prod.CategoryID,
+                        Image = prod.Image,
+                        MinQuantity = prod.MinQuantity,
+                        MaxQuantity = prod.MaxQuantity,
+                        TotalCurrentQuantity = prod.TotalCurrentQuantity,
+                        Status = prod.Status
+                    }).ToList()
                 }).ToList();
 
 

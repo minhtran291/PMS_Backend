@@ -444,6 +444,8 @@ namespace PMS.Application.Services.User
                 {
                     Id = u.Id,
                     UserName = u.UserName ?? string.Empty,
+                    Email = u.Email ?? string.Empty,
+                    PhoneNumber = u.PhoneNumber ?? string.Empty,
                     Mst = u.CustomerProfile?.Mst,
                     ImageCnkd = u.CustomerProfile?.ImageCnkd ?? string.Empty,
                     ImageByt = u.CustomerProfile?.ImageByt ?? string.Empty,
@@ -577,11 +579,190 @@ namespace PMS.Application.Services.User
                     StatusCode = 200
                 };
             }
-            catch (Exception ex)
-            {
-                throw new Exception($"Error changing password: {ex.Message}", ex);
-            }
+        catch (Exception ex)
+        {
+            throw new Exception($"Error changing password: {ex.Message}", ex);
         }
     }
+
+    public async Task<ServiceResult<bool>> SubmitCustomerAdditionalInfoAsync(string userId, CustomerAdditionalInfoDTO additionalInfo)
+    {
+        try
+        {
+            _logger.LogInformation($"Bắt đầu submit thông tin bổ sung cho customer: {userId}");
+
+            // Kiểm tra user có tồn tại không
+            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning($"Không tìm thấy user với ID: {userId}");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Message = "Không tìm thấy người dùng",
+                    Data = false
+                };
+            }
+
+            // Kiểm tra user có phải customer không
+            var roles = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
+            if (!roles.Contains(UserRoles.CUSTOMER))
+            {
+                _logger.LogWarning($"User {userId} không phải customer");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 403,
+                    Message = "Chỉ customer mới có thể submit thông tin bổ sung",
+                    Data = false
+                };
+            }
+
+            // Kiểm tra customer profile có tồn tại không
+            var customerProfile = await _unitOfWork.CustomerProfile.Query()
+                .FirstOrDefaultAsync(cp => cp.UserId == userId);
+
+            if (customerProfile == null)
+            {
+                _logger.LogWarning($"Không tìm thấy customer profile cho user: {userId}");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Message = "Không tìm thấy thông tin customer",
+                    Data = false
+                };
+            }
+
+            // Kiểm tra customer đã submit thông tin bổ sung chưa
+            if (customerProfile.Mst.HasValue && customerProfile.Mshkd.HasValue)
+            {
+                _logger.LogWarning($"Customer {userId} đã submit thông tin bổ sung");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 400,
+                    Message = "Bạn đã submit thông tin bổ sung rồi",
+                    Data = false
+                };
+            }
+
+            // Cập nhật thông tin bổ sung
+            customerProfile.Mst = additionalInfo.Mst;
+            customerProfile.Mshkd = additionalInfo.Mshkd;
+            customerProfile.ImageCnkd = additionalInfo.ImageCnkd;
+            customerProfile.ImageByt = additionalInfo.ImageByt;
+
+            // Cập nhật trạng thái user thành Inactive để chờ manager duyệt
+            user.UserStatus = UserStatus.Inactive;
+
+            _unitOfWork.CustomerProfile.Update(customerProfile);
+            await _unitOfWork.Users.UserManager.UpdateAsync(user);
+            await _unitOfWork.CommitAsync();
+
+            // Gửi thông báo cho manager
+            await _notificationService.SendNotificationToRolesAsync(
+                userId, // senderId
+                new List<string> { UserRoles.MANAGER }, // targetRoles
+                "Yêu cầu duyệt thông tin customer",
+                $"Customer {user.UserName} đã submit thông tin bổ sung và cần được duyệt",
+                NotificationType.System
+            );
+
+            _logger.LogInformation($"Submit thông tin bổ sung thành công cho customer: {userId}");
+            return new ServiceResult<bool>
+            {
+                StatusCode = 200,
+                Message = "Submit thông tin bổ sung thành công. Vui lòng chờ manager duyệt.",
+                Data = true
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Lỗi khi submit thông tin bổ sung cho customer: {userId}");
+            return new ServiceResult<bool>
+            {
+                StatusCode = 500,
+                Message = "Có lỗi xảy ra khi submit thông tin bổ sung",
+                Data = false
+            };
+        }
+    }
+
+    public async Task<ServiceResult<CustomerStatusDTO>> GetCustomerStatusAsync(string userId)
+    {
+        try
+        {
+            _logger.LogInformation($"Kiểm tra trạng thái customer: {userId}");
+
+            // Kiểm tra user có tồn tại không
+            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning($"Không tìm thấy user với ID: {userId}");
+                return new ServiceResult<CustomerStatusDTO>
+                {
+                    StatusCode = 404,
+                    Message = "Không tìm thấy người dùng",
+                    Data = null
+                };
+            }
+
+            // Kiểm tra user có phải customer không
+            var roles = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
+            if (!roles.Contains(UserRoles.CUSTOMER))
+            {
+                _logger.LogWarning($"User {userId} không phải customer");
+                return new ServiceResult<CustomerStatusDTO>
+                {
+                    StatusCode = 403,
+                    Message = "Chỉ customer mới có thể kiểm tra trạng thái",
+                    Data = null
+                };
+            }
+
+            // Kiểm tra customer profile
+            var customerProfile = await _unitOfWork.CustomerProfile.Query()
+                .FirstOrDefaultAsync(cp => cp.UserId == userId);
+
+            var hasAdditionalInfo = customerProfile != null && 
+                                   customerProfile.Mst.HasValue && 
+                                   customerProfile.Mshkd.HasValue &&
+                                   !string.IsNullOrEmpty(customerProfile.ImageCnkd) &&
+                                   !string.IsNullOrEmpty(customerProfile.ImageByt);
+
+            var needsAdditionalInfo = !hasAdditionalInfo;
+
+            var statusDTO = new CustomerStatusDTO
+            {
+                UserStatus = user.UserStatus,
+                HasAdditionalInfo = hasAdditionalInfo,
+                NeedsAdditionalInfo = needsAdditionalInfo,
+                Message = user.UserStatus switch
+                {
+                    UserStatus.Block => "Tài khoản của bạn đã bị khóa",
+                    UserStatus.Inactive => hasAdditionalInfo ? "Thông tin của bạn đang chờ manager duyệt" : "Bạn cần bổ sung thông tin mã số thuế và mã số kinh doanh",
+                    UserStatus.Active => "Tài khoản của bạn đã được kích hoạt",
+                    _ => "Trạng thái không xác định"
+                }
+            };
+
+            _logger.LogInformation($"Trạng thái customer {userId}: {statusDTO.UserStatus}, HasAdditionalInfo: {statusDTO.HasAdditionalInfo}");
+            return new ServiceResult<CustomerStatusDTO>
+            {
+                StatusCode = 200,
+                Message = "Lấy trạng thái thành công",
+                Data = statusDTO
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, $"Lỗi khi kiểm tra trạng thái customer: {userId}");
+            return new ServiceResult<CustomerStatusDTO>
+            {
+                StatusCode = 500,
+                Message = "Có lỗi xảy ra khi kiểm tra trạng thái",
+                Data = null
+            };
+        }
+    }
+}
 }
 

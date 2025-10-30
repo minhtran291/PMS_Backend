@@ -10,5 +10,6 @@ namespace PMS.Application.Services.Category
         Task<ServiceResult<bool>> AddAsync(CategoryDTO category);
         Task<ServiceResult<bool>> UpdateCategoryAsync(CategoryDTO category);
         Task<ServiceResult<bool>> ActiveSupplierAsync(int cateId);
+        Task<ServiceResult<bool>> DeleteAsync(int cateId);
     }
 }

@@ -63,8 +63,7 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(u => u.FullName)
                     .HasMaxLength(128);
 
-                entity.Property(u => u.Avatar)
-                    .HasMaxLength(256);
+                entity.Property(u => u.Avatar);
 
                 entity.Property(u => u.Address)
                     .HasMaxLength(256);

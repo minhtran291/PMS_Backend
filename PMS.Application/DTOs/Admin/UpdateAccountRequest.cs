@@ -6,6 +6,7 @@ namespace PMS.Application.DTOs.Admin
     {
         // Update User 
         public string UserId {  get; set; }
+        public string? Email { get; set; }
         public string? PhoneNumber { get; set; }
         public UserStatus? UserStatus { get; set; }
 
