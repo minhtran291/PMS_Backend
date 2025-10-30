@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PMS.Data.DatabaseConfig;
 
@@ -11,9 +12,11 @@ using PMS.Data.DatabaseConfig;
 namespace PMS.Data.Migrations
 {
     [DbContext(typeof(PMSContext))]
-    partial class PMSContextModelSnapshot : ModelSnapshot
+    [Migration("20251029144626_Update_SalesQuotationDetails_PK")]
+    partial class Update_SalesQuotationDetails_PK
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -709,7 +712,7 @@ namespace PMS.Data.Migrations
                     b.Property<int>("SqId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("TaxId")
+                    b.Property<int>("TaxId")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -1370,7 +1373,8 @@ namespace PMS.Data.Migrations
                     b.HasOne("PMS.Core.Domain.Entities.TaxPolicy", "TaxPolicy")
                         .WithMany("SalesQuotaionDetails")
                         .HasForeignKey("TaxId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("LotProduct");
 
