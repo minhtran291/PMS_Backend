@@ -123,5 +123,22 @@ namespace PMS.API.Controllers
                 message = result.Message,
             });
         }
+
+        [HttpPost, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
+        [Route("add-sales-quotation-comment")]
+        public async Task<IActionResult> AddComment(AddSalesQuotationCommentDTO dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _salesQuotationService.AddSalesQuotationComment(dto, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message
+            });
+        }
     }
 }
