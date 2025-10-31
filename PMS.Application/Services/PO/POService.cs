@@ -49,54 +49,73 @@ namespace PMS.API.Services.POService
             };
         }
 
-        public async Task<ServiceResult<bool>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
+        public async Task<ServiceResult<POPaidViewDTO>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
         {
             try
             {
-                var existingPO = await _unitOfWork.PurchasingOrder.Query().FirstOrDefaultAsync(po => po.POID == poid);
+                var existingPO = await _unitOfWork.PurchasingOrder.Query()
+                   
+                    .FirstOrDefaultAsync(po => po.POID == poid);
 
                 if (existingPO == null)
                 {
-                    return new ServiceResult<bool>
+                    return new ServiceResult<POPaidViewDTO>
                     {
-                        StatusCode = 200,
+                        StatusCode = 404,
                         Message = $"Không tìm thấy đơn hàng với POID = {poid}",
-                        Data = false
+                        Data = null
+                    };
+                }
+
+                if (pOUpdateDTO.paid > existingPO.Total)
+                {
+                    return new ServiceResult<POPaidViewDTO>
+                    {
+                        StatusCode = 400,
+                        Message = "Thanh toán vượt quá tổng giá trị đơn hàng",
+                        Data = null
                     };
                 }
 
                 existingPO.Status = Core.Domain.Enums.PurchasingOrderStatus.deposited;
                 existingPO.Deposit = pOUpdateDTO.paid;
-                if (pOUpdateDTO.paid > existingPO.Total)
-                {
-                    return new ServiceResult<bool>
-                    {
-                        StatusCode = 200,
-                        Message = "Thanh toán quá mức",
-                        Data = false
-                    };
-                }
                 existingPO.Debt = existingPO.Total - pOUpdateDTO.paid;
-                existingPO.PaymentDate = DateTime.Now.Date;
+                existingPO.PaymentDate = DateTime.Now;
                 existingPO.PaymentBy = userId;
+
+                
 
                 _unitOfWork.PurchasingOrder.Update(existingPO);
                 await _unitOfWork.CommitAsync();
+                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy);
+                if (user == null)
+                {
+                    throw new Exception("Lỗi khi ghi nhận tiền gửi");
+                }
+                var paymentName = user.UserName;
 
-                return new ServiceResult<bool>
+                var resultDto = new POPaidViewDTO
+                {                   
+                    PaymentBy = paymentName,
+                    PaymentDate = existingPO.PaymentDate,
+                    Status = existingPO.Status,
+                    Debt = existingPO.Debt,  
+                };
+
+                return new ServiceResult<POPaidViewDTO>
                 {
                     StatusCode = 200,
-                    Message = "Cập nhật thành công.",
-                    Data = true
+                    Message = "Xác nhận tiền cọc thành công.",
+                    Data = resultDto
                 };
             }
             catch (Exception ex)
             {
-                return new ServiceResult<bool>
+                return new ServiceResult<POPaidViewDTO>
                 {
                     StatusCode = 500,
                     Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
-                    Data = false
+                    Data = null
                 };
             }
         }
@@ -179,39 +198,40 @@ namespace PMS.API.Services.POService
             }
         }
 
-        public async Task<ServiceResult<bool>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
+        public async Task<ServiceResult<POPaidViewDTO>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
         {
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-                var existingPO = await _unitOfWork.PurchasingOrder.Query().FirstOrDefaultAsync(po => po.POID == poid);
+                var existingPO = await _unitOfWork.PurchasingOrder.Query()
+                    .FirstOrDefaultAsync(po => po.POID == poid);
 
                 if (existingPO == null)
                 {
-                    return new ServiceResult<bool>
+                    return new ServiceResult<POPaidViewDTO>
                     {
-                        StatusCode = 200,
-                        Success = false,
+                        StatusCode = 404,
                         Message = $"Không tìm thấy đơn hàng với POID = {poid}",
-                        Data = false
+                        Data = null
                     };
                 }
 
-
-                existingPO.Deposit = pOUpdateDTO.paid + existingPO.Deposit;
+                
                 if (pOUpdateDTO.paid > existingPO.Debt)
                 {
-                    return new ServiceResult<bool>
+                    return new ServiceResult<POPaidViewDTO>
                     {
-                        StatusCode = 200,
-                        Success = false,
-                        Message = "Thanh toán quá mức",
-                        Data = false
+                        StatusCode = 400,
+                        Message = "Thanh toán vượt quá số nợ còn lại.",
+                        Data = null
                     };
                 }
-                _unitOfWork.PurchasingOrder.Update(existingPO);
-                await _unitOfWork.CommitAsync();
+
+                
+                existingPO.Deposit += pOUpdateDTO.paid;
                 existingPO.Debt = existingPO.Total - existingPO.Deposit;
+
+               
                 if (existingPO.Debt == 0)
                 {
                     existingPO.Status = PurchasingOrderStatus.compeleted;
@@ -220,35 +240,53 @@ namespace PMS.API.Services.POService
                 {
                     existingPO.Status = PurchasingOrderStatus.paid;
                 }
-                
-                existingPO.PaymentDate = DateTime.Now.Date;
+
+                existingPO.PaymentDate = DateTime.Now;
                 existingPO.PaymentBy = userId;
 
                 _unitOfWork.PurchasingOrder.Update(existingPO);
                 await _unitOfWork.CommitAsync();
-                await _unitOfWork.CommitTransactionAsync();
-                return new ServiceResult<bool>
+
+               
+                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy);
+                if (user == null)
                 {
-                    StatusCode = 200,
-                    Success = true,
-                    Message = "Cập nhật thành công.",
-                    Data = true
+                    throw new Exception("Không tìm thấy thông tin người xác nhận thanh toán.");
+                }
+
+                var paymentName = user.UserName;
+
+                
+                var resultDto = new POPaidViewDTO
+                {
+                    PaymentBy = paymentName,
+                    PaymentDate = existingPO.PaymentDate,
+                    Status = existingPO.Status,
+                    Debt = existingPO.Debt
                 };
 
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ServiceResult<POPaidViewDTO>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật thanh toán thành công.",
+                    Data = resultDto
+                };
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                return new ServiceResult<bool>
+
+                return new ServiceResult<POPaidViewDTO>
                 {
                     StatusCode = 500,
-                    Success = false,
                     Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
-                    Data = false
+                    Data = null
                 };
             }
         }
-
+        
         public async Task<ServiceResult<bool>> ChangeStatusAsync(int poid, PurchasingOrderStatus newStatus)
         {
             try

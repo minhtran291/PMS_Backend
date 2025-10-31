@@ -139,7 +139,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="keyword">Tên hoặc phần tên sản phẩm</param>
         /// <returns>Thông tin sản phẩm nếu tồn tại</returns>
-        [HttpGet("search")]
+        [HttpGet("search")] 
         public async Task<IActionResult> SearchProductByKeyword([FromQuery] string keyword)
         {
             if (string.IsNullOrWhiteSpace(keyword))
@@ -150,7 +150,6 @@ namespace PMS.API.Controllers
                     Message = "Keyword không được để trống"
                 });
             }
-
             var result = await _productService.SearchProductByKeyWordAsync(keyword);
 
             if (!result.Success)
