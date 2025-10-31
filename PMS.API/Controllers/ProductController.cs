@@ -13,7 +13,7 @@ namespace PMS.API.Controllers
     public class ProductController : ControllerBase
     {
 
-        private readonly  IProductService _productService;
+        private readonly IProductService _productService;
         public ProductController(IProductService productService)
         {
             _productService = productService;
@@ -63,7 +63,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <returns>List<ProductUpdate></returns>
         [HttpGet("active")]
-       // [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        // [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetActiveProducts()
         {
             var result = await _productService.GetAllProductsWithStatusAsync();
@@ -133,5 +133,31 @@ namespace PMS.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Tìm sản phẩm theo từ khóa (keyword)
+        /// https://localhost:7213/api/Product/search
+        /// </summary>
+        /// <param name="keyword">Tên hoặc phần tên sản phẩm</param>
+        /// <returns>Thông tin sản phẩm nếu tồn tại</returns>
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchProductByKeyword([FromQuery] string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword))
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Keyword không được để trống"
+                });
+            }
+
+            var result = await _productService.SearchProductByKeyWordAsync(keyword);
+
+            if (!result.Success)
+                return NotFound(result);
+
+            return Ok(result);
+        }
     }
 }
+

@@ -9,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 namespace PMS.Application.Services.Product
 {
     public class ProductService(IUnitOfWork unitOfWork, IMapper mapper, IConfiguration configuration) : Service(unitOfWork, mapper), IProductService
-    
+
     {
         public async Task<ServiceResult<bool>> AddProductAsync(ProductDTO product)
         {
@@ -292,7 +292,7 @@ namespace PMS.Application.Services.Product
             }
         }
 
-        public async Task <ServiceResult<bool>> UpdateProductAsync(int id, ProductUpdateDTO productUpdate)
+        public async Task<ServiceResult<bool>> UpdateProductAsync(int id, ProductUpdateDTO productUpdate)
         {
             try
             {
@@ -382,7 +382,46 @@ namespace PMS.Application.Services.Product
 
             }
         }
+        public async Task<ServiceResult<List<ProductDTO>>> SearchProductByKeyWordAsync(string keyWord)
+        {
+            var products = await _unitOfWork.Product
+                .Query()
+                .AsNoTracking()
+                .Where(c => c.ProductName.Contains(keyWord))
+                .Select(p => new ProductDTO
+                {
+                    ProductID = p.ProductID,
+                    ProductName = p.ProductName,
+                    Unit = p.Unit,
+                    CategoryID = p.CategoryID,
+                    MaxQuantity = p.MaxQuantity,
+                    MinQuantity = p.MinQuantity,
+                    TotalCurrentQuantity = p.TotalCurrentQuantity,
+                    Image = p.Image,
+                    ProductDescription = p.ProductDescription,
+                    Status = p.Status
+                    
+                })
+                .ToListAsync();
 
+            if (!products.Any())
+            {
+                return new ServiceResult<List<ProductDTO>>
+                {
+                    Data = new List<ProductDTO>(),
+                    Success = false,
+                    Message = $"Không tồn tại sản phẩm nào với keyword '{keyWord}'",
+                    StatusCode = 404
+                };
+            }
 
+            return new ServiceResult<List<ProductDTO>>
+            {
+                Data = products,
+                Success = true,
+                Message = "Thành công",
+                StatusCode = 200
+            };
+        }
     }
 }
