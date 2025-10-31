@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using AutoMapper;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
@@ -13,7 +14,7 @@ using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Services.POService
 {
-    public class POService(IUnitOfWork unitOfWork, IMapper mapper)
+    public class POService(IUnitOfWork unitOfWork, IMapper mapper,IWebHostEnvironment webHostEnvironment )
         : Service(unitOfWork, mapper), IPOService
     {
         public async Task<ServiceResult<IEnumerable<POViewDTO>>> GetAllPOAsync()
@@ -364,12 +365,12 @@ namespace PMS.API.Services.POService
             using var package = new ExcelPackage();
             var ws = package.Workbook.Worksheets.Add("Thanh toán đơn hàng");
 
+
             ws.Cells.Style.Font.Name = "Arial";
             ws.Cells.Style.Font.Size = 11;
-            ws.Cells.Style.WrapText = false;
             ws.DefaultRowHeight = 18;
 
-            //
+            // header
             ws.Cells[1, 1, 1, 6].Merge = true;
             ws.Cells[1, 1].Value = "BÁO CÁO THANH TOÁN ĐƠN HÀNG (PURCHASING ORDER PAYMENT)";
             ws.Cells[1, 1].Style.Font.Bold = true;
@@ -382,6 +383,9 @@ namespace PMS.API.Services.POService
             ws.Row(1).Height = 28;
 
             int row = 3;
+            int infoStartRow = row;
+
+
             //
             ws.Cells[row, 1].Value = "Mã đơn hàng (POID):";
             ws.Cells[row, 2].Value = po.POID;
@@ -440,16 +444,24 @@ namespace PMS.API.Services.POService
             ws.Cells[row, 2].Value = paymentName;
             ws.Cells[row, 1].Style.Font.Bold = true;
 
+            int infoEndRow = row;
             row += 2;
 
-            // chi tiet
+            //
+            var infoRange = ws.Cells[infoStartRow, 1, infoEndRow, 6];
+            infoRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+            infoRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+            infoRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+            infoRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+
+            //chi tiet
             ws.Cells[row, 1, row, 6].Merge = true;
             ws.Cells[row, 1].Value = "CHI TIẾT THANH TOÁN";
             ws.Cells[row, 1].Style.Font.Bold = true;
             ws.Cells[row, 1].Style.Font.Size = 13;
+            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             ws.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
             ws.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             row++;
 
             string[] headers = { "STT", "Trạng thái", "Tổng giá trị", "Tiền đã thanh toán", "Công nợ còn lại", "Ngày cập nhật" };
@@ -472,26 +484,16 @@ namespace PMS.API.Services.POService
             ws.Cells[row, 4].Style.Numberformat.Format = "#,##0.00";
             ws.Cells[row, 5].Value = po.Debt;
             ws.Cells[row, 5].Style.Numberformat.Format = "#,##0.00";
-            if (po.PaymentDate != default)
-            {
-                ws.Cells[row, 6].Value = po.PaymentDate;
-                ws.Cells[row, 6].Style.Numberformat.Format = "dd/MM/yyyy HH:mm";
-            }
-            else
-            {
-                ws.Cells[row, 6].Value = "—";
-            }
+            ws.Cells[row, 6].Value = po.PaymentDate != default ? po.PaymentDate.ToString("dd/MM/yyyy HH:mm") : "—";
 
             var tableRange = ws.Cells[row - 1, 1, row, 6];
             tableRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
             tableRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
             tableRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
             tableRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
-            tableRange.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-
             row += 3;
 
-            //ghi chu
+            // note
             ws.Cells[row, 1, row, 6].Merge = true;
             ws.Cells[row, 1].Value = "(Tệp này được tạo tự động từ hệ thống kế toán – vui lòng không chỉnh sửa thủ công)";
             ws.Cells[row, 1].Style.Font.Italic = true;
@@ -499,8 +501,6 @@ namespace PMS.API.Services.POService
             ws.Cells[row, 1].Style.Font.Size = 9;
             row += 2;
 
-
-                        // note
             ws.Cells[row, 1, row, 6].Merge = true;
             ws.Cells[row, 1].Value = "GHI CHÚ (NOTES)";
             ws.Cells[row, 1].Style.Font.Bold = true;
@@ -510,7 +510,6 @@ namespace PMS.API.Services.POService
             ws.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
             row++;
 
-
             string[] noteLines =
             {
     $"Tôi, {paymentName}, với tư cách là bên mua, xác nhận đã thực hiện thanh toán đúng và đầy đủ số tiền theo thỏa thuận giữa hai bên.",
@@ -518,7 +517,6 @@ namespace PMS.API.Services.POService
     "Tôi hiểu và đồng ý rằng việc hoàn tất thanh toán đồng nghĩa với việc xác lập quyền sở hữu, nghĩa vụ nhận hàng hóa/dịch vụ theo hợp đồng đã ký kết.",
     "Tôi cam kết chịu hoàn toàn trách nhiệm trước pháp luật Việt Nam về tính trung thực, chính xác của thông tin và giao dịch nêu trên."
 };
-
             foreach (var line in noteLines)
             {
                 ws.Cells[row, 1, row, 6].Merge = true;
@@ -529,20 +527,74 @@ namespace PMS.API.Services.POService
                 ws.Cells[row, 1].Style.Font.Italic = true;
                 row++;
             }
+            row += 2;
 
-            row += 2; 
 
-            ws.Cells[row, 1, row, 6].Merge = true;
-            ws.Cells[row, 1].Value = $"Tôi bên mua (A): ....................................................      Ngày ký: {DateTime.Now:dd/MM/yyyy}";
+            ws.Cells[row, 1, row, 3].Merge = true;
+            ws.Cells[row, 1].Value = "Người lập phiếu";
             ws.Cells[row, 1].Style.Font.Bold = true;
-            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+
+            ws.Cells[row, 4, row, 6].Merge = true;
+            ws.Cells[row, 4].Value = "Người duyệt";
+            ws.Cells[row, 4].Style.Font.Bold = true;
+            ws.Cells[row, 4].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            row += 2;
+
+            var signaturePath = Path.Combine(webHostEnvironment.WebRootPath, "assets", "myESign.png");
+            var sealPath = Path.Combine(webHostEnvironment.WebRootPath, "assets", "myEsignCompany.png");
 
 
-            // alige
+            int startColumn = 4;
+            int endColumn = 6;
+
+
+            double totalWidth = 0;
+            for (int c = startColumn; c <= endColumn; c++)
+                totalWidth += ws.Column(c).Width;
+
+
+            int rowOffsetPx = 0;
+            int colOffsetPx = (int)(totalWidth * 3.5 * 7);
+
+
+            if (File.Exists(sealPath))
+            {
+                var sealPic = ws.Drawings.AddPicture("CompanySeal", new FileInfo(sealPath));
+
+
+                sealPic.SetPosition(row - 1, -5, startColumn - 1, colOffsetPx - 120);
+                sealPic.SetSize(200, 200);
+
+            }
+
+
+            if (File.Exists(signaturePath))
+            {
+                var signPic = ws.Drawings.AddPicture("DigitalSignature", new FileInfo(signaturePath));
+
+
+                signPic.SetPosition(row + 1, 45, startColumn - 1, colOffsetPx - 15);
+                signPic.SetSize(280, 130);
+
+
+
+                ws.Cells[row + 8, startColumn, row + 8, endColumn].Merge = true;
+                ws.Cells[row + 8, startColumn].Value = "Chữ ký điện tử – Trần Hoàng Anh";
+                ws.Cells[row + 8, startColumn].Style.Font.Italic = true;
+                ws.Cells[row + 8, startColumn].Style.Font.Color.SetColor(Color.Gray);
+                ws.Cells[row + 8, startColumn].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            }
+            else
+            {
+                ws.Cells[row, 4].Value = "(Không tìm thấy file chữ ký điện tử)";
+                ws.Cells[row, 4].Style.Font.Color.SetColor(Color.Red);
+            }
+
+
             ws.Cells[ws.Dimension.Address].AutoFitColumns();
             for (int i = 1; i <= 6; i++)
                 ws.Column(i).Width = Math.Min(ws.Column(i).Width, 40);
-
             ws.View.ZoomScale = 100;
 
             return package.GetAsByteArray();
