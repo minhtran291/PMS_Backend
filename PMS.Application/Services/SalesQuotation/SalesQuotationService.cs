@@ -697,7 +697,8 @@ namespace PMS.Application.Services.SalesQuotation
                     .Include(sq => sq.SalesQuotationNote)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.LotProduct)
-                            .ThenInclude(lp => lp.Product)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(sqd => sqd.Product)
                     .Include(sq => sq.StaffProfile)
                         .ThenInclude(sp => sp.User)
                     .FirstOrDefaultAsync(sq => sq.Id == sqId);

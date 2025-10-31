@@ -16,11 +16,6 @@ namespace PMS.Core.Domain.Constant
 
             var validityTimeSpan = sq.QuotationDate.HasValue ? sq.ExpiredDate - sq.QuotationDate : null;
 
-            if (sq.QuotationDate.HasValue)
-            {
-                validityTimeSpan = sq.ExpiredDate - sq.QuotationDate.Value;
-            }
-
             string validityText;
 
             if (validityTimeSpan.HasValue)
@@ -53,22 +48,27 @@ namespace PMS.Core.Domain.Constant
 
             foreach (var item in sq.SalesQuotaionDetails)
             {
-                var productName = HttpUtility.HtmlEncode(item.LotProduct?.Product?.ProductName ?? "N/A");
-                var unit = HttpUtility.HtmlEncode(item.LotProduct?.Product?.Unit ?? "N/A");
-                var taxText = HttpUtility.HtmlEncode(item.TaxPolicy.Name);
-                decimal tax = item.TaxPolicy.Rate;
-                var expiredDate = item.LotProduct?.ExpiredDate.ToString("dd/MM/yyyy") ?? "N/A";
-                var quantity = 1;
-                decimal salePrice = item.LotProduct?.SalePrice ?? 0;
+                var productName = HttpUtility.HtmlEncode(item.Product.ProductName);
+                var unit = HttpUtility.HtmlEncode(item.Product.Unit);
 
-                decimal itemSubTotal = quantity * salePrice;
-                decimal itemTax = itemSubTotal * tax;
-                decimal itemTotal = itemSubTotal + itemTax;
+                var note = item.Note ?? "";
 
-                subTotal += itemSubTotal;
-                taxTotal += itemTax;
+                if(item.LotProduct != null)
+                {
+                    var taxText = HttpUtility.HtmlEncode(item.TaxPolicy?.Name);
+                    decimal taxRate = item.TaxPolicy.Rate;
+                    var expiredDate = item.LotProduct.ExpiredDate.ToString("dd/MM/yyyy");
+                    var quantity = 1;
+                    decimal salePrice = item.LotProduct.SalePrice;
 
-                rows.Append($@"
+                    decimal itemSubTotal = quantity * salePrice;
+                    decimal itemTax = itemSubTotal * taxRate;
+                    decimal itemTotal = itemSubTotal + itemTax;
+
+                    subTotal += itemSubTotal;
+                    taxTotal += itemTax;
+
+                    rows.Append($@"
                     <tr>
                         <td>{productName}</td>
                         <td>{unit}</td>
@@ -77,7 +77,23 @@ namespace PMS.Core.Domain.Constant
                         <td>{quantity}</td>
                         <td>{salePrice:N0} ₫</td>
                         <td>{itemTotal:N0} ₫</td>
+                        <td>{note}</td>
                     </tr>");
+                }
+                else
+                {
+                    rows.Append($@"
+                    <tr>
+                        <td>{productName}</td>
+                        <td>{unit}</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>{note}</td>
+                    </tr>");
+                }
             }
 
             decimal grandTotal = subTotal + taxTotal;
@@ -114,6 +130,7 @@ namespace PMS.Core.Domain.Constant
                 <th>Số lượng tối thiểu</th>
                 <th>Đơn giá</th>
                 <th>Thành tiền</th>
+                <th>Ghi chú</th>
             </tr>
         </thead>
         <tbody style=""text-align: center;"">
@@ -121,22 +138,24 @@ namespace PMS.Core.Domain.Constant
         </tbody>
         <tfoot>
             <tr>
-                <td colspan=""6"" class=""total"">Tổng chưa thuế:</td>
-                <td class=""total"">{subTotal:N0} ₫</td>
+                <td colspan=""8"" class=""total"">Tổng chưa thuế: {subTotal:N0} ₫</td>
             </tr>
             <tr>
-                <td colspan=""6"" class=""total"">Thuế:</td>
-                <td class=""total"">{taxTotal:N0} ₫</td>
+                <td colspan=""8"" class=""total"">Thuế: {taxTotal:N0} ₫</td>
             </tr>
             <tr>
-                <td colspan=""6"" class=""total"">Tổng cộng (đã bao gồm thuế):</td>
-                <td class=""total"">{grandTotal:N0} ₫</td>
+                <td colspan=""8"" class=""total"">Tổng cộng (đã bao gồm thuế): {grandTotal:N0} ₫</td>
             </tr>
         </tfoot>
     </table>
 
     <p><strong>Ghi chú</strong></p>
-    <p>Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá</p>
+
+    <div style=""line-height:1.4;"">
+        <div>Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá</div>
+        <div>Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế</div>
+    </div>
+
     <p style=""white-space: pre-line;"">{HttpUtility.HtmlEncode(sq.SalesQuotationNote?.Content ?? "")}</p>
 
     <div class=""footer"">

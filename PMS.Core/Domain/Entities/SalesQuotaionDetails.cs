@@ -17,7 +17,7 @@ namespace PMS.Core.Domain.Entities
 
         public virtual SalesQuotation SalesQuotation { get; set; } = null!;
         public virtual LotProduct? LotProduct { get; set; }
-        public virtual TaxPolicy TaxPolicy { get; set; } = null!;
+        public virtual TaxPolicy? TaxPolicy { get; set; }
         public virtual Product Product { get; set;} = null!;
     }
 }
