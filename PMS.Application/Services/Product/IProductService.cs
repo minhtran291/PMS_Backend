@@ -11,5 +11,6 @@ namespace PMS.Application.Services.Product
         Task<ServiceResult<ProductDTO?>> GetProductByIdAsync(int id);
         Task<ServiceResult<bool>> UpdateProductAsync(int id, ProductUpdateDTO productUpdate);
         Task<ServiceResult<bool>> SetProductStatusAsync(int productId, bool status);
+        Task<ServiceResult<List<ProductDTO>>> SearchProductByKeyWordAsync(string keyWord);
     }
 }
