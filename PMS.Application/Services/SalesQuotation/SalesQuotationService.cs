@@ -542,7 +542,7 @@ namespace PMS.Application.Services.SalesQuotation
                     Message = "Có chi tiết báo giá không thuộc phạm vi báo giá"
                 };
 
-            foreach(var dto in details)
+            foreach (var dto in details)
             {
                 var entity = sqdId.Find(d => d.Id == dto.sqdId);
 
@@ -796,6 +796,107 @@ namespace PMS.Application.Services.SalesQuotation
         {
             var body = EmailBody.SALES_QUOTATION(customerEmail);
             await _emailService.SendMailWithPDFAsync(EmailSubject.SALES_QUOTATION, body, customerEmail, attachmentBytes, attachmentName);
+        }
+
+        public async Task<ServiceResult<object>> AddSalesQuotationComment(AddSalesQuotationCommentDTO dto, string userId)
+        {
+            try
+            {
+                var user = await _unitOfWork.Users.Query()
+                    .Include(u => u.CustomerProfile)
+                    .Include(u => u.StaffProfile)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 401,
+                        Message = "Người dùng không tồn tại"
+                    };
+
+                var salesQuotation = await _unitOfWork.SalesQuotation.Query()
+                    .Include(sq => sq.RequestSalesQuotation)
+                        .ThenInclude(rsq => rsq.CustomerProfile)
+                            .ThenInclude(cp => cp.User)
+                    .Include(sq => sq.StaffProfile)
+                        .ThenInclude(sp => sp.User)
+                    .FirstOrDefaultAsync(sq => sq.Id == dto.SqId);
+
+                if (salesQuotation == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy báo giá"
+                    };
+
+                if (salesQuotation.Status == Core.Domain.Enums.SalesQuotationStatus.Draft)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Báo giá chưa được gửi không thể bình luận"
+                    };
+
+                var role = await _unitOfWork.Users.UserManager.IsInRoleAsync(user, UserRoles.CUSTOMER);
+
+                if (role)
+                {
+                    var customer = user.CustomerProfile
+                        ?? throw new Exception("Khach hang chua co profile");
+
+                    if (salesQuotation.RequestSalesQuotation.CustomerId != customer.Id)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = "Bạn không có quyền bình luận vào báo giá này"
+                        };
+                }
+                else
+                {
+                    var staff = user.StaffProfile
+                        ?? throw new Exception("Nhan vien chua co profile");
+
+                    if (salesQuotation.SsId != staff.Id)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = "Bạn không có quyền bình luận vào báo giá này"
+                        };
+                }
+
+                var comment = new SalesQuotationComment
+                {
+                    SqId = dto.SqId,
+                    UserId = user.Id,
+                    Content = dto.Content?.Trim()
+                };
+
+                await _unitOfWork.SalesQuotationComment.AddAsync(comment);
+
+                await _unitOfWork.CommitAsync();
+
+                await _notificationService.SendNotificationToCustomerAsync(
+                    user.Id,
+                    role == true ? salesQuotation.StaffProfile.User.Id : salesQuotation.RequestSalesQuotation.CustomerProfile.User.Id,
+                    "Bạn có 1 bình luận mới",
+                    $"Bạn có 1 bình luận mới trong báo giá {salesQuotation.QuotationCode}",
+                    Core.Domain.Enums.NotificationType.Message);
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Bình luận thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi",
+                };
+            }
         }
     }
 }
