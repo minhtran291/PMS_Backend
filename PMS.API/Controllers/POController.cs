@@ -102,5 +102,18 @@ namespace PMS.API.Controllers
             var result = await _poService.ChangeStatusAsync(poid, newStatus);
             return HandleServiceResult(result);
         }
+
+        /// <summary>
+        /// https://localhost:7213/api/PO/exportPayment/{poid}
+        /// </summary>
+        /// <param name="poid"></param>
+        /// <returns></returns>
+        [HttpGet("exportPayment/{poid}")]
+        public async Task<IActionResult> ExportPOPaymentExcel(int poid)
+        {
+            var excelBytes = await _poService.GeneratePOPaymentExcelAsync(poid);
+            return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"PO_{poid}_Payment.xlsx");
+        }
     }
 }
