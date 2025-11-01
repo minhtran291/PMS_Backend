@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace PMS.Application.Services.SalesQuotation
 {
@@ -846,7 +847,7 @@ namespace PMS.Application.Services.SalesQuotation
                     if (salesQuotation.RequestSalesQuotation.CustomerId != customer.Id)
                         return new ServiceResult<object>
                         {
-                            StatusCode = 400,
+                            StatusCode = 403,
                             Message = "Bạn không có quyền bình luận vào báo giá này"
                         };
                 }
@@ -858,7 +859,7 @@ namespace PMS.Application.Services.SalesQuotation
                     if (salesQuotation.SsId != staff.Id)
                         return new ServiceResult<object>
                         {
-                            StatusCode = 400,
+                            StatusCode = 403,
                             Message = "Bạn không có quyền bình luận vào báo giá này"
                         };
                 }
@@ -888,6 +889,191 @@ namespace PMS.Application.Services.SalesQuotation
                 };
             }
             catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi",
+                };
+            }
+        }
+
+        public async Task<ServiceResult<object>> SalesQuotaionDetailsAsync(int sqId, string userId)
+        {
+            try
+            {
+                var salesQuotation = await _unitOfWork.SalesQuotation.Query()
+                    .AsNoTracking()
+                    .Include(sq => sq.SalesQuotationComments)
+                    .Include(sq => sq.RequestSalesQuotation)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(d => d.LotProduct)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(d => d.TaxPolicy)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(d => d.Product)
+                    .FirstOrDefaultAsync(sq => sq.Id == sqId);
+
+                if (salesQuotation == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy báo giá"
+                    };
+
+                var user = await _unitOfWork.Users.Query()
+                    .AsNoTracking()
+                    .Include(u => u.CustomerProfile)
+                    .Include(u => u.StaffProfile)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 401,
+                        Message = "Không tìm thấy người dùng"
+                    };
+
+                var role = await _unitOfWork.Users.UserManager.IsInRoleAsync(user, UserRoles.CUSTOMER);
+
+                if (role)
+                {
+                    var customer = user.CustomerProfile
+                        ?? throw new Exception("Khach hang chua co profile");
+
+                    if (salesQuotation.Status == Core.Domain.Enums.SalesQuotationStatus.Draft)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = "Báo giá chưa được gửi không thể xem"
+                        };
+
+                    if (salesQuotation.RequestSalesQuotation.CustomerId != customer.Id)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 403,
+                            Message = "Bạn không có quyền xem báo giá này"
+                        };
+                }
+                else
+                {
+                    var staff = user.StaffProfile
+                        ?? throw new Exception("Nhan vien chua co profile");
+
+                    if (salesQuotation.SsId != staff.Id)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 403,
+                            Message = "Bạn không có quyền xem báo giá này"
+                        };
+                }
+
+                var details = new List<ViewSalesQuotationDetailsDTO>();
+
+                decimal subTotal = 0;
+                decimal taxTotal = 0;
+
+                foreach (var item in salesQuotation.SalesQuotaionDetails)
+                {
+                    if(item.LotProduct != null && item.TaxPolicy != null)
+                    {
+                        decimal taxRate = item.TaxPolicy.Rate;
+
+                        decimal salePrice = item.LotProduct.SalePrice;
+
+                        decimal itemSubTotal = 1 * salePrice;
+                        decimal itemTax = itemSubTotal * taxRate;
+                        decimal itemTotal = itemSubTotal + itemTax;
+
+                        subTotal += itemSubTotal;
+                        taxTotal += itemTax;
+
+                        var detail = new ViewSalesQuotationDetailsDTO
+                        {
+                            Id = item.Id,
+                            ProductName = item.Product.ProductName,
+                            Unit = item.Product.Unit,
+                            TaxText = item.TaxPolicy.Name,
+                            ExpiredDate = item.LotProduct.ExpiredDate.ToString("dd/MM/yyyy"),
+                            minQuantity = 1,
+                            SalesPrice = salePrice,
+                            ItemTotal = itemTotal,
+                            Note = item.Note
+                        };
+
+                        details.Add(detail);
+                    }
+                    else
+                    {
+                        var detail = new ViewSalesQuotationDetailsDTO
+                        {
+                            Id = item.Id,
+                            ProductName = item.Product.ProductName,
+                            Unit = item.Product.Unit,
+                            Note = item.Note
+                        };
+
+                        details.Add(detail);
+                    }
+                }
+
+                decimal grandTotal = subTotal + taxTotal;
+
+                var validityTimeSpan = salesQuotation.QuotationDate.HasValue ? salesQuotation.ExpiredDate - salesQuotation.QuotationDate : null;
+
+                string validityText;
+
+                if (validityTimeSpan.HasValue)
+                {
+                    var ts = validityTimeSpan.Value;
+
+                    if (ts.TotalDays >= 1)
+                    {
+                        int days = (int)Math.Floor(ts.TotalDays);
+                        validityText = $"{days} ngày";
+                    }
+                    else if (ts.TotalHours >= 1)
+                    {
+                        int hours = (int)Math.Floor(ts.TotalHours);
+                        validityText = $"{hours} giờ";
+                    }
+                    else
+                    {
+                        int minutes = (int)Math.Ceiling(ts.TotalMinutes); // làm tròn lên
+                        validityText = $"{minutes} phút";
+                    }
+                }
+                else
+                {
+                    validityText = "Chưa xác định";
+                }
+
+                var sqDTO = new ViewSalesQuotationDTO
+                {
+                    Id = salesQuotation.Id,
+                    RequestCode = salesQuotation.RequestSalesQuotation.RequestCode,
+                    QuotationCode = salesQuotation.QuotationCode,
+                    QuotationDate = salesQuotation.QuotationDate,
+                    ExpiredDate = salesQuotation.ExpiredDate,
+                    Status = salesQuotation.Status,
+                    Details = details,
+                    Comments = _mapper.Map<List<SalesQuotationCommentDTO>>(salesQuotation.SalesQuotationComments?.ToList()),
+                    subTotal = subTotal,
+                    taxTotal = taxTotal,
+                    grandTotal = grandTotal,
+                    note = $@"Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá
+Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế"
+                };
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = sqDTO
+                };
+            }
+            catch(Exception ex)
             {
                 _logger.LogError(ex, "Loi");
 

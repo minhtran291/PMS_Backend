@@ -52,6 +52,8 @@ namespace PMS.Application.Automapper
             CreateMap<Warehouse, WarehouseDetailsDTO>()
                 .IncludeBase<Warehouse, WarehouseDTO>()
                 .ForMember(dest => dest.WarehouseLocations, opt => opt.MapFrom(src => src.WarehouseLocations));
+
+            CreateMap<SalesQuotationComment, SalesQuotationCommentDTO>();
         }
     }
 }
