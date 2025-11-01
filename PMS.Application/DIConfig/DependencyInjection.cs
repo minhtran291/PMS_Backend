@@ -2,18 +2,21 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.Application.Automapper;
+using PMS.Application.DTOs.VNPay;
 using PMS.Application.Services.Admin;
 using PMS.Application.Services.Auth;
 using PMS.Application.Services.Category;
 using PMS.Application.Services.ExternalService;
+using PMS.Application.Services.Notification;
 using PMS.Application.Services.Product;
+using PMS.Application.Services.RequestSalesQuotation;
+using PMS.Application.Services.SalesOrder;
 using PMS.Application.Services.Supplier;
 using PMS.Application.Services.User;
+using PMS.Application.Services.VNpay;
 using PMS.Application.Services.Warehouse;
 using PMS.Application.Services.WarehouseLocation;
-using PMS.Application.Services.Notification;
 using PMS.Core.ConfigOptions;
-using PMS.Application.Services.RequestSalesQuotation;
 
 namespace PMS.Application.DIConfig
 {
@@ -38,14 +41,19 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IWarehouseLocationService, WarehouseLocationService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IRequestSalesQuotationService, RequestSalesQuotationService>();
+            services.AddScoped<ISalesOrderService, SalesOrderService>();
+            // VNPay
+            services.AddScoped<IVnPayService, VnPayService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
         {
             var emailConfig = configuration.GetSection("Email");
             var jwtConfig = configuration.GetSection("Jwt");
+            var VnPayConfig = configuration.GetSection("VnPay");
             services.Configure<EmailConfig>(emailConfig);
             services.Configure<JwtConfig>(jwtConfig);
+            services.Configure<VNPayConfig>(VnPayConfig);
         }
 
         public static void AddExternalServices(this IServiceCollection services)

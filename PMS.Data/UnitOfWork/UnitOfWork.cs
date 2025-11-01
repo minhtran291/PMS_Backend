@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Storage;
 using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
+using PMS.Data.Repositories.CustomerDeptRepository;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
@@ -19,6 +20,8 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesOrderDetailsRepository;
+using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
@@ -46,7 +49,10 @@ namespace PMS.Data.UnitOfWork
         ILotProductRepository lotProduct, IPurchasingOrderRepository purchasingOrder,
         IPurchasingOrderDetailRepository purchasingOrderDetail,
         IQuotationRepository quotation,
-        IQuotationDetailRepository quotationDetail) : IUnitOfWork
+        IQuotationDetailRepository quotationDetail,
+        ISalesOrderRepository salesOrder,
+        ISalesOrderDetailsRepository salesOrderDetails,
+        ICustomerDeptRepository customerDept) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -76,7 +82,11 @@ namespace PMS.Data.UnitOfWork
         //PurchasingOrder
         public IPurchasingOrderRepository PurchasingOrder { get; private set; } = purchasingOrder;
         public IPurchasingOrderDetailRepository PurchasingOrderDetail { get; private set; } = purchasingOrderDetail;
-
+        //SalesOrder
+        public ISalesOrderRepository SalesOrder { get; private set; } = salesOrder;
+        public ISalesOrderDetailsRepository SalesOrderDetails { get; private set; } = salesOrderDetails;
+        //CustomerDept
+        public ICustomerDeptRepository CustomerDept { get; private set; } = customerDept;
         public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();

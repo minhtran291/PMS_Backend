@@ -1,4 +1,5 @@
-﻿using PMS.Data.Repositories.CustomerProfile;
+﻿using PMS.Data.Repositories.CustomerDeptRepository;
+using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
@@ -11,6 +12,8 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesOrderDetailsRepository;
+using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
@@ -47,7 +50,11 @@ namespace PMS.Data.UnitOfWork
         //PurchasingOrder
         IPurchasingOrderRepository PurchasingOrder { get; }
         IPurchasingOrderDetailRepository PurchasingOrderDetail { get; }
-
+        //SalesOrder
+        ISalesOrderRepository SalesOrder { get; }
+        ISalesOrderDetailsRepository SalesOrderDetails { get; }
+        //CustomerDept
+        ICustomerDeptRepository CustomerDept { get; }
 
         Task<int> CommitAsync();
         Task BeginTransactionAsync();

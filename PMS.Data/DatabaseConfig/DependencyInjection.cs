@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.Core.Domain.Identity;
+using PMS.Data.Repositories.CustomerDeptRepository;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
@@ -21,6 +22,8 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesOrderDetailsRepository;
+using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.User;
@@ -70,6 +73,12 @@ namespace PMS.Data.DatabaseConfig
             //
             services.AddScoped<IPurchasingOrderRepository, PurchasingOrderRepository>();
             services.AddScoped<IPurchasingOrderDetailRepository, PurchasingOrderDetailRepository>();
+            //
+            services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
+            services.AddScoped<ISalesOrderDetailsRepository, SalesOrderDetailsRepository>();
+            //
+            services.AddScoped<ICustomerDeptRepository, CustomerDeptRepository>();
+
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)
