@@ -1224,5 +1224,35 @@ namespace PMS.API.Services.PRFQService
 
             return ServiceResult<object>.SuccessResult(result, "Lấy thông tin preview PRFQ thành công", 200);
         }
+
+        public async Task<ServiceResult< bool>> UpdatePRFQStatusAsync(int prfqId, PRFQStatus newStatus)
+        {
+            var prfq = await _unitOfWork.PurchasingRequestForQuotation
+                .Query()
+                .FirstOrDefaultAsync(p => p.PRFQID == prfqId);
+
+            if (prfq == null)
+                return new ServiceResult<bool>
+                {
+                    Data = false,
+                    Message = $"Không tìm thấy prfq với id {prfqId}",
+                    StatusCode = 200,
+                    Success = false,
+                };
+
+            if (prfq.Status == PRFQStatus.Approved && newStatus == PRFQStatus.Draft)
+                throw new Exception("Không thể chuyển từ trạng thái Approved về Draft.");
+            prfq.Status = newStatus;         
+            _unitOfWork.PurchasingRequestForQuotation.Update(prfq);
+            await _unitOfWork.CommitAsync();
+
+            return new ServiceResult<bool>
+            {
+                Data = true,
+                Message ="Thanh cong",
+                StatusCode=200,
+                Success=true,
+            };
+        }
     }
 }

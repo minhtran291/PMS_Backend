@@ -22,5 +22,6 @@ namespace PMS.API.Services.PRFQService
         Task<byte[]> GenerateExcelAsync(int prfqId);
 
         Task<ServiceResult<object>> PreviewPRFQAsync(int id);
+        Task<ServiceResult<bool>> UpdatePRFQStatusAsync(int prfqId, PRFQStatus newStatus);
     }
 }
