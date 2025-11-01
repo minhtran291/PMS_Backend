@@ -535,7 +535,7 @@ namespace PMS.API.Services.POService
     <p class='note'>Tôi, {paymentName}, với tư cách là bên mua, xác nhận đã thực hiện thanh toán đúng và đầy đủ số tiền theo thỏa thuận giữa hai bên.</p>
     <p class='note'>Việc thanh toán này được thực hiện hoàn toàn tự nguyện, minh bạch, không bị ép buộc, lừa dối hoặc chi phối dưới bất kỳ hình thức nào.</p>
     <p class='note'>Tôi hiểu và đồng ý rằng việc hoàn tất thanh toán đồng nghĩa với việc xác lập quyền sở hữu, nghĩa vụ nhận hàng hóa/dịch vụ theo hợp đồng đã ký kết.</p>
-    <p class='note'>Tôi cam kết chịu hoàn toàn trách nhiệm trước pháp luật Việt Nam về tính trung thực, chính xác của thông tin và giao dịch nêu trên.</p>
+    <p class='note'>Tôi cam kết chịu hoàn toàn trách nhiệm trước hiến pháp và pháp luật nước CHXHCN Việt Nam về tính trung thực, chính xác của thông tin và giao dịch nêu trên.</p>
 
     <div class='signature'>
         <table>

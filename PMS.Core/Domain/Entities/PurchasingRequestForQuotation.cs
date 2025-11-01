@@ -30,9 +30,11 @@ namespace PMS.Core.Domain.Entities
         public PRFQStatus Status { get; set; } 
         [ForeignKey("SupplierID")]
         public virtual Supplier Supplier { get; set; } = null!;
+
         public string UserId { get; set; }
         [ForeignKey("UserId")]
         public virtual User User { get; set; } = null!;
+        public virtual Quotation Quotation { get; set; } = null!;
         public virtual ICollection<PurchasingRequestProduct> PRPS { get; set; } = new List<PurchasingRequestProduct>();
     }
 }

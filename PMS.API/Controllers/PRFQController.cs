@@ -62,7 +62,7 @@ namespace PMS.API.Controllers
         [HttpPost("convertToPo")]
         [Consumes("application/json")]
         [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> ConvertToPurchaseOrder([FromBody] PurchaseOrderInputDto input)
+        public async Task<IActionResult> ConvertToPurchaseOrder([FromBody] PurchaseOrderInputDto input )
         {
             if (!ModelState.IsValid)
                 return BadRequest(new ServiceResult<string>
@@ -84,7 +84,7 @@ namespace PMS.API.Controllers
                     });
                 }
 
-                var result = await _iPRFQService.ConvertExcelToPurchaseOrderAsync(userId, input);
+                var result = await _iPRFQService.ConvertExcelToPurchaseOrderAsync(userId, input, input.status);
                 return HandleServiceResult(result);
             }
             catch (Exception ex)

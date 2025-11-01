@@ -1,11 +1,12 @@
 ﻿using AutoMapper;
-using DinkToPdf.Contracts;
 using DinkToPdf;
+using DinkToPdf.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.API.Services.GRNService;
 using PMS.API.Services.POService;
 using PMS.API.Services.PRFQService;
+using PMS.API.Services.QuotationService;
 using PMS.Application.Automapper;
 using PMS.Application.Services.Admin;
 using PMS.Application.Services.Auth;
@@ -49,6 +50,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IPOService, POService>();
             services.AddScoped<IGRNService, GRNService>();
             services.AddScoped<ISalesQuotationService, SalesQuotationService>();
+            services.AddScoped<IQuotationService, QuotationService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
