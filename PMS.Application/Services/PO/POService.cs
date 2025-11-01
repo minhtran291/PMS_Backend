@@ -1,5 +1,7 @@
 ﻿using System.Drawing;
 using AutoMapper;
+using DinkToPdf;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
@@ -13,7 +15,7 @@ using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Services.POService
 {
-    public class POService(IUnitOfWork unitOfWork, IMapper mapper)
+    public class POService(IUnitOfWork unitOfWork, IMapper mapper, IWebHostEnvironment webHostEnvironment)
         : Service(unitOfWork, mapper), IPOService
     {
         public async Task<ServiceResult<IEnumerable<POViewDTO>>> GetAllPOAsync()
@@ -57,7 +59,7 @@ namespace PMS.API.Services.POService
             try
             {
                 var existingPO = await _unitOfWork.PurchasingOrder.Query()
-                   
+
                     .FirstOrDefaultAsync(po => po.POID == poid);
 
                 if (existingPO == null)
@@ -86,7 +88,7 @@ namespace PMS.API.Services.POService
                 existingPO.PaymentDate = DateTime.Now;
                 existingPO.PaymentBy = userId;
 
-                
+
 
                 _unitOfWork.PurchasingOrder.Update(existingPO);
                 await _unitOfWork.CommitAsync();
@@ -98,11 +100,11 @@ namespace PMS.API.Services.POService
                 var paymentName = user.UserName;
 
                 var resultDto = new POPaidViewDTO
-                {                   
+                {
                     PaymentBy = paymentName,
                     PaymentDate = existingPO.PaymentDate,
                     Status = existingPO.Status,
-                    Debt = existingPO.Debt,  
+                    Debt = existingPO.Debt,
                 };
 
                 return new ServiceResult<POPaidViewDTO>
@@ -219,7 +221,7 @@ namespace PMS.API.Services.POService
                     };
                 }
 
-                
+
                 if (pOUpdateDTO.paid > existingPO.Debt)
                 {
                     return new ServiceResult<POPaidViewDTO>
@@ -230,11 +232,11 @@ namespace PMS.API.Services.POService
                     };
                 }
 
-                
+
                 existingPO.Deposit += pOUpdateDTO.paid;
                 existingPO.Debt = existingPO.Total - existingPO.Deposit;
 
-               
+
                 if (existingPO.Debt == 0)
                 {
                     existingPO.Status = PurchasingOrderStatus.compeleted;
@@ -250,7 +252,7 @@ namespace PMS.API.Services.POService
                 _unitOfWork.PurchasingOrder.Update(existingPO);
                 await _unitOfWork.CommitAsync();
 
-               
+
                 var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy);
                 if (user == null)
                 {
@@ -259,7 +261,7 @@ namespace PMS.API.Services.POService
 
                 var paymentName = user.UserName;
 
-                
+
                 var resultDto = new POPaidViewDTO
                 {
                     PaymentBy = paymentName,
@@ -289,7 +291,7 @@ namespace PMS.API.Services.POService
                 };
             }
         }
-        
+
         public async Task<ServiceResult<bool>> ChangeStatusAsync(int poid, PurchasingOrderStatus newStatus)
         {
             try
@@ -351,7 +353,7 @@ namespace PMS.API.Services.POService
             };
         }
 
-        public async Task<byte[]> GeneratePOPaymentExcelAsync(int poid)
+        public async Task<byte[]> GeneratePOPaymentPdfAsync(int poid)
         {
             var po = await _unitOfWork.PurchasingOrder.Query()
                 .Include(p => p.Quotations)
@@ -361,193 +363,230 @@ namespace PMS.API.Services.POService
             if (po == null)
                 throw new Exception($"Không tìm thấy đơn hàng với POID = {poid}");
 
-            using var package = new ExcelPackage();
-            var ws = package.Workbook.Worksheets.Add("Thanh toán đơn hàng");
-
-            ws.Cells.Style.Font.Name = "Arial";
-            ws.Cells.Style.Font.Size = 11;
-            ws.Cells.Style.WrapText = false;
-            ws.DefaultRowHeight = 18;
-
-            //
-            ws.Cells[1, 1, 1, 6].Merge = true;
-            ws.Cells[1, 1].Value = "BÁO CÁO THANH TOÁN ĐƠN HÀNG (PURCHASING ORDER PAYMENT)";
-            ws.Cells[1, 1].Style.Font.Bold = true;
-            ws.Cells[1, 1].Style.Font.Size = 16;
-            ws.Cells[1, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            ws.Cells[1, 1].Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-            ws.Cells[1, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[1, 1].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 102, 204));
-            ws.Cells[1, 1].Style.Font.Color.SetColor(Color.White);
-            ws.Row(1).Height = 28;
-
-            int row = 3;
-            //
-            ws.Cells[row, 1].Value = "Mã đơn hàng (POID):";
-            ws.Cells[row, 2].Value = po.POID;
-            ws.Cells[row, 1].Style.Font.Bold = true;
-
-            ws.Cells[row, 4].Value = "Trạng thái:";
-            ws.Cells[row, 5, row, 6].Merge = true;
-            ws.Cells[row, 5].Value = po.Status.ToString();
-            row++;
-
-            ws.Cells[row, 1].Value = "Từ báo giá:";
-            ws.Cells[row, 2, row, 3].Merge = true;
-            ws.Cells[row, 2].Value = po.QID;
-            ws.Cells[row, 1].Style.Font.Bold = true;
-
-            ws.Cells[row, 4].Value = "Người tạo đơn:";
-            ws.Cells[row, 5, row, 6].Merge = true;
-            ws.Cells[row, 5].Value = po.User?.UserName ?? "—";
-            row++;
-
-            ws.Cells[row, 1].Value = "Tổng giá trị:";
-            ws.Cells[row, 2].Value = po.Total;
-            ws.Cells[row, 2].Style.Numberformat.Format = "#,##0.00";
-            ws.Cells[row, 1].Style.Font.Bold = true;
-
-            ws.Cells[row, 4].Value = "Tiền gửi (Paid):";
-            ws.Cells[row, 5].Value = po.Deposit;
-            ws.Cells[row, 5].Style.Numberformat.Format = "#,##0.00";
-            row++;
-
-            ws.Cells[row, 1].Value = "Công nợ còn lại:";
-            ws.Cells[row, 2].Value = po.Debt;
-            ws.Cells[row, 2].Style.Numberformat.Format = "#,##0.00";
-            ws.Cells[row, 1].Style.Font.Bold = true;
-
-            ws.Cells[row, 4].Value = "Ngày thanh toán:";
-            ws.Cells[row, 5, row, 6].Merge = true;
-            if (po.PaymentDate != default)
-            {
-                ws.Cells[row, 5].Value = po.PaymentDate;
-                ws.Cells[row, 5].Style.Numberformat.Format = "dd/MM/yyyy HH:mm";
-            }
-            else
-            {
-                ws.Cells[row, 5].Value = "—";
-            }
-            row++;
-
             var paymentUser = po.PaymentBy != null
                 ? await _unitOfWork.Users.UserManager.FindByIdAsync(po.PaymentBy)
                 : null;
             string paymentName = paymentUser?.UserName ?? "—";
 
-            ws.Cells[row, 1].Value = "Người xác nhận thanh toán:";
-            ws.Cells[row, 2, row, 3].Merge = true;
-            ws.Cells[row, 2].Value = paymentName;
-            ws.Cells[row, 1].Style.Font.Bold = true;
+            string logoPath = Path.Combine(webHostEnvironment.WebRootPath, "assets", "myESign.png");
+            string sealPath = Path.Combine(webHostEnvironment.WebRootPath, "assets", "myEsignCompany.png");
+            string backgroundPath = Path.Combine(webHostEnvironment.WebRootPath, "assets", "background.png");
 
-            row += 2;
+            string logoBase64 = File.Exists(logoPath)
+                ? $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(logoPath))}"
+                : "";
+            string sealBase64 = File.Exists(sealPath)
+                ? $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(sealPath))}"
+                : "";
 
-            // chi tiet
-            ws.Cells[row, 1, row, 6].Merge = true;
-            ws.Cells[row, 1].Value = "CHI TIẾT THANH TOÁN";
-            ws.Cells[row, 1].Style.Font.Bold = true;
-            ws.Cells[row, 1].Style.Font.Size = 13;
-            ws.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            row++;
 
-            string[] headers = { "STT", "Trạng thái", "Tổng giá trị", "Tiền đã thanh toán", "Công nợ còn lại", "Ngày cập nhật" };
-            for (int i = 0; i < headers.Length; i++)
+            string html = $@"
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+           <style>
+            @page {{
+                margin: 0;
+            }}
+
+            html, body {{
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                font-family: Arial, sans-serif;
+                font-size: 12pt;
+                color: #333;
+                position: relative;
+
+                /* Giữ đúng tỷ lệ ảnh nền */
+                background: url('file:///{backgroundPath.Replace("\\", "/")}') no-repeat center center ;
+                background-size: cover; /* cover = fill hết mà không méo */
+                background-attachment: local;
+            }}
+
+            /* Lớp phủ làm mờ nền */
+            body::before {{
+                content: """";
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background-color: rgba(255, 255, 255, 0.82); /* độ mờ */
+                z-index: 0;
+            }}
+
+            /* Nội dung chính */
+            .content {{
+                position: relative;
+                z-index: 1;
+                padding: 40px 50px;
+            }}
+
+            h1 {{
+                background-color: #0066CC;
+                color: white;
+                text-align: center;
+                padding: 10px;
+                font-size: 16pt;
+                border-radius: 6px;
+            }}
+
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+            }}
+
+            td, th {{
+                border: 1px solid #999;
+                padding: 6px 8px;
+                vertical-align: middle;
+            }}
+
+            th {{
+                background-color: #009900;
+                color: white;
+                text-align: center;
+            }}
+
+            .section-title {{
+                background-color: #d9d9d9;
+                text-align: center;
+                font-weight: bold;
+                padding: 6px;
+                font-size: 13pt;
+                margin-top: 15px;
+            }}
+
+            .note {{
+                font-style: italic;
+                text-align: justify;
+                margin: 10px 0;
+            }}
+
+            .signature {{
+                margin-top: 40px;
+                text-align: center;
+            }}
+
+            .small-note {{
+                font-size: 9pt;
+                text-align: center;
+                color: #666;
+                margin-top: 20px;
+            }}
+        </style>
+        </head>
+        <body>
+   <div class='content'>
+
+    <h1>BÁO CÁO THANH TOÁN ĐƠN HÀNG (PURCHASING ORDER PAYMENT)</h1>
+
+    <table>
+        <tr>
+            <td><b>Mã đơn hàng (POID):</b></td><td>{po.POID}</td>
+            <td><b>Trạng thái:</b></td><td>{po.Status}</td>
+        </tr>
+        <tr>
+            <td><b>Từ báo giá:</b></td><td>{po.QID}</td>
+            <td><b>Người tạo đơn:</b></td><td>{po.User?.UserName ?? "—"}</td>
+        </tr>
+        <tr>
+            <td><b>Tổng giá trị:</b></td><td>{po.Total:N2}</td>
+            <td><b>Tiền gửi (Paid):</b></td><td>{po.Deposit:N2}</td>
+        </tr>
+        <tr>
+            <td><b>Công nợ còn lại:</b></td><td>{po.Debt:N2}</td>
+            <td><b>Ngày thanh toán:</b></td><td>{(po.PaymentDate != default ? po.PaymentDate.ToString("dd/MM/yyyy HH:mm") : "—")}</td>
+        </tr>
+        <tr>
+            <td><b>Người xác nhận thanh toán:</b></td><td colspan='3'>{paymentName}</td>
+        </tr>
+    </table>
+
+    <div class='section-title'>CHI TIẾT THANH TOÁN</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>STT</th>
+                <th>Trạng thái</th>
+                <th>Tổng giá trị</th>
+                <th>Tiền đã thanh toán</th>
+                <th>Công nợ còn lại</th>
+                <th>Ngày cập nhật</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>{po.Status}</td>
+                <td>{po.Total:N2}</td>
+                <td>{po.Deposit:N2}</td>
+                <td>{po.Debt:N2}</td>
+                <td>{(po.PaymentDate != default ? po.PaymentDate.ToString("dd/MM/yyyy HH:mm") : "—")}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p class='small-note'>(Tệp này được tạo tự động từ hệ thống kế toán – vui lòng không chỉnh sửa thủ công)</p>
+
+    <div class='section-title'>GHI CHÚ (NOTES)</div>
+
+    <p class='note'>Tôi, {paymentName}, với tư cách là bên mua, xác nhận đã thực hiện thanh toán đúng và đầy đủ số tiền theo thỏa thuận giữa hai bên.</p>
+    <p class='note'>Việc thanh toán này được thực hiện hoàn toàn tự nguyện, minh bạch, không bị ép buộc, lừa dối hoặc chi phối dưới bất kỳ hình thức nào.</p>
+    <p class='note'>Tôi hiểu và đồng ý rằng việc hoàn tất thanh toán đồng nghĩa với việc xác lập quyền sở hữu, nghĩa vụ nhận hàng hóa/dịch vụ theo hợp đồng đã ký kết.</p>
+    <p class='note'>Tôi cam kết chịu hoàn toàn trách nhiệm trước hiến pháp và pháp luật nước CHXHCN Việt Nam về tính trung thực, chính xác của thông tin và giao dịch nêu trên.</p>
+
+    <div class='signature'>
+        <table>
+            <tr style=""text-align: center;"">
+                <td><b>Giám đốc DH (Chair man)</b></td>
+                <td><b>Kế toán trưởng (Accountant)</b></td>
+            </tr>
+            <tr>
+                <td style='height:120px'></td>
+                <td style='text-align:center; position:relative;'>
+
+                    {(string.IsNullOrEmpty(sealBase64) ? "" :
+                                $"<img src='{sealBase64}' style='width:140px;height:auto;opacity:0.9;'/>")}
+                    
+
+                    {(string.IsNullOrEmpty(logoBase64) ?
+                                "<br/><span style='color:red'>(Không có chữ ký điện tử)</span>" :
+                                $"<img src='{logoBase64}' style='width:180px;height:auto;position:relative;margin-top:-200px;margin-left:-120px;z-index:2;'/>")}
+                    
+                    <div style='font-style:italic;color:gray;margin-top:-10px;'>
+                         Nhân viên KÝ RÕ HỌ TÊN
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+  </div>
+</body>
+</html>";
+
+
+            var converter = new SynchronizedConverter(new PdfTools());
+            var doc = new HtmlToPdfDocument()
             {
-                ws.Cells[row, i + 1].Value = headers[i];
-                ws.Cells[row, i + 1].Style.Font.Bold = true;
-                ws.Cells[row, i + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-                ws.Cells[row, i + 1].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 153, 0));
-                ws.Cells[row, i + 1].Style.Font.Color.SetColor(Color.White);
-                ws.Cells[row, i + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                GlobalSettings = {
+            PaperSize = PaperKind.A4,
+            Orientation = Orientation.Portrait,
+            DocumentTitle = $"PO Payment Report #{po.POID}"
+        },
+                Objects = {
+            new ObjectSettings {
+                HtmlContent = html,
+                WebSettings = { DefaultEncoding = "utf-8", LoadImages = true }
             }
-            row++;
-
-            ws.Cells[row, 1].Value = 1;
-            ws.Cells[row, 2].Value = po.Status.ToString();
-            ws.Cells[row, 3].Value = po.Total;
-            ws.Cells[row, 3].Style.Numberformat.Format = "#,##0.00";
-            ws.Cells[row, 4].Value = po.Deposit;
-            ws.Cells[row, 4].Style.Numberformat.Format = "#,##0.00";
-            ws.Cells[row, 5].Value = po.Debt;
-            ws.Cells[row, 5].Style.Numberformat.Format = "#,##0.00";
-            if (po.PaymentDate != default)
-            {
-                ws.Cells[row, 6].Value = po.PaymentDate;
-                ws.Cells[row, 6].Style.Numberformat.Format = "dd/MM/yyyy HH:mm";
-            }
-            else
-            {
-                ws.Cells[row, 6].Value = "—";
-            }
-
-            var tableRange = ws.Cells[row - 1, 1, row, 6];
-            tableRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-            tableRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-            tableRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-            tableRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
-            tableRange.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-
-            row += 3;
-
-            //ghi chu
-            ws.Cells[row, 1, row, 6].Merge = true;
-            ws.Cells[row, 1].Value = "(Tệp này được tạo tự động từ hệ thống kế toán – vui lòng không chỉnh sửa thủ công)";
-            ws.Cells[row, 1].Style.Font.Italic = true;
-            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            ws.Cells[row, 1].Style.Font.Size = 9;
-            row += 2;
-
-
-                        // note
-            ws.Cells[row, 1, row, 6].Merge = true;
-            ws.Cells[row, 1].Value = "GHI CHÚ (NOTES)";
-            ws.Cells[row, 1].Style.Font.Bold = true;
-            ws.Cells[row, 1].Style.Font.Size = 13;
-            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            ws.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-            row++;
-
-
-            string[] noteLines =
-            {
-    $"Tôi, {paymentName}, với tư cách là bên mua, xác nhận đã thực hiện thanh toán đúng và đầy đủ số tiền theo thỏa thuận giữa hai bên.",
-    "Việc thanh toán này được thực hiện hoàn toàn tự nguyện, minh bạch, không bị ép buộc, lừa dối hoặc chi phối dưới bất kỳ hình thức nào.",
-    "Tôi hiểu và đồng ý rằng việc hoàn tất thanh toán đồng nghĩa với việc xác lập quyền sở hữu, nghĩa vụ nhận hàng hóa/dịch vụ theo hợp đồng đã ký kết.",
-    "Tôi cam kết chịu hoàn toàn trách nhiệm trước pháp luật Việt Nam về tính trung thực, chính xác của thông tin và giao dịch nêu trên."
-};
-
-            foreach (var line in noteLines)
-            {
-                ws.Cells[row, 1, row, 6].Merge = true;
-                ws.Cells[row, 1].Value = line;
-                ws.Cells[row, 1].Style.WrapText = true;
-                ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Justify;
-                ws.Cells[row, 1].Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-                ws.Cells[row, 1].Style.Font.Italic = true;
-                row++;
-            }
-
-            row += 2; 
-
-            ws.Cells[row, 1, row, 6].Merge = true;
-            ws.Cells[row, 1].Value = $"Tôi bên mua (A): ....................................................      Ngày ký: {DateTime.Now:dd/MM/yyyy}";
-            ws.Cells[row, 1].Style.Font.Bold = true;
-            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
-
-
-            // alige
-            ws.Cells[ws.Dimension.Address].AutoFitColumns();
-            for (int i = 1; i <= 6; i++)
-                ws.Column(i).Width = Math.Min(ws.Column(i).Width, 40);
-
-            ws.View.ZoomScale = 100;
-
-            return package.GetAsByteArray();
         }
+            };
 
+            var pdfBytes = converter.Convert(doc);
+            return pdfBytes;
+        }
 
     }
 }

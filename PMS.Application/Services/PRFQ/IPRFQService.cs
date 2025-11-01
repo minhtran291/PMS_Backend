@@ -11,7 +11,7 @@ namespace PMS.API.Services.PRFQService
     {
         Task<ServiceResult<int>> CreatePRFQAsync(string userId, int supplierId, string taxCode, string myPhone, string myAddress, List<int> productIds, PRFQStatus status);
 
-        Task<ServiceResult<int>> ConvertExcelToPurchaseOrderAsync(string userId, PurchaseOrderInputDto input);
+        Task<ServiceResult<int>> ConvertExcelToPurchaseOrderAsync(string userId, PurchaseOrderInputDto input, PurchasingOrderStatus purchasingOrderStatus);
         Task<PreviewExcelResponse> PreviewExcelProductsAsync(IFormFile file);
         Task<ServiceResult<bool>> DeletePRFQAsync(int prfqId, string userId);
 
@@ -22,5 +22,6 @@ namespace PMS.API.Services.PRFQService
         Task<byte[]> GenerateExcelAsync(int prfqId);
 
         Task<ServiceResult<object>> PreviewPRFQAsync(int id);
+        Task<ServiceResult<bool>> UpdatePRFQStatusAsync(int prfqId, PRFQStatus newStatus);
     }
 }

@@ -429,6 +429,11 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(u => u.PurchasingRequestForQuotations)
                     .HasForeignKey(prfq => prfq.UserId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(prfq => prfq.Quotation)
+                        .WithOne(q => q.PurchasingRequestForQuotation)
+                        .HasForeignKey<Quotation>(q => q.PRFQID)
+                        .OnDelete(DeleteBehavior.Cascade);
             });
 
             builder.Entity<PurchasingRequestProduct>(entity =>
@@ -536,6 +541,9 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.Property(q => q.Status)
                     .IsRequired();
+
+                entity.Property(q => q.PRFQID);
+                   
 
 
                 entity.HasMany(q => q.PurchasingOrders)

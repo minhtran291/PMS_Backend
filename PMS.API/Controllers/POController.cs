@@ -103,17 +103,19 @@ namespace PMS.API.Controllers
             return HandleServiceResult(result);
         }
 
+
         /// <summary>
-        /// https://localhost:7213/api/PO/exportPayment/{poid}
+        /// Xuất file PDF báo cáo thanh toán đơn hàng (PO Payment Report)
+        /// GET: https://localhost:7213/api/PO/exportPaymentPdf/{poid}
         /// </summary>
-        /// <param name="poid"></param>
-        /// <returns></returns>
-        [HttpGet("exportPayment/{poid}")]
-        public async Task<IActionResult> ExportPOPaymentExcel(int poid)
+        /// <param name="poid">Mã PO cần xuất</param>
+        /// <returns>File PDF</returns>
+        [HttpGet("exportPaymentPdf/{poid}")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> ExportPOPaymentPdf(int poid)
         {
-            var excelBytes = await _poService.GeneratePOPaymentExcelAsync(poid);
-            return File(excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"PO_{poid}_Payment.xlsx");
+            var pdfBytes = await _poService.GeneratePOPaymentPdfAsync(poid);
+            return File(pdfBytes, "application/pdf", $"PO_{poid}_Payment.pdf");
         }
     }
 }

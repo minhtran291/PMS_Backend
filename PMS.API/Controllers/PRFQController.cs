@@ -6,6 +6,7 @@ using PMS.API.Services.PRFQService;
 using PMS.Application.DTOs.PRFQ;
 using PMS.Application.DTOs.RequestSalesQuotation;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Enums;
 
 namespace PMS.API.Controllers
 {
@@ -61,7 +62,7 @@ namespace PMS.API.Controllers
         [HttpPost("convertToPo")]
         [Consumes("application/json")]
         [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> ConvertToPurchaseOrder([FromBody] PurchaseOrderInputDto input)
+        public async Task<IActionResult> ConvertToPurchaseOrder([FromBody] PurchaseOrderInputDto input )
         {
             if (!ModelState.IsValid)
                 return BadRequest(new ServiceResult<string>
@@ -83,7 +84,7 @@ namespace PMS.API.Controllers
                     });
                 }
 
-                var result = await _iPRFQService.ConvertExcelToPurchaseOrderAsync(userId, input);
+                var result = await _iPRFQService.ConvertExcelToPurchaseOrderAsync(userId, input, input.status);
                 return HandleServiceResult(result);
             }
             catch (Exception ex)
@@ -203,6 +204,27 @@ namespace PMS.API.Controllers
             Response.Headers.Append("Content-Disposition", $"attachment; filename=PRFQ_{prfqId}.xlsx");
             return File(result,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        }
+
+        /// <summary>
+        ///  https://localhost:7213/api/PRFQ/{prfqId}/status
+        /// </summary>
+        /// <param name="prfqId"></param>
+        /// <param name="newStatus"></param>
+        /// <returns></returns>
+        [HttpPut("{prfqId}/status")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> UpdatePRFQStatus(int prfqId, [FromBody] PRFQStatus newStatus)
+        {
+            try
+            {
+                await _iPRFQService.UpdatePRFQStatusAsync(prfqId, newStatus);
+                return Ok(new { Message = $"Đã cập nhật trạng thái PRFQ {prfqId} thành {newStatus}" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Error = ex.Message });
+            }
         }
     }
 }
