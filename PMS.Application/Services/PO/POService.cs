@@ -381,102 +381,102 @@ namespace PMS.API.Services.POService
 
 
             string html = $@"
-<html>
-<head>
-    <meta charset='UTF-8'>
-   <style>
-    @page {{
-        margin: 0;
-    }}
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+           <style>
+            @page {{
+                margin: 0;
+            }}
 
-    html, body {{
-        width: 100%;
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        font-family: Arial, sans-serif;
-        font-size: 12pt;
-        color: #333;
-        position: relative;
+            html, body {{
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                font-family: Arial, sans-serif;
+                font-size: 12pt;
+                color: #333;
+                position: relative;
 
-        /* Giữ đúng tỷ lệ ảnh nền */
-        background: url('file:///{backgroundPath.Replace("\\", "/")}') no-repeat center center ;
-        background-size: cover; /* cover = fill hết mà không méo */
-        background-attachment: local;
-    }}
+                /* Giữ đúng tỷ lệ ảnh nền */
+                background: url('file:///{backgroundPath.Replace("\\", "/")}') no-repeat center center ;
+                background-size: cover; /* cover = fill hết mà không méo */
+                background-attachment: local;
+            }}
 
-    /* Lớp phủ làm mờ nền */
-    body::before {{
-        content: """";
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background-color: rgba(255, 255, 255, 0.82); /* độ mờ */
-        z-index: 0;
-    }}
+            /* Lớp phủ làm mờ nền */
+            body::before {{
+                content: """";
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background-color: rgba(255, 255, 255, 0.82); /* độ mờ */
+                z-index: 0;
+            }}
 
-    /* Nội dung chính */
-    .content {{
-        position: relative;
-        z-index: 1;
-        padding: 40px 50px;
-    }}
+            /* Nội dung chính */
+            .content {{
+                position: relative;
+                z-index: 1;
+                padding: 40px 50px;
+            }}
 
-    h1 {{
-        background-color: #0066CC;
-        color: white;
-        text-align: center;
-        padding: 10px;
-        font-size: 16pt;
-        border-radius: 6px;
-    }}
+            h1 {{
+                background-color: #0066CC;
+                color: white;
+                text-align: center;
+                padding: 10px;
+                font-size: 16pt;
+                border-radius: 6px;
+            }}
 
-    table {{
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 15px;
-    }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+            }}
 
-    td, th {{
-        border: 1px solid #999;
-        padding: 6px 8px;
-        vertical-align: middle;
-    }}
+            td, th {{
+                border: 1px solid #999;
+                padding: 6px 8px;
+                vertical-align: middle;
+            }}
 
-    th {{
-        background-color: #009900;
-        color: white;
-        text-align: center;
-    }}
+            th {{
+                background-color: #009900;
+                color: white;
+                text-align: center;
+            }}
 
-    .section-title {{
-        background-color: #d9d9d9;
-        text-align: center;
-        font-weight: bold;
-        padding: 6px;
-        font-size: 13pt;
-        margin-top: 15px;
-    }}
+            .section-title {{
+                background-color: #d9d9d9;
+                text-align: center;
+                font-weight: bold;
+                padding: 6px;
+                font-size: 13pt;
+                margin-top: 15px;
+            }}
 
-    .note {{
-        font-style: italic;
-        text-align: justify;
-        margin: 10px 0;
-    }}
+            .note {{
+                font-style: italic;
+                text-align: justify;
+                margin: 10px 0;
+            }}
 
-    .signature {{
-        margin-top: 40px;
-        text-align: center;
-    }}
+            .signature {{
+                margin-top: 40px;
+                text-align: center;
+            }}
 
-    .small-note {{
-        font-size: 9pt;
-        text-align: center;
-        color: #666;
-        margin-top: 20px;
-    }}
-</style>
-</head>
-<body>
+            .small-note {{
+                font-size: 9pt;
+                text-align: center;
+                color: #666;
+                margin-top: 20px;
+            }}
+        </style>
+        </head>
+        <body>
    <div class='content'>
 
     <h1>BÁO CÁO THANH TOÁN ĐƠN HÀNG (PURCHASING ORDER PAYMENT)</h1>
@@ -539,24 +539,24 @@ namespace PMS.API.Services.POService
 
     <div class='signature'>
         <table>
-            <tr>
-                <td><b>Người lập phiếu</b></td>
-                <td><b>Người duyệt</b></td>
+            <tr style=""text-align: center;"">
+                <td><b>Giám đốc DH (Chair man)</b></td>
+                <td><b>Kế toán trưởng (Accountant)</b></td>
             </tr>
             <tr>
                 <td style='height:120px'></td>
                 <td style='text-align:center; position:relative;'>
-                    <!-- Con dấu -->
+
                     {(string.IsNullOrEmpty(sealBase64) ? "" :
                                 $"<img src='{sealBase64}' style='width:140px;height:auto;opacity:0.9;'/>")}
                     
-                    <!-- Chữ ký (đè lên dấu, lệch trái) -->
+
                     {(string.IsNullOrEmpty(logoBase64) ?
                                 "<br/><span style='color:red'>(Không có chữ ký điện tử)</span>" :
                                 $"<img src='{logoBase64}' style='width:180px;height:auto;position:relative;margin-top:-200px;margin-left:-120px;z-index:2;'/>")}
                     
                     <div style='font-style:italic;color:gray;margin-top:-10px;'>
-                        TGD CTY TNHH BBPHARMACY ANH TRAN
+                         Nhân viên KÝ RÕ HỌ TÊN
                     </div>
                 </td>
             </tr>
