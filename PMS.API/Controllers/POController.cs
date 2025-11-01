@@ -111,6 +111,7 @@ namespace PMS.API.Controllers
         /// <param name="poid">Mã PO cần xuất</param>
         /// <returns>File PDF</returns>
         [HttpGet("exportPaymentPdf/{poid}")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> ExportPOPaymentPdf(int poid)
         {
             var pdfBytes = await _poService.GeneratePOPaymentPdfAsync(poid);

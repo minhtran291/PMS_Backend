@@ -585,6 +585,9 @@ namespace PMS.Data.Migrations
                     b.Property<int>("QID")
                         .HasColumnType("int");
 
+                    b.Property<int>("PRFQID")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("QuotationExpiredDate")
                         .HasColumnType("datetime2");
 
@@ -598,6 +601,9 @@ namespace PMS.Data.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("QID");
+
+                    b.HasIndex("PRFQID")
+                        .IsUnique();
 
                     b.ToTable("Quotations");
                 });
@@ -1307,6 +1313,17 @@ namespace PMS.Data.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.Quotation", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.PurchasingRequestForQuotation", "PurchasingRequestForQuotation")
+                        .WithOne("Quotation")
+                        .HasForeignKey("PMS.Core.Domain.Entities.Quotation", "PRFQID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PurchasingRequestForQuotation");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.QuotationDetail", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Entities.Quotation", "Quotation")
@@ -1492,6 +1509,9 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.PurchasingRequestForQuotation", b =>
                 {
                     b.Navigation("PRPS");
+
+                    b.Navigation("Quotation")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Quotation", b =>

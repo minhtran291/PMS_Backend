@@ -774,10 +774,9 @@ namespace PMS.API.Services.PRFQService
             return value.Substring(0, maxLength - 3) + "...";
         }
 
-        public async Task<ServiceResult<int>> ConvertExcelToPurchaseOrderAsync(string userId, PurchaseOrderInputDto input)
+        public async Task<ServiceResult<int>> ConvertExcelToPurchaseOrderAsync(string userId, PurchaseOrderInputDto input, PurchasingOrderStatus purchasingOrderStatus)
         {
             await _unitOfWork.BeginTransactionAsync();
-
             try
             {
                 var excelPath = await _cache.GetStringAsync(input.ExcelKey);
@@ -787,6 +786,8 @@ namespace PMS.API.Services.PRFQService
                 using var package = new ExcelPackage(new FileInfo(excelPath));
                 var worksheet = package.Workbook.Worksheets[0];
                 var supplierName = worksheet.Cells[4, 6].Text?.Trim();
+                if (!int.TryParse(worksheet.Cells[2, 2].Text?.Trim(), out int YC))
+                    throw new Exception("Không thể đọc YC từ file Excel.");
                 var SenderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
                 var supplier = _unitOfWork.Supplier.Query().FirstOrDefault(sp => sp.Name == supplierName);
                 if (supplier == null)
@@ -826,7 +827,8 @@ namespace PMS.API.Services.PRFQService
                     SupplierID = supplier.Id,
                     SendDate = qSDate,
                     Status = SupplierQuotationStatus.InDate,
-                    QuotationExpiredDate = qEDate
+                    QuotationExpiredDate = qEDate,
+                    PRFQID = YC
                 };
 
                 // Tạo PO mới
@@ -1005,14 +1007,16 @@ namespace PMS.API.Services.PRFQService
                         Message = "Kiểm tra lại email nhà cung cấp"
                     };
                 }
-
-                await _emailService.SendEmailWithAttachmentAsync(
-                    SupplierEmail,
-                    "đơn hàng",
-                    GeneratePOEmailBody(po),
-                    poExcelBytes,
-                    $"PO_{po.POID}.xlsx"
-                );
+                if (purchasingOrderStatus == PurchasingOrderStatus.sent)
+                {
+                    await _emailService.SendEmailWithAttachmentAsync(
+                        SupplierEmail,
+                        "đơn hàng",
+                        GeneratePOEmailBody(po),
+                        poExcelBytes,
+                        $"PO_{po.POID}.xlsx"
+                    );
+                }
                 await _notificationService.SendNotificationToRolesAsync(
                    userId,
                    ["ACCOUNTANT"],
@@ -1091,7 +1095,8 @@ namespace PMS.API.Services.PRFQService
                         x.ProductID,
                         x.Product.ProductName,
                         x.Product.ProductDescription,
-                        x.Product.Status
+                        x.Product.Status,
+                        x.Product.Unit
                     })
                 };
 
@@ -1118,22 +1123,11 @@ namespace PMS.API.Services.PRFQService
         {
             try
             {
+               
                 var prfqs = await _unitOfWork.PurchasingRequestForQuotation
                     .Query()
                     .Include(p => p.Supplier)
                     .Include(p => p.User)
-                    .Select(p => new
-                    {
-                        p.PRFQID,
-                        p.RequestDate,
-                        p.Status,
-                        p.TaxCode,
-                        p.MyPhone,
-                        p.MyAddress,
-                        SupplierName = p.Supplier.Name,
-                        SupplierEmail = p.Supplier.Email,
-                        CreatedBy = p.User.UserName
-                    })
                     .OrderByDescending(p => p.RequestDate)
                     .ToListAsync();
 
@@ -1147,9 +1141,46 @@ namespace PMS.API.Services.PRFQService
                     };
                 }
 
+               
+                var quotationPRFQIDs = await _unitOfWork.Quotation
+                    .Query()
+                    .Select(q => q.PRFQID)
+                    .Distinct()
+                    .ToListAsync();
+
+               
+                var prfqsToUpdate = prfqs
+                    .Where(p => quotationPRFQIDs.Contains(p.PRFQID) && p.Status != PRFQStatus.Approved)
+                    .ToList();
+
+                if (prfqsToUpdate.Any())
+                {
+                    foreach (var prfq in prfqsToUpdate)
+                    {
+                        prfq.Status = PRFQStatus.Approved;
+                    }
+
+                   
+                    await _unitOfWork.CommitAsync();
+                }
+
+              
+                var result = prfqs.Select(p => new
+                {
+                    p.PRFQID,
+                    p.RequestDate,
+                    Status = p.Status,
+                    p.TaxCode,
+                    p.MyPhone,
+                    p.MyAddress,
+                    SupplierName = p.Supplier?.Name,
+                    SupplierEmail = p.Supplier?.Email,
+                    CreatedBy = p.User?.UserName,
+                }).ToList();
+
                 return new ServiceResult<IEnumerable<object>>
                 {
-                    Data = prfqs,
+                    Data = result,
                     StatusCode = 200,
                     Message = "Lấy danh sách yêu cầu báo giá thành công."
                 };
@@ -1225,7 +1256,7 @@ namespace PMS.API.Services.PRFQService
             return ServiceResult<object>.SuccessResult(result, "Lấy thông tin preview PRFQ thành công", 200);
         }
 
-        public async Task<ServiceResult< bool>> UpdatePRFQStatusAsync(int prfqId, PRFQStatus newStatus)
+        public async Task<ServiceResult<bool>> UpdatePRFQStatusAsync(int prfqId, PRFQStatus newStatus)
         {
             var prfq = await _unitOfWork.PurchasingRequestForQuotation
                 .Query()
@@ -1242,16 +1273,16 @@ namespace PMS.API.Services.PRFQService
 
             if (prfq.Status == PRFQStatus.Approved && newStatus == PRFQStatus.Draft)
                 throw new Exception("Không thể chuyển từ trạng thái Approved về Draft.");
-            prfq.Status = newStatus;         
+            prfq.Status = newStatus;
             _unitOfWork.PurchasingRequestForQuotation.Update(prfq);
             await _unitOfWork.CommitAsync();
 
             return new ServiceResult<bool>
             {
                 Data = true,
-                Message ="Thanh cong",
-                StatusCode=200,
-                Success=true,
+                Message = "Thanh cong",
+                StatusCode = 200,
+                Success = true,
             };
         }
     }
