@@ -140,5 +140,23 @@ namespace PMS.API.Controllers
                 message = result.Message
             });
         }
+
+        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
+        [Route("view-sales-quotation-details")]
+        public async Task<IActionResult> ViewSalesQuotationDetails(int sqId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _salesQuotationService.SalesQuotaionDetailsAsync(sqId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
     }
 }
