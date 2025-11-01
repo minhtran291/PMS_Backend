@@ -802,24 +802,67 @@ namespace PMS.API.Services.PRFQService
                 if (!int.TryParse(worksheet.Cells[4, 4].Text?.Trim(), out int qId))
                     throw new Exception("Không thể đọc QID từ file Excel.");
                 DateTime qEDate;
-                if (DateTime.TryParse(worksheet.Cells[7, 4].Text?.Trim(), out qEDate))
+                var qEDateCell = worksheet.Cells[7, 4];
+                var rawQEDate = qEDateCell.Text?.Trim();
+
+                if (qEDateCell.Value is double serialValue)
                 {
-                    if ((DateTime.Now > qEDate))
-                        return new ServiceResult<int>
-                        {
-                            StatusCode = 200,
-                            Message = "Quotation đã quá hạn. Vui lòng yêu cầu nhà cung cấp cập nhật báo giá mới."
-                        };
+                   
+                    qEDate = DateTime.FromOADate(serialValue);
+                }
+                else if (DateTime.TryParseExact(rawQEDate,
+                    new[] { "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "d/M/yyyy", "M/d/yyyy" },
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsed))
+                {
+                    qEDate = parsed;
+                }
+                else if (DateTime.TryParse(rawQEDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedLoose))
+                {
+                    qEDate = parsedLoose;
                 }
                 else
                 {
-                    throw new Exception("Đọc ngày hết hạn thất bại.");
+                    throw new Exception($"Không thể đọc ngày hết hạn từ Excel: '{rawQEDate}'");
                 }
-                DateTime qSDate;
-                if (!DateTime.TryParse(worksheet.Cells[7, 2].Text?.Trim(), out qSDate))
+
+                // Kiểm tra hạn
+                if (DateTime.Now > qEDate)
                 {
-                    throw new Exception("Đọc ngày gửi thất bại.");
+                    return new ServiceResult<int>
+                    {
+                        StatusCode = 200,
+                        Message = "Quotation đã quá hạn. Vui lòng yêu cầu nhà cung cấp cập nhật báo giá mới."
+                    };
                 }
+
+                DateTime qSDate;
+                var qSDateCell = worksheet.Cells[7, 2];
+                var rawQSDate = qSDateCell.Text?.Trim();
+
+                if (qSDateCell.Value is double value)
+                {
+                    
+                    qSDate = DateTime.FromOADate(value);
+                }
+                else if (DateTime.TryParseExact(rawQSDate,
+                    new[] { "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "d/M/yyyy", "M/d/yyyy" },
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsed))
+                {
+                    qSDate = parsed;
+                }
+                else if (DateTime.TryParse(rawQSDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedLoose))
+                {
+                    qSDate = parsedLoose;
+                }
+                else
+                {
+                    throw new Exception($"Đọc ngày gửi thất bại. Giá trị không hợp lệ: '{rawQSDate}'");
+                }
+
                 // tạo quotation
                 var Quotation = new Quotation
                 {
