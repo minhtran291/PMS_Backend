@@ -239,7 +239,7 @@ namespace PMS.API.Controllers
 
             try
             {
-                var result = await _iPRFQService.ContinueEditPRFQ(prfqId, input.ProductIds);
+                var result = await _iPRFQService.ContinueEditPRFQ(prfqId, input);
                 return HandleServiceResult(result);
             }
             catch (Exception ex)

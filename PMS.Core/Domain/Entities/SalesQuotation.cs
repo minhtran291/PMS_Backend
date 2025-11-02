@@ -18,6 +18,8 @@ namespace PMS.Core.Domain.Entities
         public DateTime ExpiredDate { get; set; }
         public SalesQuotationStatus Status { get; set; }
         public string? Notes { get; set; }
+        public decimal DepositPercent {  get; set; }
+        public int DepositDueDays {  get; set; }
 
         public virtual RequestSalesQuotation RequestSalesQuotation { get; set; } = null!;
         public virtual ICollection<SalesQuotaionDetails> SalesQuotaionDetails { get; set; } = [];
