@@ -12,6 +12,7 @@ using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using PMS.Application.DTOs.PO;
 using PMS.Application.DTOs.PRFQ;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
@@ -774,353 +775,6 @@ namespace PMS.API.Services.PRFQService
             return value.Substring(0, maxLength - 3) + "...";
         }
 
-        public async Task<ServiceResult<int>> ConvertExcelToPurchaseOrderAsync(string userId, PurchaseOrderInputDto input, PurchasingOrderStatus purchasingOrderStatus)
-        {
-            await _unitOfWork.BeginTransactionAsync();
-            try
-            {
-                var excelPath = await _cache.GetStringAsync(input.ExcelKey);
-                if (string.IsNullOrEmpty(excelPath) || !File.Exists(excelPath))
-                    throw new Exception("Lấy key thất bại, Vui lòng upload lại báo giá.");
-
-                using var package = new ExcelPackage(new FileInfo(excelPath));
-                var worksheet = package.Workbook.Worksheets[0];
-                var supplierName = worksheet.Cells[4, 6].Text?.Trim();
-                if (!int.TryParse(worksheet.Cells[2, 2].Text?.Trim(), out int YC))
-                    throw new Exception("Không thể đọc YC từ file Excel.");
-
-                var SenderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
-                var supplier = _unitOfWork.Supplier.Query().FirstOrDefault(sp => sp.Name == supplierName);
-                if (supplier == null)
-                {
-                    return new ServiceResult<int>
-                    {
-                        StatusCode = 200,
-                        Message = "Tên nhà sản xuất bị trống"
-                    };
-                }
-
-                // Đọc QID từ Excel 
-                if (!int.TryParse(worksheet.Cells[4, 4].Text?.Trim(), out int qId))
-                    throw new Exception("Không thể đọc QID từ file Excel.");
-
-                // Đọc qEDate (an toàn với serial / string)
-                DateTime qEDate;
-                var qEDateCell = worksheet.Cells[7, 4];
-                var rawQEDate = qEDateCell.Text?.Trim();
-                if (qEDateCell.Value is double serialValue)
-                {
-                    qEDate = DateTime.FromOADate(serialValue);
-                }
-                else if (DateTime.TryParseExact(rawQEDate,
-                    new[] { "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "d/M/yyyy", "M/d/yyyy" },
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out var parsedE))
-                {
-                    qEDate = parsedE;
-                }
-                else if (DateTime.TryParse(rawQEDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedLooseE))
-                {
-                    qEDate = parsedLooseE;
-                }
-                else
-                {
-                    throw new Exception($"Không thể đọc ngày hết hạn từ Excel: '{rawQEDate}'");
-                }
-
-                // Đọc qSDate 
-                DateTime qSDate;
-                var qSDateCell = worksheet.Cells[7, 2];
-                var rawQSDate = qSDateCell.Text?.Trim();
-                if (qSDateCell.Value is double serialValueS)
-                {
-                    qSDate = DateTime.FromOADate(serialValueS);
-                }
-                else if (DateTime.TryParseExact(rawQSDate,
-                    new[] { "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "d/M/yyyy", "M/d/yyyy" },
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.None,
-                    out var parsedS))
-                {
-                    qSDate = parsedS;
-                }
-                else if (DateTime.TryParse(rawQSDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedLooseS))
-                {
-                    qSDate = parsedLooseS;
-                }
-                else
-                {
-                    throw new Exception($"Đọc ngày gửi thất bại. Giá trị không hợp lệ: '{rawQSDate}'");
-                }
-
-                // Lấy existingQuotation
-                var existingQuotation = await _unitOfWork.Quotation.Query()
-                    .FirstOrDefaultAsync(q => q.QID == qId && q.SupplierID == supplier.Id);
-
-                Quotation quotationToUse;
-
-                if (existingQuotation == null)
-                {
-
-                    if (DateTime.Now > qEDate)
-                    {
-                        return new ServiceResult<int>
-                        {
-                            StatusCode = 200,
-                            Message = "Quotation đã quá hạn. Vui lòng yêu cầu nhà cung cấp cập nhật báo giá mới."
-                        };
-                    }
-
-                    quotationToUse = new Quotation
-                    {
-                        QID = qId,
-                        SupplierID = supplier.Id,
-                        SendDate = qSDate,
-                        Status = SupplierQuotationStatus.InDate,
-                        QuotationExpiredDate = qEDate,
-                        PRFQID = YC
-                    };
-
-                    await _unitOfWork.Quotation.AddAsync(quotationToUse);
-
-                    await _unitOfWork.CommitAsync();
-                }
-                else
-                {
-
-                    if (DateTime.Now > existingQuotation.QuotationExpiredDate)
-                    {
-                        return new ServiceResult<int>
-                        {
-                            StatusCode = 200,
-                            Message = $"Báo giá QID = {qId} của NCC {supplier.Name} đã hết hạn. Vui lòng yêu cầu cập nhật báo giá mới."
-                        };
-                    }
-
-
-                    quotationToUse = existingQuotation;
-                }
-
-
-                var po = new PurchasingOrder
-                {
-                    OrderDate = DateTime.Now,
-                    QID = quotationToUse.QID,
-                    UserId = userId,
-                    Total = 0,
-                    Status = PurchasingOrderStatus.sent,
-                };
-
-                await _unitOfWork.PurchasingOrder.AddAsync(po);
-
-                await _unitOfWork.CommitAsync();
-
-
-                var products = await _unitOfWork.Product.Query()
-                    .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
-
-
-                var selectedProductQuantities = input.Details
-                    .Where(d => d.Quantity > 0)
-                    .ToDictionary(d => d.ProductID, d => d.Quantity);
-
-                var details = new List<PurchasingOrderDetail>();
-                var QuotationDetails = new List<QuotationDetail>();
-                int row = 11;
-
-
-                while (!string.IsNullOrEmpty(worksheet.Cells[row, 1].Text))
-                {
-                    var productIdText = worksheet.Cells[row, 1].Text?.Trim();
-                    if (!int.TryParse(productIdText, out int productId))
-                    {
-                        row++;
-                        continue;
-                    }
-
- 
-                    if (!selectedProductQuantities.TryGetValue(productId, out int quantity))
-                    {
-                        row++;
-                        continue;
-                    }
-
-                    var description = worksheet.Cells[row, 3].Text?.Trim();
-                    var dvt = worksheet.Cells[row, 4].Text?.Trim();
-                    var unitPriceText = worksheet.Cells[row, 5].Text?.Trim();
-                    var expiredDateText = worksheet.Cells[row, 6].Text?.Trim();
-
-                    if (!decimal.TryParse(unitPriceText, out decimal unitPrice))
-                        unitPrice = 0;
-
-                    DateTime expectedExpiredDate = DateTime.MinValue;
-
-
-                    if (!string.IsNullOrEmpty(expiredDateText) && expiredDateText != "Chưa có lô hàng")
-                    {
-                        if (double.TryParse(expiredDateText, NumberStyles.Any, CultureInfo.InvariantCulture, out double serialDate))
-                        {
-                            try
-                            {
-                                expectedExpiredDate = DateTime.FromOADate(serialDate);
-                            }
-                            catch (ArgumentException)
-                            {
-                                return new ServiceResult<int>
-                                {
-                                    StatusCode = 200,
-                                    Message = $"Invalid serial date {serialDate} at row {row}"
-                                };
-                            }
-                        }
-                        else
-                        {
-                            string[] dateFormats = {
-                        "dd/MM/yyyy", "MM/yyyy", "MMM-yyyy", "MMMM-yyyy",
-                        "MMM-yy", "MMMM-yy", "MMM-dd", "dd-MMM", "dd-MMM-yyyy",
-                        "MMM dd", "MMM dd yyyy", "MMM dd-yy", "MMM dd-yyyy"
-                    };
-
-                            expiredDateText = expiredDateText.Replace("Sept", "Sep", StringComparison.OrdinalIgnoreCase).Trim();
-
-                            bool parsedSuccess = false;
-
-                            foreach (var format in dateFormats)
-                            {
-                                if (DateTime.TryParseExact(expiredDateText, format, new CultureInfo("en-US"), DateTimeStyles.None, out DateTime parsed))
-                                {
-                                    expectedExpiredDate = parsed;
-                                    parsedSuccess = true;
-                                    break;
-                                }
-                            }
-
-                            if (!parsedSuccess && DateTime.TryParse(expiredDateText, new CultureInfo("en-US"), DateTimeStyles.None, out DateTime parsedLoose))
-                            {
-                                expectedExpiredDate = parsedLoose;
-                                parsedSuccess = true;
-                            }
-
-                            if (!parsedSuccess)
-                            {
-                                return new ServiceResult<int>
-                                {
-                                    StatusCode = 400,
-                                    Message = $"Không parse được ExpiredDate '{expiredDateText}' tại dòng {row}"
-                                };
-                            }
-                        }
-                    }
-
-                    if (expectedExpiredDate == DateTime.MinValue)
-                    {
-                        return new ServiceResult<int>
-                        {
-                            StatusCode = 200,
-                            Message = $"Lỗi khi biên dịch ExpiredDate tại dòng {row}: giá trị '{expiredDateText}' không hợp lệ hoặc không có lô hàng."
-                        };
-                    }
-
-                    var total = quantity * unitPrice * 1.1m;
-                    var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
-
-                    details.Add(new PurchasingOrderDetail
-                    {
-                        POID = po.POID,
-                        ProductName = productName,
-                        Description = description,
-                        DVT = dvt,
-                        Quantity = quantity,
-                        UnitPrice = unitPrice,
-                        UnitPriceTotal = total,
-                        ExpiredDate = expectedExpiredDate,
-                        ProductID = productId,
-                    });
-
-                    po.Total += total;
-
-                    QuotationDetails.Add(new QuotationDetail
-                    {
-                        QID = quotationToUse.QID,
-                        ProductID = productId,
-                        ProductName = productName,
-                        ProductDescription = description ?? string.Empty,
-                        ProductUnit = dvt ?? string.Empty,
-                        UnitPrice = unitPrice,
-                        ProductDate = expectedExpiredDate
-                    });
-
-                    row++;
-                }
-
-                if (details.Count == 0)
-                {
-                    return new ServiceResult<int>
-                    {
-                        StatusCode = 200,
-                        Message = "Không có sản phẩm nào được chọn để đặt hàng."
-                    };
-                }
-
-                _unitOfWork.PurchasingOrderDetail.AddRange(details);
-                _unitOfWork.QuotationDetail.AddRange(QuotationDetails);
-                await _unitOfWork.CommitAsync();
-
-                // Gửi mail PO
-                var poExcelBytes = await GeneratePOExcelAsync(userId, po);
-                var SupplierEmail = worksheet.Cells[5, 6].Text?.Trim();
-                if (string.IsNullOrWhiteSpace(SupplierEmail))
-                {
-                    return new ServiceResult<int>
-                    {
-                        StatusCode = 200,
-                        Message = "Kiểm tra lại email nhà cung cấp"
-                    };
-                }
-
-                if (purchasingOrderStatus == PurchasingOrderStatus.sent)
-                {
-                    await _emailService.SendEmailWithAttachmentAsync(
-                        SupplierEmail,
-                        "đơn hàng",
-                        GeneratePOEmailBody(po),
-                        poExcelBytes,
-                        $"PO_{po.POID}.xlsx"
-                    );
-                }
-
-                await _notificationService.SendNotificationToRolesAsync(
-                   userId,
-                   ["ACCOUNTANT"],
-                   "Yêu cầu nhập hàng",
-                   $"Nhân viên {SenderUser.UserName} đã gửi mail đặt hàng đến NCC:{supplier.Name}",
-                   Core.Domain.Enums.NotificationType.Reminder
-                   );
-
-                await _unitOfWork.CommitTransactionAsync();
-
-                try { File.Delete(excelPath); } catch { }
-
-                return new ServiceResult<int>
-                {
-                    StatusCode = 200,
-                    Message = "Thành công."
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "ConvertExcelToPurchaseOrderAsync failed");
-                await _unitOfWork.RollbackTransactionAsync();
-                return new ServiceResult<int>
-                {
-                    StatusCode = 400,
-                    Message = "Thất bại."
-                };
-            }
-        }
-
-
         public async Task<ServiceResult<object>> GetPRFQDetailAsync(int prfqId)
         {
             try
@@ -1203,7 +857,6 @@ namespace PMS.API.Services.PRFQService
             }
         }
 
-
         public async Task<ServiceResult<IEnumerable<object>>> GetAllPRFQAsync()
         {
             try
@@ -1279,7 +932,6 @@ namespace PMS.API.Services.PRFQService
                 };
             }
         }
-
 
         public async Task<byte[]> GenerateExcelAsync(int prfqId)
         {
@@ -1369,5 +1021,224 @@ namespace PMS.API.Services.PRFQService
                 Success = true,
             };
         }
+
+        public async Task<ServiceResult<int>> ConvertExcelToPurchaseOrderAsync(string userId, PurchaseOrderInputDto input, PurchasingOrderStatus purchasingOrderStatus)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+
+                var excelPath = await _cache.GetStringAsync(input.ExcelKey);
+                if (string.IsNullOrEmpty(excelPath) || !File.Exists(excelPath))
+                    throw new Exception("Lấy key thất bại, vui lòng upload lại báo giá.");
+
+                using var package = new ExcelPackage(new FileInfo(excelPath));
+                var worksheet = package.Workbook.Worksheets[0];
+                var excelData = ReadExcelData(worksheet);
+
+                var senderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+                var supplier = _unitOfWork.Supplier.Query().FirstOrDefault(sp => sp.Name == excelData.SupplierName);
+                if (supplier == null)
+                    return new ServiceResult<int> { StatusCode = 200, Message = "Tên nhà sản xuất bị trống" };
+
+
+                var quotation = await GetOrCreateQuotationAsync(excelData, supplier.Id);
+                if (quotation == null)
+                    return new ServiceResult<int> { StatusCode = 200, Message = "Báo giá đã quá hạn hoặc không hợp lệ." };
+
+
+                var po = await CreatePurchaseOrderAsync(userId, quotation.QID, input, worksheet, excelData.IsNewQuotation);
+
+
+                await SendEmailAndNotificationAsync(po, supplier, senderUser, worksheet, purchasingOrderStatus, userId);
+
+                await _unitOfWork.CommitTransactionAsync();
+                try { File.Delete(excelPath); } catch { }
+
+                return new ServiceResult<int> { StatusCode = 200, Message = "Thành công." };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "ConvertExcelToPurchaseOrderAsync failed");
+                await _unitOfWork.RollbackTransactionAsync();
+                return new ServiceResult<int> { StatusCode = 400, Message = "Thất bại." };
+            }
+        }
+
+        private ExcelData ReadExcelData(ExcelWorksheet worksheet)
+        {
+            var supplierName = worksheet.Cells[4, 6].Text?.Trim();
+            if (!int.TryParse(worksheet.Cells[2, 2].Text?.Trim(), out int prfqId))
+                throw new Exception("Không thể đọc YC từ file Excel.");
+            if (!int.TryParse(worksheet.Cells[4, 4].Text?.Trim(), out int qId))
+                throw new Exception("Không thể đọc QID từ file Excel.");
+
+            var sendDate = PMS.Core.Domain.Helper.ExcelDateHelper.ReadDateFromCell(worksheet.Cells[7, 2], "Đọc ngày gửi thất bại.");
+            var expiredDate = PMS.Core.Domain.Helper.ExcelDateHelper.ReadDateFromCell(worksheet.Cells[7, 4], "Không thể đọc ngày hết hạn từ Excel");
+
+            return new ExcelData
+            {
+                SupplierName = supplierName,
+                PRFQID = prfqId,
+                QID = qId,
+                SendDate = sendDate,
+                ExpiredDate = expiredDate
+            };
+        }
+
+        private async Task<Quotation?> GetOrCreateQuotationAsync(ExcelData data, int supplierId)
+        {
+            var existingQuotation = await _unitOfWork.Quotation.Query()
+                .FirstOrDefaultAsync(q => q.QID == data.QID && q.SupplierID == supplierId);
+
+            if (existingQuotation != null)
+            {
+                if (DateTime.Now > existingQuotation.QuotationExpiredDate)
+                    return null;
+                data.IsNewQuotation = false;
+                return existingQuotation;
+            }
+
+            if (DateTime.Now > data.ExpiredDate)
+                return null;
+
+            var quotation = new Quotation
+            {
+                QID = data.QID,
+                SupplierID = supplierId,
+                SendDate = data.SendDate,
+                Status = SupplierQuotationStatus.InDate,
+                QuotationExpiredDate = data.ExpiredDate,
+                PRFQID = data.PRFQID
+            };
+
+            await _unitOfWork.Quotation.AddAsync(quotation);
+            await _unitOfWork.CommitAsync();
+
+            data.IsNewQuotation = true;
+            return quotation;
+        }
+
+        private async Task<PurchasingOrder> CreatePurchaseOrderAsync(
+        string userId, int qId, PurchaseOrderInputDto input, ExcelWorksheet worksheet, bool isNewQuotation)
+        {
+            var po = new PurchasingOrder
+            {
+                OrderDate = DateTime.Now,
+                QID = qId,
+                UserId = userId,
+                Total = 0,
+                Status = PurchasingOrderStatus.sent,
+            };
+
+            await _unitOfWork.PurchasingOrder.AddAsync(po);
+            await _unitOfWork.CommitAsync();
+
+            var products = await _unitOfWork.Product.Query()
+                .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
+
+            var selectedProductQuantities = input.Details
+                .Where(d => d.Quantity > 0)
+                .ToDictionary(d => d.ProductID, d => d.Quantity);
+
+            var poDetails = new List<PurchasingOrderDetail>();
+            var quotationDetails = new List<QuotationDetail>();
+
+            int row = 11;
+            while (!string.IsNullOrEmpty(worksheet.Cells[row, 1].Text))
+            {
+                var productIdText = worksheet.Cells[row, 1].Text?.Trim();
+                if (!int.TryParse(productIdText, out int productId))
+                {
+                    row++;
+                    continue;
+                }
+
+                var description = worksheet.Cells[row, 3].Text?.Trim();
+                var dvt = worksheet.Cells[row, 4].Text?.Trim();
+                var unitPriceText = worksheet.Cells[row, 5].Text?.Trim();
+                var expiredDateText = worksheet.Cells[row, 6].Text?.Trim();
+
+                decimal.TryParse(unitPriceText, out decimal unitPrice);
+                DateTime expiredDate = DateTime.MinValue;
+                try { expiredDate = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(expiredDateText, row); } catch { }
+
+                var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
+
+                if (selectedProductQuantities.TryGetValue(productId, out int quantity))
+                {
+                    var total = quantity * unitPrice * 1.1m;
+                    poDetails.Add(new PurchasingOrderDetail
+                    {
+                        POID = po.POID,
+                        ProductName = productName,
+                        Description = description,
+                        DVT = dvt,
+                        Quantity = quantity,
+                        UnitPrice = unitPrice,
+                        UnitPriceTotal = total,
+                        ExpiredDate = expiredDate,
+                        ProductID = productId
+                    });
+                    po.Total += total;
+                }
+
+                if (isNewQuotation)
+                {
+                    quotationDetails.Add(new QuotationDetail
+                    {
+                        QID = qId,
+                        ProductID = productId,
+                        ProductName = productName,
+                        ProductDescription = description ?? string.Empty,
+                        ProductUnit = dvt ?? string.Empty,
+                        UnitPrice = unitPrice,
+                        ProductDate = expiredDate
+                    });
+                }
+
+                row++;
+            }
+
+            if (poDetails.Count == 0)
+                throw new Exception("Không có sản phẩm nào được chọn để đặt hàng.");
+
+            _unitOfWork.PurchasingOrderDetail.AddRange(poDetails);
+            if (isNewQuotation && quotationDetails.Count > 0)
+                _unitOfWork.QuotationDetail.AddRange(quotationDetails);
+
+            await _unitOfWork.CommitAsync();
+            return po;
+        }
+
+        private async Task SendEmailAndNotificationAsync(PurchasingOrder po, Supplier supplier, User senderUser, ExcelWorksheet worksheet, PurchasingOrderStatus status, string userId)
+
+        {
+            var supplierEmail = worksheet.Cells[5, 6].Text?.Trim();
+            if (string.IsNullOrWhiteSpace(supplierEmail))
+                throw new Exception("Kiểm tra lại email nhà cung cấp");
+
+            var poExcelBytes = await GeneratePOExcelAsync(userId, po);
+
+            if (status == PurchasingOrderStatus.sent)
+            {
+                await _emailService.SendEmailWithAttachmentAsync(
+                    supplierEmail,
+                    "Đơn hàng",
+                    GeneratePOEmailBody(po),
+                    poExcelBytes,
+                    $"PO_{po.POID}.xlsx"
+                );
+            }
+
+            await _notificationService.SendNotificationToRolesAsync(
+                userId,
+                ["ACCOUNTANT"],
+                "Yêu cầu nhập hàng",
+                $"Nhân viên {senderUser.UserName} đã gửi mail đặt hàng đến NCC: {supplier.Name}",
+                Core.Domain.Enums.NotificationType.Reminder
+            );
+        }
+
     }
 }
