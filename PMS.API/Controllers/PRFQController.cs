@@ -226,5 +226,26 @@ namespace PMS.API.Controllers
                 return BadRequest(new { Error = ex.Message });
             }
         }
+
+        /// <summary>
+        ///  https://localhost:7213/api/PRFQ/{prfqId}/continue
+        /// Tiếp tục chỉnh sửa PRFQ đang ở trạng thái Draft
+        /// </summary>
+        [HttpPut("{prfqId}/continue")]
+        public async Task<IActionResult> ContinueEditPRFQ([FromRoute] int prfqId, [FromBody] ContinuePRFQDTO input)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var result = await _iPRFQService.ContinueEditPRFQ(prfqId, input.ProductIds);
+                return HandleServiceResult(result);
+            }
+            catch (Exception ex)
+            {             
+                return StatusCode(500, new { Message = "Đã xảy ra lỗi trong quá trình chỉnh sửa PRFQ." });
+            }
+        }
     }
 }
