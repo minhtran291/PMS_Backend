@@ -963,7 +963,10 @@ namespace PMS.API.Services.PRFQService
                         p.MyAddress,
                         SupplierName = p.Supplier.Name,
                         SupplierEmail = p.Supplier.Email,
-                        CreatedBy = p.User.UserName,
+                        SupplierAddress = p.Supplier.Address,
+                        SupplierPhone = p.Supplier.PhoneNumber,
+                        CreatedBy = p.User.FullName,
+
                     })
                     .OrderByDescending(p => p.RequestDate)
                     .ToListAsync();
@@ -998,7 +1001,9 @@ namespace PMS.API.Services.PRFQService
                     p.MyAddress,
                     p.SupplierName,
                     p.SupplierEmail,
-                    p.CreatedBy
+                    p.CreatedBy,
+                    p.SupplierPhone,
+                    p.SupplierAddress,
                 }).ToList();
 
                 return new ServiceResult<IEnumerable<object>>

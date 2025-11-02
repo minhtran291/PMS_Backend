@@ -25,7 +25,7 @@ namespace PMS.API.Services.POService
                 .ToListAsync();
 
             var userList = await _unitOfWork.Users.Query()
-                .Select(u => new { u.Id, u.UserName })
+                .Select(u => new { u.Id, u.FullName })
                 .ToListAsync();
 
             var result = poList.Select(p =>
@@ -41,8 +41,8 @@ namespace PMS.API.Services.POService
                     Deposit = p.Deposit,
                     Debt = p.Debt,
                     PaymentDate = p.PaymentDate,
-                    UserName = p.User?.UserName ?? "Unknown",
-                    PaymentBy = paymentUser?.UserName ?? "Unknown"
+                    UserName = p.User?.FullName ?? "Unknown",
+                    PaymentBy = paymentUser?.FullName ?? "Unknown"
                 };
             }).ToList();
 
@@ -146,13 +146,13 @@ namespace PMS.API.Services.POService
 
                 var paymentUserName = await _unitOfWork.Users.Query()
                                         .Where(u => u.Id == expo.PaymentBy)
-                                        .Select(u => u.UserName)
+                                        .Select(u => u.FullName)
                                         .FirstOrDefaultAsync();
 
-                var createdByName = expo.User?.UserName
+                var createdByName = expo.User?.FullName
                                     ?? await _unitOfWork.Users.Query()
                                         .Where(u => u.Id == expo.UserId)
-                                        .Select(u => u.UserName)
+                                        .Select(u => u.FullName)
                                         .FirstOrDefaultAsync();
                 var dto = new POViewDTO
                 {
