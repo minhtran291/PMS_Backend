@@ -26,5 +26,6 @@ namespace PMS.Application.DTOs.SQ
         public required DateTime QuotationExpiredDate { get; set; }
 
         public virtual ICollection<QuotationDetailDTO> QuotationDetailDTOs { get; set; }= new List<QuotationDetailDTO>();
+        public string SupplierName { get; set; }
     }
 }
