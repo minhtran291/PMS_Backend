@@ -620,9 +620,9 @@ namespace PMS.Data
                     },
                     new TaxPolicy
                     {
-                        Name = "Không chịu thuế",
+                        Name = "VAT 0%",
                         Rate = 0.00m,
-                        Description = "Miễn áp thuế giá trị gia tăng",
+                        Description = "Thuế giá trị gia tăng 0%",
                         Status = true
                     }
                 };
