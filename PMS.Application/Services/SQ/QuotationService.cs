@@ -15,6 +15,7 @@ namespace PMS.API.Services.QuotationService
             try
             {
                 var quotations = await _unitOfWork.Quotation.Query().ToListAsync();
+                var suppliers = await _unitOfWork.Supplier.Query().ToListAsync();
 
                 if (quotations == null || !quotations.Any())
                 {
@@ -23,18 +24,19 @@ namespace PMS.API.Services.QuotationService
 
                 var now = DateTime.Now;
 
-                var result = quotations.Select(q => new QuotationDTO
-                {
-                    QID = q.QID,
-                    SendDate = q.SendDate,
-                    SupplierID = q.SupplierID,
-                    QuotationExpiredDate = q.QuotationExpiredDate,
-
-                   
-                    Status = q.QuotationExpiredDate >= now
-                        ? SupplierQuotationStatus.InDate
-                        : SupplierQuotationStatus.OutOfDate
-                });
+                var result = from q in quotations
+                             join s in suppliers on q.SupplierID equals s.Id
+                             select new QuotationDTO
+                             {
+                                 QID = q.QID,
+                                 SendDate = q.SendDate,
+                                 SupplierID = q.SupplierID,
+                                 SupplierName = s.Name,
+                                 QuotationExpiredDate = q.QuotationExpiredDate,
+                                 Status = q.QuotationExpiredDate >= now
+                                     ? SupplierQuotationStatus.InDate
+                                     : SupplierQuotationStatus.OutOfDate
+                             };
 
                 return ServiceResult<IEnumerable<QuotationDTO>>.SuccessResult(result, "Lấy danh sách báo giá thành công", 200);
             }
@@ -43,6 +45,7 @@ namespace PMS.API.Services.QuotationService
                 return ServiceResult<IEnumerable<QuotationDTO>>.Fail($"Lỗi khi lấy danh sách báo giá: {ex.Message}", 500);
             }
         }
+
 
         public async Task<ServiceResult<List<QuotationDTO>>> GetAllQuotationsWithActiveDateAsync()
         {
