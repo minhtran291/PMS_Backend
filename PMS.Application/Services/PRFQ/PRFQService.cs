@@ -1111,11 +1111,20 @@ namespace PMS.API.Services.PRFQService
                     };
                 }
 
+                
+                bool hasQuotation = await _unitOfWork.Quotation
+                    .Query()
+                    .AnyAsync(q => q.PRFQID == prfq.PRFQID);
+
+                
+                var displayStatus = hasQuotation ? PRFQStatus.Approved : prfq.Status;
+
+               
                 var detail = new
                 {
                     prfq.PRFQID,
                     prfq.RequestDate,
-                    prfq.Status,
+                    Status = displayStatus, 
                     prfq.TaxCode,
                     prfq.MyPhone,
                     prfq.MyAddress,
@@ -1162,15 +1171,28 @@ namespace PMS.API.Services.PRFQService
             }
         }
 
+
         public async Task<ServiceResult<IEnumerable<object>>> GetAllPRFQAsync()
         {
             try
             {
-               
+                
                 var prfqs = await _unitOfWork.PurchasingRequestForQuotation
                     .Query()
                     .Include(p => p.Supplier)
                     .Include(p => p.User)
+                    .Select(p => new
+                    {
+                        p.PRFQID,
+                        p.RequestDate,
+                        p.Status,
+                        p.TaxCode,
+                        p.MyPhone,
+                        p.MyAddress,
+                        SupplierName = p.Supplier.Name,
+                        SupplierEmail = p.Supplier.Email,
+                        CreatedBy = p.User.UserName,
+                    })
                     .OrderByDescending(p => p.RequestDate)
                     .ToListAsync();
 
@@ -1191,34 +1213,20 @@ namespace PMS.API.Services.PRFQService
                     .Distinct()
                     .ToListAsync();
 
-               
-                var prfqsToUpdate = prfqs
-                    .Where(p => quotationPRFQIDs.Contains(p.PRFQID) && p.Status != PRFQStatus.Approved)
-                    .ToList();
-
-                if (prfqsToUpdate.Any())
-                {
-                    foreach (var prfq in prfqsToUpdate)
-                    {
-                        prfq.Status = PRFQStatus.Approved;
-                    }
-
-                   
-                    await _unitOfWork.CommitAsync();
-                }
-
-              
+                
                 var result = prfqs.Select(p => new
                 {
                     p.PRFQID,
                     p.RequestDate,
-                    Status = p.Status,
+                    Status = quotationPRFQIDs.Contains(p.PRFQID)
+                        ? PRFQStatus.Approved  
+                        : p.Status,             
                     p.TaxCode,
                     p.MyPhone,
                     p.MyAddress,
-                    SupplierName = p.Supplier?.Name,
-                    SupplierEmail = p.Supplier?.Email,
-                    CreatedBy = p.User?.UserName,
+                    p.SupplierName,
+                    p.SupplierEmail,
+                    p.CreatedBy
                 }).ToList();
 
                 return new ServiceResult<IEnumerable<object>>
@@ -1239,6 +1247,7 @@ namespace PMS.API.Services.PRFQService
                 };
             }
         }
+
 
         public async Task<byte[]> GenerateExcelAsync(int prfqId)
         {
