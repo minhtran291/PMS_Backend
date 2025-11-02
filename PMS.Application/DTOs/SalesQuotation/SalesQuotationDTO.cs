@@ -12,6 +12,8 @@ namespace PMS.Application.DTOs.SalesQuotation
         public int Id { get; set; }
         public string RequestCode {  get; set; } = string.Empty;
         public string QuotationCode { get; set; } = string.Empty;
+        public DateTime? QuotationDate { get; set; }
+        public DateTime ExpiredDate { get; set; }
         public SalesQuotationStatus Status { get; set; }
     }
 }
