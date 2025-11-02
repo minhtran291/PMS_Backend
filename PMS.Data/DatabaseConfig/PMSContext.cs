@@ -620,6 +620,13 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(sq => sq.Notes)
                     .HasMaxLength(512);
 
+                entity.Property(sq => sq.DepositPercent)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(sq => sq.DepositDueDays)
+                    .IsRequired();
+
                 entity.HasOne(sq => sq.RequestSalesQuotation)
                     .WithMany(rsq => rsq.SalesQuotations)
                     .HasForeignKey(sq => sq.RsqId);
