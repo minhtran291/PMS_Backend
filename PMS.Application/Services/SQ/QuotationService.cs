@@ -83,16 +83,17 @@ namespace PMS.API.Services.QuotationService
         {
             try
             {
-                
+
                 var quotation = await _unitOfWork.Quotation.Query()
-                    .Include(q => q.QuotationDetails)                      
+                    .Include(q => q.QuotationDetails)
                     .FirstOrDefaultAsync(q => q.QID == id);
+                
 
                 if (quotation == null)
                 {
                     return ServiceResult<QuotationDTO?>.Fail($"Không tìm thấy báo giá với ID: {id}", 404);
                 }
-
+                var supplier = await _unitOfWork.Supplier.Query().FirstOrDefaultAsync(s => s.Id == quotation.SupplierID);
                 var now = DateTime.Now;
 
 
@@ -100,7 +101,8 @@ namespace PMS.API.Services.QuotationService
                 {
                     QID = quotation.QID,
                     SendDate = quotation.SendDate,
-                    SupplierID = quotation.SupplierID,
+                    SupplierID = supplier.Id,
+                    SupplierName = supplier.Name,
                     QuotationExpiredDate = quotation.QuotationExpiredDate,
                     Status = quotation.QuotationExpiredDate >= now
                         ? SupplierQuotationStatus.InDate
