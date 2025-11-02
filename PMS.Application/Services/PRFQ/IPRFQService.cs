@@ -23,5 +23,7 @@ namespace PMS.API.Services.PRFQService
 
         Task<ServiceResult<object>> PreviewPRFQAsync(int id);
         Task<ServiceResult<bool>> UpdatePRFQStatusAsync(int prfqId, PRFQStatus newStatus);
+
+        Task<ServiceResult<int>> ContinueEditPRFQ(int prfqId, ContinuePRFQDTO dto);
     }
 }

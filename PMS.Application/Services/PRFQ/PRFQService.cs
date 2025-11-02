@@ -127,6 +127,93 @@ namespace PMS.API.Services.PRFQService
             };
         }
 
+        public async Task<ServiceResult<int>> ContinueEditPRFQ(int prfqId, ContinuePRFQDTO dto)
+        {
+            try
+            {
+                var currentPrfq = await _unitOfWork.PurchasingRequestForQuotation
+                    .Query()
+                    .Include(p => p.PRPS)
+                    .FirstOrDefaultAsync(p => p.PRFQID == prfqId);
+
+                if (currentPrfq == null)
+                {
+                    return new ServiceResult<int>
+                    {
+                        Data = 0,
+                        Message = $"Không tìm thấy PRFQ với ID = {prfqId}.",
+                        StatusCode = 404,
+                        Success = false
+                    };
+                }
+
+                if (currentPrfq.Status != PRFQStatus.Draft)
+                {
+                    return new ServiceResult<int>
+                    {
+                        Data = prfqId,
+                        Message = $"PRFQ {prfqId} không thể chỉnh sửa vì trạng thái hiện tại là '{currentPrfq.Status}'.",
+                        StatusCode = 400,
+                        Success = false
+                    };
+                }
+
+
+                currentPrfq.RequestDate = DateTime.Now;
+                currentPrfq.Status = dto.PRFQStatus;
+                _unitOfWork.PurchasingRequestForQuotation.Update(currentPrfq);
+
+
+                var existingProducts = currentPrfq.PRPS.Select(x => x.ProductID).ToList();
+
+
+                var toAdd = dto.ProductIds.Except(existingProducts).ToList();
+
+
+                var toRemove = existingProducts.Except(dto.ProductIds).ToList();
+
+
+                foreach (var productId in toAdd)
+                {
+                    await _unitOfWork.PurchasingRequestProduct.AddAsync(new PurchasingRequestProduct
+                    {
+                        PRFQID = currentPrfq.PRFQID,
+                        ProductID = productId
+                    });
+                }
+
+                if (toRemove.Any())
+                {
+                    var removeEntities = currentPrfq.PRPS
+                        .Where(p => toRemove.Contains(p.ProductID))
+                        .ToList();
+
+                    _unitOfWork.PurchasingRequestProduct.RemoveRange(removeEntities);
+                }
+
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<int>
+                {
+                    Data = currentPrfq.PRFQID,
+                    Message = $"Thành công.",
+                    StatusCode = 200,
+                    Success = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"ContinueEditPRFQ failed for PRFQID = {prfqId}");
+                return new ServiceResult<int>
+                {
+                    Data = 0,
+                    Message = "Có lỗi xảy ra khi tiếp tục chỉnh sửa PRFQ.",
+                    StatusCode = 500,
+                    Success = false
+                };
+            }
+        }
+
         public async Task<ServiceResult<bool>> DeletePRFQAsync(int prfqId, string userId)
         {
             try
