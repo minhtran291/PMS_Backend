@@ -788,6 +788,7 @@ namespace PMS.API.Services.PRFQService
                 var supplierName = worksheet.Cells[4, 6].Text?.Trim();
                 if (!int.TryParse(worksheet.Cells[2, 2].Text?.Trim(), out int YC))
                     throw new Exception("Không thể đọc YC từ file Excel.");
+
                 var SenderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
                 var supplier = _unitOfWork.Supplier.Query().FirstOrDefault(sp => sp.Name == supplierName);
                 if (supplier == null)
@@ -798,100 +799,128 @@ namespace PMS.API.Services.PRFQService
                         Message = "Tên nhà sản xuất bị trống"
                     };
                 }
+
                 // Đọc QID từ Excel 
                 if (!int.TryParse(worksheet.Cells[4, 4].Text?.Trim(), out int qId))
                     throw new Exception("Không thể đọc QID từ file Excel.");
+
+                // Đọc qEDate (an toàn với serial / string)
                 DateTime qEDate;
                 var qEDateCell = worksheet.Cells[7, 4];
                 var rawQEDate = qEDateCell.Text?.Trim();
-
                 if (qEDateCell.Value is double serialValue)
                 {
-                   
                     qEDate = DateTime.FromOADate(serialValue);
                 }
                 else if (DateTime.TryParseExact(rawQEDate,
                     new[] { "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "d/M/yyyy", "M/d/yyyy" },
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.None,
-                    out var parsed))
+                    out var parsedE))
                 {
-                    qEDate = parsed;
+                    qEDate = parsedE;
                 }
-                else if (DateTime.TryParse(rawQEDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedLoose))
+                else if (DateTime.TryParse(rawQEDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedLooseE))
                 {
-                    qEDate = parsedLoose;
+                    qEDate = parsedLooseE;
                 }
                 else
                 {
                     throw new Exception($"Không thể đọc ngày hết hạn từ Excel: '{rawQEDate}'");
                 }
 
-                // Kiểm tra hạn
-                if (DateTime.Now > qEDate)
-                {
-                    return new ServiceResult<int>
-                    {
-                        StatusCode = 200,
-                        Message = "Quotation đã quá hạn. Vui lòng yêu cầu nhà cung cấp cập nhật báo giá mới."
-                    };
-                }
-
+                // Đọc qSDate 
                 DateTime qSDate;
                 var qSDateCell = worksheet.Cells[7, 2];
                 var rawQSDate = qSDateCell.Text?.Trim();
-
-                if (qSDateCell.Value is double value)
+                if (qSDateCell.Value is double serialValueS)
                 {
-                    
-                    qSDate = DateTime.FromOADate(value);
+                    qSDate = DateTime.FromOADate(serialValueS);
                 }
                 else if (DateTime.TryParseExact(rawQSDate,
                     new[] { "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd", "d/M/yyyy", "M/d/yyyy" },
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.None,
-                    out var parsed))
+                    out var parsedS))
                 {
-                    qSDate = parsed;
+                    qSDate = parsedS;
                 }
-                else if (DateTime.TryParse(rawQSDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedLoose))
+                else if (DateTime.TryParse(rawQSDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedLooseS))
                 {
-                    qSDate = parsedLoose;
+                    qSDate = parsedLooseS;
                 }
                 else
                 {
                     throw new Exception($"Đọc ngày gửi thất bại. Giá trị không hợp lệ: '{rawQSDate}'");
                 }
 
-                // tạo quotation
-                var Quotation = new Quotation
-                {
-                    QID = qId,
-                    SupplierID = supplier.Id,
-                    SendDate = qSDate,
-                    Status = SupplierQuotationStatus.InDate,
-                    QuotationExpiredDate = qEDate,
-                    PRFQID = YC
-                };
+                // Lấy existingQuotation
+                var existingQuotation = await _unitOfWork.Quotation.Query()
+                    .FirstOrDefaultAsync(q => q.QID == qId && q.SupplierID == supplier.Id);
 
-                // Tạo PO mới
+                Quotation quotationToUse;
+
+                if (existingQuotation == null)
+                {
+
+                    if (DateTime.Now > qEDate)
+                    {
+                        return new ServiceResult<int>
+                        {
+                            StatusCode = 200,
+                            Message = "Quotation đã quá hạn. Vui lòng yêu cầu nhà cung cấp cập nhật báo giá mới."
+                        };
+                    }
+
+                    quotationToUse = new Quotation
+                    {
+                        QID = qId,
+                        SupplierID = supplier.Id,
+                        SendDate = qSDate,
+                        Status = SupplierQuotationStatus.InDate,
+                        QuotationExpiredDate = qEDate,
+                        PRFQID = YC
+                    };
+
+                    await _unitOfWork.Quotation.AddAsync(quotationToUse);
+
+                    await _unitOfWork.CommitAsync();
+                }
+                else
+                {
+
+                    if (DateTime.Now > existingQuotation.QuotationExpiredDate)
+                    {
+                        return new ServiceResult<int>
+                        {
+                            StatusCode = 200,
+                            Message = $"Báo giá QID = {qId} của NCC {supplier.Name} đã hết hạn. Vui lòng yêu cầu cập nhật báo giá mới."
+                        };
+                    }
+
+
+                    quotationToUse = existingQuotation;
+                }
+
+
                 var po = new PurchasingOrder
                 {
                     OrderDate = DateTime.Now,
-                    QID = Quotation.QID,
+                    QID = quotationToUse.QID,
                     UserId = userId,
                     Total = 0,
                     Status = PurchasingOrderStatus.sent,
                 };
-                await _unitOfWork.Quotation.AddAsync(Quotation);
+
                 await _unitOfWork.PurchasingOrder.AddAsync(po);
+
                 await _unitOfWork.CommitAsync();
 
-                // Lấy dictionary sản phẩm từ DB
+
                 var products = await _unitOfWork.Product.Query()
                     .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
 
-                // Lọc danh sách sản phẩm được chọn
+
                 var selectedProductQuantities = input.Details
                     .Where(d => d.Quantity > 0)
                     .ToDictionary(d => d.ProductID, d => d.Quantity);
@@ -900,7 +929,7 @@ namespace PMS.API.Services.PRFQService
                 var QuotationDetails = new List<QuotationDetail>();
                 int row = 11;
 
-                // Đọc từng dòng trong Excel
+
                 while (!string.IsNullOrEmpty(worksheet.Cells[row, 1].Text))
                 {
                     var productIdText = worksheet.Cells[row, 1].Text?.Trim();
@@ -910,7 +939,7 @@ namespace PMS.API.Services.PRFQService
                         continue;
                     }
 
-                    // bỏ qua sản phẩm không được chọn
+ 
                     if (!selectedProductQuantities.TryGetValue(productId, out int quantity))
                     {
                         row++;
@@ -927,7 +956,7 @@ namespace PMS.API.Services.PRFQService
 
                     DateTime expectedExpiredDate = DateTime.MinValue;
 
-                    // Parse ExpiredDate (tối ưu hóa theo nhiều format)
+
                     if (!string.IsNullOrEmpty(expiredDateText) && expiredDateText != "Chưa có lô hàng")
                     {
                         if (double.TryParse(expiredDateText, NumberStyles.Any, CultureInfo.InvariantCulture, out double serialDate))
@@ -938,7 +967,6 @@ namespace PMS.API.Services.PRFQService
                             }
                             catch (ArgumentException)
                             {
-
                                 return new ServiceResult<int>
                                 {
                                     StatusCode = 200,
@@ -949,10 +977,10 @@ namespace PMS.API.Services.PRFQService
                         else
                         {
                             string[] dateFormats = {
-                            "dd/MM/yyyy", "MM/yyyy", "MMM-yyyy", "MMMM-yyyy",
-                            "MMM-yy", "MMMM-yy", "MMM-dd", "dd-MMM", "dd-MMM-yyyy",
-                            "MMM dd", "MMM dd yyyy", "MMM dd-yy", "MMM dd-yyyy"
-        };
+                        "dd/MM/yyyy", "MM/yyyy", "MMM-yyyy", "MMMM-yyyy",
+                        "MMM-yy", "MMMM-yy", "MMM-dd", "dd-MMM", "dd-MMM-yyyy",
+                        "MMM dd", "MMM dd yyyy", "MMM dd-yy", "MMM dd-yyyy"
+                    };
 
                             expiredDateText = expiredDateText.Replace("Sept", "Sep", StringComparison.OrdinalIgnoreCase).Trim();
 
@@ -987,7 +1015,6 @@ namespace PMS.API.Services.PRFQService
 
                     if (expectedExpiredDate == DateTime.MinValue)
                     {
-
                         return new ServiceResult<int>
                         {
                             StatusCode = 200,
@@ -1015,7 +1042,7 @@ namespace PMS.API.Services.PRFQService
 
                     QuotationDetails.Add(new QuotationDetail
                     {
-                        QID = qId,
+                        QID = quotationToUse.QID,
                         ProductID = productId,
                         ProductName = productName,
                         ProductDescription = description ?? string.Empty,
@@ -1023,10 +1050,10 @@ namespace PMS.API.Services.PRFQService
                         UnitPrice = unitPrice,
                         ProductDate = expectedExpiredDate
                     });
+
                     row++;
                 }
 
-                ////
                 if (details.Count == 0)
                 {
                     return new ServiceResult<int>
@@ -1035,14 +1062,15 @@ namespace PMS.API.Services.PRFQService
                         Message = "Không có sản phẩm nào được chọn để đặt hàng."
                     };
                 }
+
                 _unitOfWork.PurchasingOrderDetail.AddRange(details);
                 _unitOfWork.QuotationDetail.AddRange(QuotationDetails);
                 await _unitOfWork.CommitAsync();
 
-                //  Gửi mail PO
+                // Gửi mail PO
                 var poExcelBytes = await GeneratePOExcelAsync(userId, po);
                 var SupplierEmail = worksheet.Cells[5, 6].Text?.Trim();
-                if (SupplierEmail == null)
+                if (string.IsNullOrWhiteSpace(SupplierEmail))
                 {
                     return new ServiceResult<int>
                     {
@@ -1050,6 +1078,7 @@ namespace PMS.API.Services.PRFQService
                         Message = "Kiểm tra lại email nhà cung cấp"
                     };
                 }
+
                 if (purchasingOrderStatus == PurchasingOrderStatus.sent)
                 {
                     await _emailService.SendEmailWithAttachmentAsync(
@@ -1060,6 +1089,7 @@ namespace PMS.API.Services.PRFQService
                         $"PO_{po.POID}.xlsx"
                     );
                 }
+
                 await _notificationService.SendNotificationToRolesAsync(
                    userId,
                    ["ACCOUNTANT"],
@@ -1080,6 +1110,7 @@ namespace PMS.API.Services.PRFQService
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "ConvertExcelToPurchaseOrderAsync failed");
                 await _unitOfWork.RollbackTransactionAsync();
                 return new ServiceResult<int>
                 {
@@ -1088,6 +1119,7 @@ namespace PMS.API.Services.PRFQService
                 };
             }
         }
+
 
         public async Task<ServiceResult<object>> GetPRFQDetailAsync(int prfqId)
         {
@@ -1111,20 +1143,20 @@ namespace PMS.API.Services.PRFQService
                     };
                 }
 
-                
+
                 bool hasQuotation = await _unitOfWork.Quotation
                     .Query()
                     .AnyAsync(q => q.PRFQID == prfq.PRFQID);
 
-                
+
                 var displayStatus = hasQuotation ? PRFQStatus.Approved : prfq.Status;
 
-               
+
                 var detail = new
                 {
                     prfq.PRFQID,
                     prfq.RequestDate,
-                    Status = displayStatus, 
+                    Status = displayStatus,
                     prfq.TaxCode,
                     prfq.MyPhone,
                     prfq.MyAddress,
@@ -1176,7 +1208,7 @@ namespace PMS.API.Services.PRFQService
         {
             try
             {
-                
+
                 var prfqs = await _unitOfWork.PurchasingRequestForQuotation
                     .Query()
                     .Include(p => p.Supplier)
@@ -1206,21 +1238,21 @@ namespace PMS.API.Services.PRFQService
                     };
                 }
 
-               
+
                 var quotationPRFQIDs = await _unitOfWork.Quotation
                     .Query()
                     .Select(q => q.PRFQID)
                     .Distinct()
                     .ToListAsync();
 
-                
+
                 var result = prfqs.Select(p => new
                 {
                     p.PRFQID,
                     p.RequestDate,
                     Status = quotationPRFQIDs.Contains(p.PRFQID)
-                        ? PRFQStatus.Approved  
-                        : p.Status,             
+                        ? PRFQStatus.Approved
+                        : p.Status,
                     p.TaxCode,
                     p.MyPhone,
                     p.MyAddress,
