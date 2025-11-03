@@ -63,8 +63,7 @@ namespace PMS.Data.UnitOfWork
         ITaxPolicyRepository taxPolicy,
         IGoodReceiptNoteDetailRepository goodReceiptNoteDetail,
         IGoodReceiptNoteRepository goodReceiptNote,
-        ISalesQuotationNoteRepository salesQuotationNote) : IUnitOfWork
-        IQuotationDetailRepository quotationDetail,
+        ISalesQuotationNoteRepository salesQuotationNote,
         ISalesOrderRepository salesOrder,
         ISalesOrderDetailsRepository salesOrderDetails,
         ICustomerDeptRepository customerDept) : IUnitOfWork
