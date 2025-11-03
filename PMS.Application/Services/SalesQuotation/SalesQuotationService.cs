@@ -78,13 +78,27 @@ namespace PMS.Application.Services.SalesQuotation
                     }
                     else
                     {
-                        lotDtos.Add(new LotDTO
+                        var latestLot = await _unitOfWork.LotProduct.Query()
+                            .Include(lp => lp.Product)
+                            .AsNoTracking()
+                            .Where(lp => lp.ProductID == detail.ProductId)
+                            .OrderByDescending(lp => lp.InputDate)
+                            .FirstOrDefaultAsync();
+
+                        if(latestLot != null)
                         {
-                            ProductID = detail.ProductId,
-                            ProductName = detail.Product.ProductName,
-                            Unit = detail.Product.Unit,
-                            Note = "Hết hàng"
-                        });
+                            lotDtos.Add(_mapper.Map<LotDTO>(latestLot));
+                        }
+                        else
+                        {
+                            lotDtos.Add(new LotDTO
+                            {
+                                ProductID = detail.ProductId,
+                                ProductName = detail.Product.ProductName,
+                                Unit = detail.Product.Unit,
+                                Note = "Chưa có lô hàng nào"
+                            });
+                        }
                     }
                 }
 
@@ -162,6 +176,8 @@ namespace PMS.Application.Services.SalesQuotation
                     QuotationCode = GenerateQuotationCode(),
                     ExpiredDate = dto.ExpiredDate.Date.AddDays(1).AddTicks(-1),
                     Status = Core.Domain.Enums.SalesQuotationStatus.Draft,
+                    DepositPercent = dto.DepositPercent,
+                    DepositDueDays = dto.DepositDueDays,
                     SalesQuotaionDetails = dto.Details.Select(item => new SalesQuotaionDetails
                     {
                         LotId = item.LotId,
@@ -296,19 +312,19 @@ namespace PMS.Application.Services.SalesQuotation
                     Message = "Có lô hàng không tồn tại trong hệ thống"
                 };
 
-            var invalidLots = lots
-                .Where(l => l.ExpiredDate.Date <= DateTime.Today || l.LotQuantity <= 0)
-                .ToList();
+            //var invalidLots = lots
+            //    .Where(l => l.ExpiredDate.Date <= DateTime.Today || l.LotQuantity <= 0)
+            //    .ToList();
 
-            if (invalidLots.Any())
-            {
-                var names = string.Join(", ", invalidLots.Select(l => l.Product.ProductName));
-                return new ServiceResult<object>
-                {
-                    StatusCode = 400,
-                    Message = $"Các lô hàng không hợp lệ (hết hạn hoặc hết hàng): {names}"
-                };
-            }
+            //if (invalidLots.Any())
+            //{
+            //    var names = string.Join(", ", invalidLots.Select(l => l.Product.ProductName));
+            //    return new ServiceResult<object>
+            //    {
+            //        StatusCode = 400,
+            //        Message = $"Các lô hàng không hợp lệ (hết hạn hoặc hết hàng): {names}"
+            //    };
+            //}
 
             var outOfScopeLots = lots
                 .Where(l => !validProductIds.Contains(l.ProductID))
@@ -466,6 +482,10 @@ namespace PMS.Application.Services.SalesQuotation
                 salesQuotation.SqnId = dto.SqnId;
 
                 salesQuotation.ExpiredDate = dto.ExpiredDate.Date.AddDays(1).AddTicks(-1);
+
+                salesQuotation.DepositPercent = dto.DepositPercent;
+
+                salesQuotation.DepositDueDays = dto.DepositDueDays;
 
                 foreach (var detailDto in dto.Details)
                 {
