@@ -15,67 +15,73 @@ namespace PMS.API.Controllers
         {
             _warehouseService = warehouseService;
         }
-
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/get-all-warehouse
+        /// </summary>
+        /// <returns></returns>
         [HttpGet]
         [Route("get-all-warehouse")]
         public async Task<IActionResult> WarehouseList()
         {
-            try
+            var result = await _warehouseService.GetListWarehouseAsync();
+            return StatusCode(result.StatusCode, new
             {
-                var list = await _warehouseService.GetListWarehouseAsync();
-                return Ok(list);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         [HttpPost]
         [Route("create-warehouse")]
-        public async Task<IActionResult> CreateWarehouse([FromBody] CreateWarehouse dto)
+        public async Task<IActionResult> CreateWarehouse([FromBody] CreateWarehouseDTO dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            try
+            var result = await _warehouseService.CreateWarehouseAsync(dto);
+
+            return StatusCode(result.StatusCode, new
             {
-                await _warehouseService.CreateWarehouseAsync(dto);
-                return Ok("Tạo thành công");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+                message = result.Message,
+            });
         }
 
         [HttpPut]
         [Route("update-warehouse")]
-        public async Task<IActionResult> UpdateWarehouse([FromBody] UpdateWarehouse dto)
+        public async Task<IActionResult> UpdateWarehouse([FromBody] UpdateWarehouseDTO dto)
         {
-            try
-            {
-                await _warehouseService.UpdateWarehouseAsync(dto);
-                return Ok("Cập nhật thành công");
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
-        }
+            var result = await _warehouseService.UpdateWarehouseAsync(dto);
 
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+            });
+        }
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/get-warehouse-details/{}
+        /// </summary>
+        /// <param name="warehouseId"></param>
+        /// <returns></returns>
         [HttpGet]
-        [Route("get-warehouse-details")]
+        [Route("get-warehouse-details/{warehouseId}")]
         public async Task<IActionResult> WarehouseDetails(int warehouseId)
         {
-            try
+            var result = await _warehouseService.ViewWarehouseDetailsAysnc(warehouseId);
+
+            return StatusCode(result.StatusCode, new
             {
-                var result = await _warehouseService.ViewWarehouseDetailsAysnc(warehouseId);
-                return Ok(result);
-            }
-            catch (Exception ex)
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        [HttpDelete]
+        [Route("delete-warehouse")]
+        public async Task<IActionResult> DeleteWarehouse(int warehouseId)
+        {
+            var result = await _warehouseService.DeleteWarehouseAsync(warehouseId);
+
+            return StatusCode(result.StatusCode, new
             {
-                return BadRequest(ex.Message);
-            }
+                message = result.Message,
+            });
         }
     }
 }

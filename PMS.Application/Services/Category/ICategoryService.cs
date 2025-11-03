@@ -5,6 +5,7 @@ namespace PMS.Application.Services.Category
 {
     public interface ICategoryService
     {
+        Task<ServiceResult<bool>> DeleteCategoriesWithNoReference(int cateId);
         Task<ServiceResult<CategoryDTO>> GetByIdAsync(int id);
         Task<ServiceResult<IEnumerable<CategoryDTO>>> GetAllAsync();
         Task<ServiceResult<bool>> AddAsync(CategoryDTO category);

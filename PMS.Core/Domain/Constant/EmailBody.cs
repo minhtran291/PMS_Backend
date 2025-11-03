@@ -69,5 +69,33 @@ namespace PMS.Core.Domain.Constant
 
             return body;
         }
+
+        public static string SALES_QUOTATION(string email)
+        {
+            var body = $@"
+<!DOCTYPE html>
+    <html lang=""en"">
+    <head>
+        <meta charset=""UTF-8"">
+        <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+        <title>Đơn báo giá</title>
+    </head>
+    <body style=""margin: 0; font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 40px;"">
+        <div style=""max-width: 600px; margin: auto; background-color: #fff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"">
+            <img src=""https://res.cloudinary.com/dkyqm6vou/image/upload/v1737280894/OIP_3_ovpptg.jpg"" alt=""Envelope Icon"" style=""width: 60px; display: block; margin: 0 auto 20px;"">
+            <h2 style=""text-align: center; color: #333;"">Đơn báo giá</h2>
+            <p style=""font-size: 15px; color: #555;"">Chào <strong>{email}</strong>,</p>
+            <p style=""font-size: 15px; color: #555;"">
+                Chúng tôi gửi bạn đơn báo giá.
+            </p>
+            <p style=""font-size: 15px; color: #555;"">
+                Nếu có bất kỳ thắc mắc nào vùi lòng liên hệ lại với chúng tôi.
+            </p>
+        </div>
+    </body>
+    </html>";
+
+            return body;
+        }
     }
 }

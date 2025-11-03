@@ -1,15 +1,24 @@
 ﻿using AutoMapper;
+using DinkToPdf;
+using DinkToPdf.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using PMS.API.Services.GRNService;
+using PMS.API.Services.POService;
+using PMS.API.Services.PRFQService;
+using PMS.API.Services.QuotationService;
 using PMS.Application.Automapper;
 using PMS.Application.DTOs.VNPay;
 using PMS.Application.Services.Admin;
 using PMS.Application.Services.Auth;
 using PMS.Application.Services.Category;
 using PMS.Application.Services.ExternalService;
+
 using PMS.Application.Services.Notification;
+using PMS.Application.Services.PO;
 using PMS.Application.Services.Product;
 using PMS.Application.Services.RequestSalesQuotation;
+using PMS.Application.Services.SalesQuotation;
 using PMS.Application.Services.SalesOrder;
 using PMS.Application.Services.Supplier;
 using PMS.Application.Services.User;
@@ -41,6 +50,11 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IWarehouseLocationService, WarehouseLocationService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IRequestSalesQuotationService, RequestSalesQuotationService>();
+            services.AddScoped<IPRFQService, PRFQService>();
+            services.AddScoped<IPOService, POService>();
+            services.AddScoped<IGRNService, GRNService>();
+            services.AddScoped<ISalesQuotationService, SalesQuotationService>();
+            services.AddScoped<IQuotationService, QuotationService>();
             services.AddScoped<ISalesOrderService, SalesOrderService>();
             // VNPay
             services.AddScoped<IVnPayService, VnPayService>();
@@ -59,6 +73,8 @@ namespace PMS.Application.DIConfig
         public static void AddExternalServices(this IServiceCollection services)
         {
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IPdfService, PdfService>();
+            services.AddSingleton<IConverter, SynchronizedConverter>(_ => new SynchronizedConverter(new PdfTools()));
         }
     }
 }

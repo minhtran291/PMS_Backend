@@ -8,9 +8,9 @@ namespace PMS.Core.Domain.Enums
 {
     public enum PRFQStatus
     {
-        Pending,
-        Sent,
-        Approved,
-        Rejected
+        Sent =1,
+        Approved =2,
+        Rejected =3,
+        Draft=4
     }
 }

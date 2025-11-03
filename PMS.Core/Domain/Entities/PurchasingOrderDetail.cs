@@ -13,6 +13,10 @@ namespace PMS.Core.Domain.Entities
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int PODID { get; set; }
+
+        [ForeignKey("Product")]
+        [Required]
+        public int ProductID { get; set; }
         public string ProductName { get; set; }
         public string DVT { get; set; }
         public int Quantity { get; set; }
@@ -22,6 +26,8 @@ namespace PMS.Core.Domain.Entities
         public int POID { get; set; }
         [ForeignKey("POID")]
         public virtual PurchasingOrder PurchasingOrder { get; set; } = null!;
+
+        public virtual Product Product { get; set; } = null!;
 
         public DateTime ExpiredDate { get; set; }
     }

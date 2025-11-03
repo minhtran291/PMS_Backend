@@ -58,7 +58,7 @@ namespace PMS.API.Controllers
         /// Lấy thể loại theo ID
         /// </summary>
         [HttpGet("getbyid/{id}")]
-       // [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetCategory(int id)
         {
             var result = await _categoryService.GetByIdAsync(id);
@@ -112,6 +112,7 @@ namespace PMS.API.Controllers
         /// <param name="cateId"></param>
         /// <returns></returns>
         [HttpPut("toggleStatus/{cateId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> ToggleCategoryStatus(int cateId)
         {
             try
@@ -134,6 +135,21 @@ namespace PMS.API.Controllers
                     Message = $"Đã xảy ra lỗi trong quá trình xử lý: {ex.Message}"
                 });
             }
+        }
+
+
+        /// <summary>
+        /// Xóa danh mục khi không có sản phẩm liên quan
+        /// https://localhost:7213/api/Category/Delete/{cateId}
+        /// </summary>
+        /// <param name="cateId">ID của danh mục cần xóa</param>
+        /// <returns>Kết quả xóa danh mục</returns>
+        [HttpDelete("Delete/{cateId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> DeleteCategory(int cateId)
+        {
+            var result = await _categoryService.DeleteCategoriesWithNoReference(cateId);
+            return HandleServiceResult(result);
         }
 
     }

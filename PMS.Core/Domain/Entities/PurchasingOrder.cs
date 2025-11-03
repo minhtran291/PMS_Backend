@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PMS.Core.Domain.Enums;
 using PMS.Core.Domain.Identity;
 
 namespace PMS.Core.Domain.Entities
@@ -19,10 +20,11 @@ namespace PMS.Core.Domain.Entities
         [Required(ErrorMessage = "Ngày Order không được phép bỏ trống")]
         public required DateTime OrderDate { get; set; }
         public string? PaymentBy { get; set; }
-        public bool Status { get; set; } = false;
+        public PurchasingOrderStatus Status { get; set; }
         public decimal Deposit { get; set; }
         public decimal Debt { get; set; }
         public DateTime PaymentDate { get; set; }
+
         public string UserId { get; set; }// người tạo
         [Required(ErrorMessage = "QID không được phép bỏ trống")]
         [ForeignKey("Quotation")]
@@ -30,10 +32,8 @@ namespace PMS.Core.Domain.Entities
         [ForeignKey("UserId")]
         public virtual User User { get; set; } = null!;
         public virtual ICollection<PurchasingOrderDetail> PurchasingOrderDetails { get; set; } = new List<PurchasingOrderDetail>();
-        //public virtual ICollection<GoodReceiptNote> GoodReceiptNotes { get; set; } = new List<GoodReceiptNote>();
+        public virtual ICollection<GoodReceiptNote> GoodReceiptNotes { get; set; } = new List<GoodReceiptNote>();
 
         public virtual Quotation Quotations { get; set; } = null;
-
-        //public virtual ICollection<SupplierInvoice> SupplierInvoices { get; set; } = new List<SupplierInvoice>();
     }
 }

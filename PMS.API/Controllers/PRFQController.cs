@@ -1,9 +1,12 @@
 ﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.API.Services.PRFQService;
 using PMS.Application.DTOs.PRFQ;
 using PMS.Application.DTOs.RequestSalesQuotation;
+using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Enums;
 
 namespace PMS.API.Controllers
 {
@@ -26,7 +29,7 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         /// 
         [HttpPost("quotationforsupplier")]
-        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> CreatePRFQ([FromBody] CreatePRFQDTO dto)
         {
             if (!ModelState.IsValid)
@@ -42,10 +45,207 @@ namespace PMS.API.Controllers
                 dto.TaxCode,
                 dto.MyPhone,
                 dto.MyAddress,
-                dto.ProductIds
+                dto.ProductIds,
+                dto.PRFQStatus
             );
 
             return HandleServiceResult(result);
+        }
+
+        /// <summary>
+        /// POST https://localhost:7213/api/PRFQ/convertToPo
+        /// Chuyển báo giá Excel (đã preview trước đó) thành đơn hàng chính thức (Purchase Order)
+        /// và gửi mail xác nhận lại cho supplier.
+        /// </summary>
+        /// <param name="input">ExcelKey (được sinh khi preview) + danh sách sản phẩm có Quantity</param>
+        /// <returns>POID và thông báo kết quả</returns>
+        [HttpPost("convertToPo")]
+        [Consumes("application/json")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> ConvertToPurchaseOrder([FromBody] PurchaseOrderInputDto input )
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new ServiceResult<string>
+                {
+                    StatusCode = 400,
+                    Message = "Dữ liệu đầu vào không hợp lệ.",
+                    Data = null
+                });
+
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return HandleServiceResult(new ServiceResult<string>
+                    {
+                        StatusCode = 401,
+                        Message = "Không thể xác thực người dùng."
+                    });
+                }
+
+                var result = await _iPRFQService.ConvertExcelToPurchaseOrderAsync(userId, input, input.status);
+                return HandleServiceResult(result);
+            }
+            catch (Exception ex)
+            {
+                return HandleServiceResult(new ServiceResult<string>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi hệ thống: " + ex.Message
+                });
+            }
+        }
+
+
+        /// <summary>
+        /// https://localhost:7213/api/PRFQ/previewSupplierQuotaionExcel
+        /// Xem trước danh sách sản phẩm trong file báo giá Excel của supplier.
+        /// </summary>
+        /// <param name="excelFile">File Excel do supplier gửi</param>
+        /// <returns>Danh sách sản phẩm gồm ProductID, Mô tả, ĐVT, Giá báo...</returns>
+        [HttpPost("previewSupplierQuotaionExcel")]
+        [Consumes("multipart/form-data")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> PreviewSupplierQuotationExcel([FromForm] IFormFile excelFile)
+        {
+            if (excelFile == null || excelFile.Length == 0)
+                return BadRequest("File Excel không hợp lệ");
+
+            try
+            {
+                var result = await _iPRFQService.PreviewExcelProductsAsync(excelFile);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        //ok
+        /// <summary>
+        /// delete PRFQ with status=4 (draft)
+        /// https://localhost:7213/api/PRFQ/deletePRFQ/{prfqId}
+        /// </summary>
+        /// <param name="prfqId"></param>
+        /// <returns></returns>
+        [HttpDelete("deletePRFQ/{prfqId:int}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> DeletePRFQ(int prfqId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { message = "Không thể xác thực người dùng." });
+
+            var result = await _iPRFQService.DeletePRFQAsync(prfqId, userId);
+            return HandleServiceResult(result);
+        }
+
+        //ok
+        /// <summary>
+        /// view detail PRFQ
+        /// https://localhost:7213/api/PRFQ/detail/{prfqId}   
+        /// </summary>
+        /// <param name="prfqId"></param>
+        /// <returns></returns>
+        [HttpGet("detail/{prfqId:int}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> GetPRFQDetail(int prfqId)
+        {
+            var result = await _iPRFQService.GetPRFQDetailAsync(prfqId);
+            return HandleServiceResult(result);
+        }
+
+        //ok
+        /// <summary>
+        /// Getall PRFQ
+        /// https://localhost:7213/api/PRFQ/getAll
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("getAll")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> GetAllPRFQ()
+        {
+            var result = await _iPRFQService.GetAllPRFQAsync();
+            return HandleServiceResult(result);
+        }
+
+        //ok
+        /// <summary>
+        /// Xem trước file Excel PRFQ 
+        /// https://localhost:7213/api/PRFQ/preview/{prfqId}
+        /// </summary>
+        /// <param name="prfqId">ID của PRFQ</param>
+        [HttpGet("preview/{prfqId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> PreviewExcel(int prfqId)
+        {
+            var result = await _iPRFQService.PreviewPRFQAsync(prfqId);
+            return StatusCode(result.StatusCode, result);
+        }
+
+        //ok
+        /// <summary>
+        /// Tải xuống file Excel PRFQ 
+        /// https://localhost:7213/api/PRFQ/download/{prfqId}
+        /// </summary>
+        /// <param name="prfqId">ID của PRFQ</param>
+        [HttpGet("download/{prfqId}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> DownloadExcel(int prfqId)
+        {
+            var result = await _iPRFQService.GenerateExcelAsync(prfqId);
+            if (result == null)
+                return NotFound("Không tìm thấy PRFQ.");
+
+            
+            Response.Headers.Append("Content-Disposition", $"attachment; filename=PRFQ_{prfqId}.xlsx");
+            return File(result,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        }
+
+        /// <summary>
+        ///  https://localhost:7213/api/PRFQ/{prfqId}/status
+        /// </summary>
+        /// <param name="prfqId"></param>
+        /// <param name="newStatus"></param>
+        /// <returns></returns>
+        [HttpPut("{prfqId}/status")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> UpdatePRFQStatus(int prfqId, [FromBody] PRFQStatus newStatus)
+        {
+            try
+            {
+                await _iPRFQService.UpdatePRFQStatusAsync(prfqId, newStatus);
+                return Ok(new { Message = $"Đã cập nhật trạng thái PRFQ {prfqId} thành {newStatus}" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        ///  https://localhost:7213/api/PRFQ/{prfqId}/continue
+        /// Tiếp tục chỉnh sửa PRFQ đang ở trạng thái Draft
+        /// </summary>
+        [HttpPut("{prfqId}/continue")]
+        public async Task<IActionResult> ContinueEditPRFQ([FromRoute] int prfqId, [FromBody] ContinuePRFQDTO input)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var result = await _iPRFQService.ContinueEditPRFQ(prfqId, input);
+                return HandleServiceResult(result);
+            }
+            catch (Exception ex)
+            {             
+                return StatusCode(500, new { Message = "Đã xảy ra lỗi trong quá trình chỉnh sửa PRFQ." });
+            }
         }
     }
 }

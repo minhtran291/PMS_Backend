@@ -66,5 +66,10 @@ namespace PMS.Data.Repositories.Base
         {
             _dbSet.UpdateRange(entities);
         }
+
+        public async Task AddRangeAsync(IEnumerable<T> entities)
+        {
+            await _dbSet.AddRangeAsync(entities);
+        }
     }
 }

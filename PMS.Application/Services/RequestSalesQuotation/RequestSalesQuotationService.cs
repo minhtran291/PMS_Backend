@@ -95,7 +95,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 }
                 else
                 {
-                    query = query.Where(r => r.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Sent);
+                    query = query.Where(r => r.Status != Core.Domain.Enums.RequestSalesQuotationStatus.Draft);
                 }
 
                 var list = await query.Select(r => new ViewRsqDTO
@@ -410,7 +410,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                     Message = "Bạn không có quyền thao tác trên yêu cầu báo giá này",
                 };
 
-            if (rsq.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Sent)
+            if (rsq.Status != Core.Domain.Enums.RequestSalesQuotationStatus.Draft)
                 return new ServiceResult<object>
                 {
                     StatusCode = 200,
@@ -440,7 +440,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
             }
             else
             {
-                if (rsq.Status != Core.Domain.Enums.RequestSalesQuotationStatus.Sent)
+                if (rsq.Status == Core.Domain.Enums.RequestSalesQuotationStatus.Draft)
                     return new ServiceResult<object>
                     {
                         StatusCode = 403,

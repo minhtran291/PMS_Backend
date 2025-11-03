@@ -39,6 +39,9 @@ namespace PMS.API
             // Services
             builder.Services.AddServices();
 
+            // Infrastructure
+            builder.Services.AddInfrastructure();
+
             // External Services
             builder.Services.AddExternalServices();
 
@@ -61,6 +64,11 @@ namespace PMS.API
                             .AllowAnyMethod()
                             .AllowCredentials();
                 });
+            });
+            builder.Services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = builder.Configuration.GetConnectionString("Redis");
+                options.InstanceName = "PO_Excel_";
             });
 
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -104,7 +112,10 @@ namespace PMS.API
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(c =>
+                {
+                    c.DocExpansion(Swashbuckle.AspNetCore.SwaggerUI.DocExpansion.None);
+                });
             }
 
             app.UseCors("AllowFrontend");

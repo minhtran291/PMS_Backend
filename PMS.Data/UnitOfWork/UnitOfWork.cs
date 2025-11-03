@@ -8,6 +8,8 @@ using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerDeptRepository;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
+using PMS.Data.Repositories.GoodReceiptNoteRepository;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
@@ -20,10 +22,15 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesQuotation;
+using PMS.Data.Repositories.SalesQuotationComment;
+using PMS.Data.Repositories.SalesQuotationDetails;
+using PMS.Data.Repositories.SalesQuotationNote;
 using PMS.Data.Repositories.SalesOrderDetailsRepository;
 using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
+using PMS.Data.Repositories.TaxPolicy;
 using PMS.Data.Repositories.User;
 using PMS.Data.Repositories.Warehouse;
 using PMS.Data.Repositories.WarehouseLocation;
@@ -49,6 +56,14 @@ namespace PMS.Data.UnitOfWork
         ILotProductRepository lotProduct, IPurchasingOrderRepository purchasingOrder,
         IPurchasingOrderDetailRepository purchasingOrderDetail,
         IQuotationRepository quotation,
+        IQuotationDetailRepository quotationDetail, 
+        ISalesQuotationRepository salesQuotation, 
+        ISalesQuotationDetailsRepository salesQuotationDetails, 
+        ISalesQuotationCommentRepository salesQuotationComment, 
+        ITaxPolicyRepository taxPolicy,
+        IGoodReceiptNoteDetailRepository goodReceiptNoteDetail,
+        IGoodReceiptNoteRepository goodReceiptNote,
+        ISalesQuotationNoteRepository salesQuotationNote) : IUnitOfWork
         IQuotationDetailRepository quotationDetail,
         ISalesOrderRepository salesOrder,
         ISalesOrderDetailsRepository salesOrderDetails,
@@ -82,6 +97,15 @@ namespace PMS.Data.UnitOfWork
         //PurchasingOrder
         public IPurchasingOrderRepository PurchasingOrder { get; private set; } = purchasingOrder;
         public IPurchasingOrderDetailRepository PurchasingOrderDetail { get; private set; } = purchasingOrderDetail;
+        //Sales Quotation
+        public ISalesQuotationRepository SalesQuotation { get; private set; } = salesQuotation;
+        public ISalesQuotationDetailsRepository SalesQuotationDetails { get; private set; } = salesQuotationDetails;
+        public ISalesQuotationCommentRepository SalesQuotationComment { get; private set; } = salesQuotationComment;
+        public ITaxPolicyRepository TaxPolicy { get; private set; } = taxPolicy;
+        //
+        public IGoodReceiptNoteDetailRepository GoodReceiptNoteDetail { get; private set; } = goodReceiptNoteDetail;
+        public IGoodReceiptNoteRepository GoodReceiptNote { get; private set; } = goodReceiptNote;
+        public ISalesQuotationNoteRepository SalesQuotationNote { get; private set; } = salesQuotationNote;
         //SalesOrder
         public ISalesOrderRepository SalesOrder { get; private set; } = salesOrder;
         public ISalesOrderDetailsRepository SalesOrderDetails { get; private set; } = salesOrderDetails;
