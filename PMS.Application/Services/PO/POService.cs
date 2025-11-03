@@ -1,4 +1,5 @@
 ﻿using System.Drawing;
+using System.Threading.Tasks;
 using AutoMapper;
 using DinkToPdf;
 using Microsoft.AspNetCore.Hosting;
@@ -22,16 +23,30 @@ namespace PMS.API.Services.POService
         {
             var poList = await _unitOfWork.PurchasingOrder.Query()
                 .Include(p => p.User)
+                .Include(p => p.Quotations)
                 .ToListAsync();
 
             var userList = await _unitOfWork.Users.Query()
                 .Select(u => new { u.Id, u.FullName })
                 .ToListAsync();
 
-            var result = poList.Select(p =>
+            var result = new List<POViewDTO>();
+
+            foreach (var p in poList)
             {
+                var quotation = _unitOfWork.Quotation.Query().FirstOrDefault();
+                Supplier? sup = null;
+
+                if (quotation != null)
+                {
+                   
+                    sup = await _unitOfWork.Supplier.Query()
+                        .FirstOrDefaultAsync(s => s.Id == quotation.SupplierID);
+                }
+
                 var paymentUser = userList.FirstOrDefault(u => u.Id == p.PaymentBy);
-                return new POViewDTO
+
+                result.Add(new POViewDTO
                 {
                     POID = p.POID,
                     OrderDate = p.OrderDate,
@@ -42,9 +57,10 @@ namespace PMS.API.Services.POService
                     Debt = p.Debt,
                     PaymentDate = p.PaymentDate,
                     UserName = p.User?.FullName ?? "Unknown",
-                    PaymentBy = paymentUser?.FullName ?? "Unknown"
-                };
-            }).ToList();
+                    PaymentBy = paymentUser?.FullName ?? "Unknown",
+                    supplierName = sup?.Name ?? "Unknown"
+                });
+            }
 
             return new ServiceResult<IEnumerable<POViewDTO>>
             {
@@ -53,6 +69,8 @@ namespace PMS.API.Services.POService
                 Message = "Thành công"
             };
         }
+
+
 
         public async Task<ServiceResult<POPaidViewDTO>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
         {

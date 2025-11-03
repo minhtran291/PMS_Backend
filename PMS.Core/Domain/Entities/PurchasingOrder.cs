@@ -24,6 +24,7 @@ namespace PMS.Core.Domain.Entities
         public decimal Deposit { get; set; }
         public decimal Debt { get; set; }
         public DateTime PaymentDate { get; set; }
+
         public string UserId { get; set; }// người tạo
         [Required(ErrorMessage = "QID không được phép bỏ trống")]
         [ForeignKey("Quotation")]
