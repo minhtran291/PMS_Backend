@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Storage;
 using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
+using PMS.Data.Repositories.CustomerDeptRepository;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
@@ -25,6 +26,8 @@ using PMS.Data.Repositories.SalesQuotation;
 using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotationNote;
+using PMS.Data.Repositories.SalesOrderDetailsRepository;
+using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.TaxPolicy;
@@ -60,7 +63,10 @@ namespace PMS.Data.UnitOfWork
         ITaxPolicyRepository taxPolicy,
         IGoodReceiptNoteDetailRepository goodReceiptNoteDetail,
         IGoodReceiptNoteRepository goodReceiptNote,
-        ISalesQuotationNoteRepository salesQuotationNote) : IUnitOfWork
+        ISalesQuotationNoteRepository salesQuotationNote,
+        ISalesOrderRepository salesOrder,
+        ISalesOrderDetailsRepository salesOrderDetails,
+        ICustomerDeptRepository customerDept) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -99,6 +105,11 @@ namespace PMS.Data.UnitOfWork
         public IGoodReceiptNoteDetailRepository GoodReceiptNoteDetail { get; private set; } = goodReceiptNoteDetail;
         public IGoodReceiptNoteRepository GoodReceiptNote { get; private set; } = goodReceiptNote;
         public ISalesQuotationNoteRepository SalesQuotationNote { get; private set; } = salesQuotationNote;
+        //SalesOrder
+        public ISalesOrderRepository SalesOrder { get; private set; } = salesOrder;
+        public ISalesOrderDetailsRepository SalesOrderDetails { get; private set; } = salesOrderDetails;
+        //CustomerDept
+        public ICustomerDeptRepository CustomerDept { get; private set; } = customerDept;
         public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();

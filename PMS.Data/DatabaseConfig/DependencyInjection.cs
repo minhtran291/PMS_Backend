@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.Core.Domain.Identity;
+using PMS.Data.Repositories.CustomerDeptRepository;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
@@ -27,6 +28,8 @@ using PMS.Data.Repositories.SalesQuotation;
 using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotationNote;
+using PMS.Data.Repositories.SalesOrderDetailsRepository;
+using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.TaxPolicy;
@@ -85,6 +88,12 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<IGoodReceiptNoteRepository, GoodReceiptNoteRepository>();
             services.AddScoped<IGoodReceiptNoteDetailRepository, GoodReceiptNoteDetailRepository>();
             services.AddScoped<ISalesQuotationNoteRepository, SalesQuotationNoteRepository>();
+            //
+            services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
+            services.AddScoped<ISalesOrderDetailsRepository, SalesOrderDetailsRepository>();
+            //
+            services.AddScoped<ICustomerDeptRepository, CustomerDeptRepository>();
+
         }
 
         public static void AddIdentityConfig(this IServiceCollection services)

@@ -60,11 +60,11 @@ namespace PMS.Application.Services.Admin
                 if (!createResult.Succeeded)
                 {
                     var errors = string.Join(", ", createResult.Errors.Select(e => e.Description));
-                    _logger.LogError("Tao nguoi dung that bai: {Errors}", errors);
+                    _logger.LogError("Tạo người dùng thất bại: {Errors}", errors);
                     return new ServiceResult<bool>
                     {
                         StatusCode = 500,
-                        Message = "Có lỗi xảy ra",
+                        Message = "Mật khẩu phải từ 8 kí tự và phải chứ ít nhất một kí tự đặc biệt, một chữ cái thường và một chữ cái in hoa.",
                         Data = false
                     };
                 }
@@ -96,11 +96,11 @@ namespace PMS.Application.Services.Admin
                 if (!roleResult.Succeeded)
                 {
                     var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
-                    _logger.LogError("Gan role that bai: {Errors}", errors);
+                    _logger.LogError("Gán vai trò thất bại: {Errors}", errors);
                     return new ServiceResult<bool>
                     {
                         StatusCode = 500,
-                        Message = "Có lỗi xảy ra",
+                        Message = "Không gán được vai trò cho nhân viên.",
                         Data = false
                     };
                 }
@@ -112,14 +112,14 @@ namespace PMS.Application.Services.Admin
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
-                    Message = "Tạo thành công.",
+                    Message = "Tạo thành công tài khoản nhân viên",
                     Data = true
                 };
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Tao nhan vien that bai");
+                _logger.LogError(ex, "Tạo nhân viên thất bại");
                 throw;
             }
         }
@@ -140,7 +140,6 @@ namespace PMS.Application.Services.Admin
                     Data = null
                 };
             }
-
             var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
             var staffRole = MapToSingleStaffRole(roleNames);
 
@@ -217,8 +216,8 @@ namespace PMS.Application.Services.Admin
             var roleOfUser = new Dictionary<string, StaffRole>();
             foreach (var u in result)
             {
-                var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(u); // IList<string>
-                roleOfUser[u.Id] = ToStaffRole(roleNames); // map tên role -> enum StaffRole
+                var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(u);
+                roleOfUser[u.Id] = ToStaffRole(roleNames);
             }
 
             return result.Select(u => new AccountList
@@ -237,6 +236,7 @@ namespace PMS.Application.Services.Admin
             }).ToList();
         }
 
+        //Get role to account list
         private static StaffRole ToStaffRole(IList<string> names)
         {
             if (names.Contains(UserRoles.SALES_STAFF)) return StaffRole.SalesStaff;
@@ -245,6 +245,7 @@ namespace PMS.Application.Services.Admin
             else return StaffRole.Accountant;
         }
 
+        //Change account status to Inactive
         public async Task<ServiceResult<bool>> SuspendAccountAsync(string userId)
         {
             var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
@@ -253,7 +254,7 @@ namespace PMS.Application.Services.Admin
                 return new ServiceResult<bool>
                 {
                     StatusCode = 404,
-                    Message = "không tìm thấy user",
+                    Message = "không tìm thấy người dùng",
                     Data = false
                 };
             }
@@ -266,12 +267,12 @@ namespace PMS.Application.Services.Admin
             return new ServiceResult<bool>
             {
                 StatusCode = 200,
-                Message = "cập nhật thành công",
+                Message = "Ngừng hoạt động tài khoản thành công",
                 Data = true
             };
         }
 
-
+        //Update account information
         public async Task<ServiceResult<bool>> UpdateAccountAsync(UpdateAccountRequest request)
         {
             var user = await _unitOfWork.Users.Query()
@@ -282,7 +283,7 @@ namespace PMS.Application.Services.Admin
                 return new ServiceResult<bool>
                 {
                     StatusCode = 404,
-                    Message = "không tìm thấy user",
+                    Message = "không tìm thấy người dùng",
                     Data = false
                 };
             }
@@ -305,7 +306,7 @@ namespace PMS.Application.Services.Admin
 
                 await _unitOfWork.Users.UserManager.UpdateAsync(user);
 
-                // Update / Upsert StaffProfile
+                // Update StaffProfile
                 var staffProfile = user.StaffProfile;
                 if (staffProfile == null)
                 {
@@ -313,7 +314,7 @@ namespace PMS.Application.Services.Admin
                     return new ServiceResult<bool>
                     {
                         StatusCode = 500,
-                        Message = "có lỗi xảy ra",
+                        Message = "Update profile lỗi, không có staff profile",
                         Data = false
                     };
                 }
@@ -329,20 +330,23 @@ namespace PMS.Application.Services.Admin
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
-                    Message = "Thành công",
+                    Message = "Cập Nhật Thành công",
                     Data = false
                 };
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Admin update account loi: ");
+                _logger.LogError(ex, "Có lỗi trong khi cập nhật thông tin tài khoản: ");
                 throw;
             }
         }
-        private static string GenerateEmployeeCode(string role )
-           => $"{role}{DateTime.UtcNow:yyyyMMddHHmmssfff}";
 
+        //Generate EmployeeCode acording to roles
+        private static string GenerateEmployeeCode(string role )
+           => $"{role}{DateTime.Now:yyyyMMddHHmmssfff}";
+
+        //Change account status to Active
         public async Task <ServiceResult<bool>> ActiveAccountAsync(string userID)
         {
             var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userID);
@@ -351,7 +355,7 @@ namespace PMS.Application.Services.Admin
                 return new ServiceResult<bool>
                 {
                     StatusCode = 404,
-                    Message = "không tìm thấy user",
+                    Message = "không tìm thấy người dùng",
                     Data = false
                 };
             }
@@ -363,7 +367,7 @@ namespace PMS.Application.Services.Admin
             return new ServiceResult<bool>
             {
                 StatusCode = 200,
-                Message = "kích hoạt thành công",
+                Message = "kích hoạt tài khoản thành công",
                 Data = true
             };
         }
