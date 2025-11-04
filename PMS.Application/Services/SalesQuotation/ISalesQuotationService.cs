@@ -18,5 +18,6 @@ namespace PMS.Application.Services.SalesQuotation
         Task<ServiceResult<object>> SendSalesQuotationAsync(int sqId, string ssId);
         Task<ServiceResult<object>> AddSalesQuotationComment(AddSalesQuotationCommentDTO dto, string userId);
         Task<ServiceResult<object>> SalesQuotaionDetailsAsync(int sqId, string userId);
+        Task UpdateExpiredQuotationAsync();
     }
 }

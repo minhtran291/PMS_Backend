@@ -54,6 +54,9 @@ namespace PMS.API
             // JWT
             builder.Services.AddJwt(builder.Configuration);
 
+            // Background service
+            builder.Services.AddBackgroundServices();
+
             // cho phep khi dung ajax goi api tu fe den be
             builder.Services.AddCors(options =>
             {
