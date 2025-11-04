@@ -232,6 +232,7 @@ namespace PMS.API.Controllers
         /// Tiếp tục chỉnh sửa PRFQ đang ở trạng thái Draft
         /// </summary>
         [HttpPut("{prfqId}/continue")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> ContinueEditPRFQ([FromRoute] int prfqId, [FromBody] ContinuePRFQDTO input)
         {
             if (!ModelState.IsValid)
