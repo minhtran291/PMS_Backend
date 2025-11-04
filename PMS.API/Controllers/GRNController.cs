@@ -81,5 +81,46 @@ namespace PMS.API.Controllers
 
             return HandleServiceResult(result);
         }
+
+        /// <summary>
+        /// https://localhost:7213/api/GRN/getAll
+        /// Lấy toàn bộ danh sách phiếu nhập kho (Good Receipt Note)
+        /// </summary>
+        [HttpGet("getAll")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        public async Task<IActionResult> GetAllGRN()
+        {
+            var result = await _IGRNService.GetAllGRN();
+            return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
+        /// https://localhost:7213/api/GRN/detail/{id}
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        [HttpGet("detail/{id}")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        public async Task<IActionResult> GetDetail(int id)
+        {
+            var result = await _IGRNService.GetGRNDetailAsync(id);
+            return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
+        /// Xuất phiếu nhập kho (GRN) ra file PDF
+        /// https://localhost:7213/api/GRN/exportPdf/{grnId}
+        /// </summary>
+        /// <param name="grnId">Mã phiếu nhập kho</param>
+        /// <returns>File PDF phiếu nhập kho</returns>
+        [HttpGet("exportPdf/{grnId}")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        public async Task<IActionResult> ExportGRNToPdf(int grnId)
+        {
+            var pdfBytes = await _IGRNService.GeneratePDFGRNAsync(grnId);
+            return File(pdfBytes, "application/pdf", $"GRN_{grnId}.pdf");
+        }
     }
 }

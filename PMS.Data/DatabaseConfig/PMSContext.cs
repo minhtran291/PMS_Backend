@@ -744,6 +744,9 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(grn => grn.Description)
                     .HasMaxLength(500);
 
+                entity.Property(grn => grn.warehouseID);
+
+
                 entity.HasOne(grn => grn.PurchasingOrder)
                     .WithMany(grn => grn.GoodReceiptNotes)
                     .HasForeignKey(grn => grn.POID)

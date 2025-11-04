@@ -1,6 +1,10 @@
 ﻿using AutoMapper;
+using DinkToPdf;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using PMS.Application.DTOs.GRN;
 using PMS.Application.Services.Base;
+using PMS.Application.Services.ExternalService;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.DTO.Content;
@@ -9,10 +13,10 @@ using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Services.GRNService
 {
-    public class GRNService(IUnitOfWork unitOfWork, IMapper mapper)
+    public class GRNService(IUnitOfWork unitOfWork, IMapper mapper, IWebHostEnvironment webHostEnvironment, IPdfService pdfService)
         : Service(unitOfWork, mapper), IGRNService
     {
-        public async Task<ServiceResult<int>> CreateGoodReceiptNoteFromPOAsync(string userId, int poId,int WarehouseLocationID)
+        public async Task<ServiceResult<int>> CreateGoodReceiptNoteFromPOAsync(string userId, int poId, int WarehouseLocationID)
         {
             await _unitOfWork.BeginTransactionAsync();
 
@@ -42,7 +46,8 @@ namespace PMS.API.Services.GRNService
                     CreateDate = DateTime.Now,
                     Total = po.Total,
                     Description = $"Phiếu nhập kho từ đơn hàng PO_{po.POID}",
-                    POID = poId
+                    POID = poId,
+                    warehouseID = WarehouseLocationID
                 };
 
                 await _unitOfWork.GoodReceiptNote.AddAsync(grn);
@@ -208,6 +213,7 @@ namespace PMS.API.Services.GRNService
             }
         }
 
+
         private async Task HandleLotProductsAsync(IEnumerable<IGRNDetail> grnDetails, int supplierId, DateTime inputDate, int warehouseLocationID)
         {
             try
@@ -286,6 +292,336 @@ namespace PMS.API.Services.GRNService
                 throw new Exception($"Đã xảy ra lỗi khi xử lý lô hàng: {ex.Message}", ex);
             }
         }
+
+        public async Task<ServiceResult<List<GRNViewDTO>>> GetAllGRN()
+        {
+            var listGRN = await _unitOfWork.GoodReceiptNote.Query().ToListAsync();
+
+            if (listGRN == null || !listGRN.Any())
+            {
+                return new ServiceResult<List<GRNViewDTO>>
+                {
+                    Data = null,
+                    Message = "Hiện tại không có bất kỳ bản ghi nhập kho nào",
+                    StatusCode = 200,
+                    Success = false,
+                };
+            }
+
+
+            var supplierList = await _unitOfWork.Users.Query()
+                .Select(s => new { s.Id, s.FullName })
+                .ToListAsync();
+
+            var result = new List<GRNViewDTO>();
+
+            foreach (var item in listGRN)
+            {
+
+                var createby = supplierList
+                    .FirstOrDefault(s => s.Id == item.CreateBy)?.FullName;
+
+                result.Add(new GRNViewDTO
+                {
+                    GRNID = item.GRNID,
+                    Source = item.Source ?? "Không xác định",
+                    CreateDate = item.CreateDate,
+                    Total = item.Total,
+                    CreateBy = createby ?? "Không xác định",
+                    Description = item.Description,
+                    POID = item.POID,
+                });
+            }
+
+            return new ServiceResult<List<GRNViewDTO>>
+            {
+                Data = result,
+                StatusCode = 200,
+                Success = true,
+            };
+        }
+
+        public async Task<ServiceResult<GRNViewDTO>> GetGRNDetailAsync(int grnId)
+        {
+            var grn = await _unitOfWork.GoodReceiptNote.Query()
+                .Include(g => g.GoodReceiptNoteDetails)
+                .FirstOrDefaultAsync(g => g.GRNID == grnId);
+
+            if (grn == null)
+            {
+                return new ServiceResult<GRNViewDTO>
+                {
+                    Data = null,
+                    Message = $"Không tìm thấy phiếu nhập kho có ID = {grnId}",
+                    StatusCode = 404,
+                    Success = false
+                };
+            }
+
+
+            var user = await _unitOfWork.Users.Query()
+                .FirstOrDefaultAsync(u => u.Id == grn.CreateBy);
+
+
+            var grnDto = new GRNViewDTO
+            {
+                GRNID = grn.GRNID,
+                Source = grn.Source ?? "Không xác định",
+                CreateDate = grn.CreateDate,
+                Total = grn.Total,
+                CreateBy = user?.FullName ?? "Không xác định",
+                Description = grn.Description,
+                POID = grn.POID,
+                GRNDetailViewDTO = grn.GoodReceiptNoteDetails.Select(d => new GRNDetailViewDTO
+                {
+                    GRNDID = d.GRNDID,
+                    ProductID = d.ProductID,
+                    UnitPrice = d.UnitPrice,
+                    Quantity = d.Quantity
+                }).ToList()
+            };
+
+            return new ServiceResult<GRNViewDTO>
+            {
+                Data = grnDto,
+                StatusCode = 200,
+                Success = true
+            };
+        }
+
+        public async Task<byte[]> GeneratePDFGRNAsync(int grnId)
+        {
+            var grn = await _unitOfWork.GoodReceiptNote.Query()
+                .Include(g => g.PurchasingOrder)
+                .Include(g => g.PurchasingOrder.Quotations)
+                .FirstOrDefaultAsync(g => g.GRNID == grnId);
+
+            if (grn == null)
+                throw new Exception($"Không tìm thấy phiếu nhập kho với GRNID = {grnId}");
+
+            var supplier = await _unitOfWork.Supplier.Query()
+                .FirstOrDefaultAsync(s => s.Id == grn.PurchasingOrder.Quotations.SupplierID);
+
+            var user = await _unitOfWork.Users.Query()
+                .FirstOrDefaultAsync(u => u.Id == grn.CreateBy);
+
+            var warehouselocation = await _unitOfWork.WarehouseLocation.Query()
+                .FirstOrDefaultAsync(wl => wl.Id == grn.warehouseID);
+
+            if (warehouselocation == null)
+                throw new Exception("Lỗi hệ thống khi tìm kiếm kho chứa");
+
+            var warehouse = await _unitOfWork.Warehouse.Query()
+                .Include(w => w.WarehouseLocations)
+                .FirstOrDefaultAsync(w => w.Id == warehouselocation.WarehouseId);
+
+            var po = await _unitOfWork.PurchasingOrder.Query()
+                .FirstOrDefaultAsync(po => po.POID == grn.POID);
+
+            if (po == null)
+                throw new Exception("Lỗi hệ thống khi tìm kiếm đơn hàng nhập");
+
+
+            string logoPath = Path.Combine(webHostEnvironment.WebRootPath, "assets", "CTTNHHBBPHARMACY.png");
+            string backgroundPath = Path.Combine(webHostEnvironment.WebRootPath, "assets", "background.png");
+
+            string logoBase64 = File.Exists(logoPath)
+                ? $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(logoPath))}"
+                : "";
+
+
+            string html = $@"
+    <html>
+    <head>
+        <meta charset='UTF-8'>
+        <style>
+            @page {{
+                margin: 0;
+            }}
+            html, body {{
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                font-family: Arial, sans-serif;
+                font-size: 12pt;
+                color: #333;
+                position: relative;
+                background: url('file:///{backgroundPath.Replace("\\", "/")}') no-repeat center center;
+                background-size: cover;
+            }}
+            body::before {{
+                content: """";
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background-color: rgba(255, 255, 255, 0.88);
+                z-index: 0;
+            }}
+            .content {{
+                position: relative;
+                z-index: 1;
+                padding: 40px 50px;
+            }}
+            h1 {{
+                background-color: #0066CC;
+                color: white;
+                text-align: center;
+                padding: 10px;
+                font-size: 16pt;
+                border-radius: 6px;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 15px;
+            }}
+            td, th {{
+                border: 1px solid #999;
+                padding: 6px 8px;
+                vertical-align: middle;
+            }}
+            th {{
+                background-color: #009900;
+                color: white;
+                text-align: center;
+            }}
+            .section-title {{
+                background-color: #d9d9d9;
+                text-align: center;
+                font-weight: bold;
+                padding: 6px;
+                font-size: 13pt;
+                margin-top: 15px;
+            }}
+            .note {{
+                font-style: italic;
+                text-align: justify;
+                margin: 10px 0;
+            }}
+            .small-note {{
+                font-size: 9pt;
+                text-align: center;
+                color: #666;
+                margin-top: 20px;
+            }}
+            .logo {{
+                text-align: left;
+                margin-bottom: 10px;
+            }}
+            .signature-table td {{
+                border: none;
+                text-align: center;
+                vertical-align: bottom;
+                height: 80px;
+                font-style: italic;
+                padding-top: 30px;
+            }}
+        </style>
+    </head>
+    <body>
+    <div class='content'>
+        <div class='logo'>
+            {(string.IsNullOrEmpty(logoBase64) ? "" : $"<img src='{logoBase64}' style='height:60px;' />")}
+        </div>
+        <h1>PHIẾU NHẬP KHO (GOODS RECEIPT NOTE)</h1>
+        <h3 style='text-align:center;'>Công ty TNHH Dược phẩm BBPharmacy</h3>
+        <table>
+            <tr>
+                <td><b>Mã GRN:</b></td><td>{grn.GRNID}</td>
+                <td><b>Ngày tạo:</b></td><td>{grn.CreateDate:dd/MM/yyyy HH:mm}</td>
+            </tr>
+            <tr>
+                <td><b>Người tạo:</b></td><td>{user?.FullName ?? "Không xác định"}</td>
+                <td><b>Theo hợp đồng số:</b></td><td>{grn.POID}, ký ngày {po.OrderDate:dd/MM/yyyy}</td>
+            </tr>
+            <tr>
+                <td><b>Tổng giá trị:</b></td><td>{grn.Total:N2} VNĐ</td>
+                <td><b>Nhà cung cấp:</b></td><td>{supplier?.Name ?? grn.Source ?? "Không xác định"}</td>
+            </tr>
+            <tr>
+                <td><b>Nhập tại kho số:</b></td><td>{warehouselocation.LocationName}</td>
+                <td><b>Địa điểm:</b></td><td>{warehouse.Name}, {warehouse.Address}</td>
+            </tr>
+        </table>
+
+        <div class='section-title'>CHI TIẾT HÀNG NHẬP</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>STT</th>
+                    <th>Mặt hàng</th>
+                    <th>Số lượng</th>
+                    <th>Đơn giá (VNĐ)</th>
+                    <th>Thành tiền (VNĐ)</th>
+                </tr>
+            </thead>
+            <tbody>";
+
+            var details = await _unitOfWork.GoodReceiptNoteDetail.Query()
+                .Include(d => d.Product)
+                .Where(d => d.GRNID == grn.GRNID)
+                .ToListAsync();
+
+            if (details != null && details.Any())
+            {
+                int index = 1;
+                foreach (var d in details)
+                {
+                    html += $@"
+            <tr>
+                <td style='text-align:center;'>{index++}</td>
+                <td>{d.Product?.ProductName ?? "Không xác định"}</td>
+                <td style='text-align:center;'>{d.Quantity}</td>
+                <td style='text-align:right;'>{d.UnitPrice:N2}</td>
+                <td style='text-align:right;'>{(d.Quantity * d.UnitPrice):N2}</td>
+            </tr>";
+                }
+            }
+            else
+            {
+                html += "<tr><td colspan='5' style='text-align:center;'>Không có dữ liệu chi tiết hàng nhập</td></tr>";
+            }
+
+
+            html += $@"
+            </tbody>
+        </table>
+
+        <div class='section-title'>GHI CHÚ (NOTES)</div>
+        <p class='note'>{grn.Description ?? "Không có ghi chú thêm"}</p>
+
+        <div class='section-title'>CHỮ KÝ XÁC NHẬN</div>
+        <table class='signature-table'>
+            <tr>
+                <td><b>Người lập phiếu</b></td>
+                <td><b>Người giao hàng</b></td>
+                <td><b>Thủ kho</b></td>
+                <td><b>Kế toán trưởng</b></td>
+                <td><b>Giám đốc</b></td>
+            </tr>
+            <tr>
+                <td>(Ký, ghi rõ họ tên)</td>
+                <td>(Ký, ghi rõ họ tên)</td>
+                <td>(Ký, ghi rõ họ tên)</td>
+                <td>(Ký, ghi rõ họ tên)</td>
+                <td>(Ký, ghi rõ họ tên)</td>
+            </tr>
+        </table>
+        
+
+                   <div class=""small-note"" style=""margin-top: 180px;"">
+                (Tệp này được tạo tự động từ hệ thống quản lý kho – vui lòng không chỉnh sửa thủ công)
+            </div>
+    </div>
+    </body>
+    </html>";
+
+
+            var pdfBytes = pdfService.GeneratePdfFromHtml(html);
+            return pdfBytes;
+        }
+
+
     }
 }
 
