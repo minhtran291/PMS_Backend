@@ -2,8 +2,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.Warehouse;
+using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Application.Services.Base;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Entities;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.Application.Services.Warehouse
@@ -213,5 +215,136 @@ namespace PMS.Application.Services.Warehouse
                 };
             }
         }
+
+        public async Task<ServiceResult<List<LotProductDTO>>> GetAllLotByWHLID(int whlcid)
+        {
+            try
+            {
+                var listLotp = await _unitOfWork.LotProduct.Query().Where(lp => lp.WarehouselocationID == whlcid).ToListAsync();
+                var result = new List<LotProductDTO>();
+                if (!listLotp.Any())
+                {
+                    return new ServiceResult<List<LotProductDTO>>
+                    {
+                        Data = null,
+                        Message = $"Hiện tại không tìm thấy bất kỳ sản phẩm nào ở vị trí {whlcid}",
+                        StatusCode = 200,
+                        Success = false
+                    };
+                }
+                foreach (var p in listLotp)
+                {
+                    var product = await _unitOfWork.Product.Query().FirstOrDefaultAsync(pr=>pr.ProductID==p.ProductID);
+                    var sup = await _unitOfWork.Supplier.Query().FirstOrDefaultAsync(sp=>sp.Id==p.SupplierID);
+                    result.Add(new LotProductDTO
+                    {
+                        LotID = p.LotID,
+                        ProductName=product.ProductName,
+                        SupplierName=sup.Name,
+                        InputDate=p.InputDate,
+                        ExpiredDate=p.ExpiredDate,
+                        InputPrice=p.InputPrice,
+                        SalePrice=p.SalePrice,
+                        LotQuantity=p.LotQuantity,
+                    });
+                }
+                return new ServiceResult<List<LotProductDTO>>
+                {
+                    Data = result,
+                    Message = $"thành công lấy dữ liệu tại vị trí {whlcid}",
+                    StatusCode = 200,
+                    Success = true,
+
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi xử lý dữ liệu GetAllLotByWHLID");
+                return new ServiceResult<List<LotProductDTO>>
+                {
+                    StatusCode = 400,
+                    Message = "Lỗi"
+                };
+            }
+        }
+
+        public async Task<ServiceResult<LotProductDTO>> UpdateSalePriceAsync(int whlcid, int lotid, decimal newSalePrice)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+
+                var lotProduct = await _unitOfWork.LotProduct.Query()
+                    .FirstOrDefaultAsync(lp => lp.WarehouselocationID == whlcid && lp.LotID==lotid);
+
+                if (lotProduct == null)
+                {
+                    return new ServiceResult<LotProductDTO>
+                    {
+                        StatusCode = 404,
+                        Success = false,
+                        Message = $"Không tìm thấy sản phẩm (ở lot{lotid}) trong vị trí kho (WHLID = {whlcid})."
+                    };
+                }
+                if (newSalePrice >= lotProduct.InputPrice)
+                {
+
+                    lotProduct.SalePrice = newSalePrice;
+                     _unitOfWork.LotProduct.Update(lotProduct);
+                    await _unitOfWork.CommitAsync();
+                    
+
+                    var product = await _unitOfWork.Product.Query().FirstOrDefaultAsync(p => p.ProductID == lotProduct.ProductID);
+                    var supplier = await _unitOfWork.Supplier.Query().FirstOrDefaultAsync(s => s.Id == lotProduct.SupplierID);
+
+                    var resultDto = new LotProductDTO
+                    {
+                        LotID = lotProduct.LotID,
+                        ProductName = product?.ProductName,
+                        SupplierName = supplier?.Name,
+                        InputDate = lotProduct.InputDate,
+                        ExpiredDate = lotProduct.ExpiredDate,
+                        InputPrice = lotProduct.InputPrice,
+                        SalePrice = lotProduct.SalePrice,
+                        LotQuantity = lotProduct.LotQuantity
+                    };
+                    await _unitOfWork.CommitTransactionAsync();
+                    return new ServiceResult<LotProductDTO>
+                    {
+                        StatusCode = 200,
+                        Success = true,
+                        Message = $"Cập nhật giá bán thành công cho sản phẩm ở lot {lotid}.",
+                        Data = resultDto
+                    };
+                    
+                }
+                else
+                {
+                    return new ServiceResult<LotProductDTO>
+                    {
+                        StatusCode = 400,
+                        Success = true,
+                        Message = "Gía bán yêu cầu lớn hơn giá nhập",
+                        Data = null
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Lỗi khi cập nhật giá bán sản phẩm ProductID = {productId} trong WHLID = {whlcid}", lotid, whlcid);
+
+                return new ServiceResult<LotProductDTO>
+                {
+                    StatusCode = 500,
+                    Success = false,
+                    Message = "Đã xảy ra lỗi trong quá trình cập nhật giá bán."
+                };
+            }
+        }
+
+
+        
+
     }
 }

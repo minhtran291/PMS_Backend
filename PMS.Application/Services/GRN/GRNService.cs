@@ -213,7 +213,6 @@ namespace PMS.API.Services.GRNService
             }
         }
 
-
         private async Task HandleLotProductsAsync(IEnumerable<IGRNDetail> grnDetails, int supplierId, DateTime inputDate, int warehouseLocationID)
         {
             try
@@ -620,6 +619,7 @@ namespace PMS.API.Services.GRNService
             var pdfBytes = pdfService.GeneratePdfFromHtml(html);
             return pdfBytes;
         }
+
 
 
     }
