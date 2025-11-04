@@ -1083,8 +1083,9 @@ namespace PMS.Application.Services.SalesQuotation
                     subTotal = subTotal,
                     taxTotal = taxTotal,
                     grandTotal = grandTotal,
-                    note = $@"Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá
-Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế"
+                    note = $@"Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá.
+Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế.
+Tạm ứng {salesQuotation.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {salesQuotation.DepositDueDays} ngày kể từ khi ký hợp đồng"
                 };
 
                 return new ServiceResult<object>
@@ -1102,6 +1103,26 @@ Quá thời hạn trên, giá chào trong bản báo giá này có thể đượ
                     StatusCode = 500,
                     Message = "Lỗi",
                 };
+            }
+        }
+
+        public async Task UpdateExpiredQuotationAsync()
+        {
+            try
+            {
+                var quotations = await _unitOfWork.SalesQuotation.Query()
+                    .Where(sq => sq.Status == Core.Domain.Enums.SalesQuotationStatus.Sent && sq.ExpiredDate < DateTime.Now)
+                    .ToListAsync();
+
+                foreach (var q in quotations)
+                    q.Status = Core.Domain.Enums.SalesQuotationStatus.Expired;
+
+                if (quotations.Any())
+                    await _unitOfWork.CommitAsync();
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
             }
         }
     }
