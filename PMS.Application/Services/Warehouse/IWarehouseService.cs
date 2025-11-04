@@ -1,4 +1,5 @@
 ﻿using PMS.Application.DTOs.Warehouse;
+using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Core.Domain.Constant;
 
 namespace PMS.Application.Services.Warehouse
@@ -10,5 +11,7 @@ namespace PMS.Application.Services.Warehouse
         Task<ServiceResult<WarehouseDetailsDTO>> ViewWarehouseDetailsAysnc(int warehouseId);
         Task<ServiceResult<List<WarehouseDTO>>> GetListWarehouseAsync();
         Task<ServiceResult<object>> DeleteWarehouseAsync(int warehouseId);
+        Task<ServiceResult<List<LotProductDTO>>> GetAllLotByWHLID(int whlcid);
+        Task<ServiceResult<LotProductDTO>> UpdateSalePriceAsync(int whlcid, int lotid, decimal newSalePrice);
     }
 }

@@ -96,7 +96,7 @@ namespace PMS.API.Controllers
         /// <param name="newStatus"></param>
         /// <returns></returns>
         [HttpPut("{poid}/status")]
-        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF}")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> ChangeStatus(int poid, [FromQuery] PurchasingOrderStatus newStatus)
         {
             var result = await _poService.ChangeStatusAsync(poid, newStatus);
