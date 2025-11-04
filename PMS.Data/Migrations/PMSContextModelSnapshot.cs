@@ -208,31 +208,6 @@ namespace PMS.Data.Migrations
                     b.ToTable("CustomerDepts", (string)null);
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDept", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("DeptAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("SalesOrderId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SalesOrderId");
-
-                    b.ToTable("CustomerDepts");
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
                 {
                     b.Property<int>("Id")
