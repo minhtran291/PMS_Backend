@@ -11,7 +11,7 @@ namespace PMS.Core.Domain.Helper
     public static class ExcelDateHelper
     {
         /// <summary>
-        /// Đọc ngày từ một ô Excel (ExcelRange). Nếu thất bại sẽ ném Exception với message chứa fieldName.
+        /// Đọc ngày từ một ô Excel (ExcelRange). thất bại sẽ ném Exception với message chứa fieldName.
         /// </summary>
         public static DateTime ReadDateFromCell(ExcelRange cell, string fieldName)
         {
@@ -74,7 +74,7 @@ namespace PMS.Core.Domain.Helper
 
         /// <summary>
         /// Parse ngày từ chuỗi chứa trong cột ExpiredDate tại một dòng cụ thể.
-        /// Trả về DateTime hoặc ném exception nếu không parse được (có thông báo row để debug).
+        /// Trả về DateTime hoặc ném exception nếu không parse được 
         /// </summary>
         public static DateTime ParseDateFromString(string rawText, int row)
         {
