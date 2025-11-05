@@ -292,6 +292,8 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.Property(lp => lp.lastedUpdate).HasColumnType("date");
                 entity.Property(lp => lp.inventoryBy);
+                entity.Property(lp => lp.note).HasMaxLength(500);
+                entity.Property(lp => lp.Diff);
 
                 entity.HasOne(lp => lp.Product)
                     .WithMany(p => p.LotProducts)

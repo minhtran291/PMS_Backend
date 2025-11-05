@@ -318,6 +318,9 @@ namespace PMS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LotID"));
 
+                    b.Property<int>("Diff")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("ExpiredDate")
                         .HasColumnType("date");
 
@@ -347,6 +350,10 @@ namespace PMS.Data.Migrations
 
                     b.Property<DateTime>("lastedUpdate")
                         .HasColumnType("date");
+
+                    b.Property<string>("note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("LotID");
 

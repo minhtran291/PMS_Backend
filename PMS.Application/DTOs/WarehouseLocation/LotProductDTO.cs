@@ -20,7 +20,7 @@ namespace PMS.Application.DTOs.WarehouseLocation
         public string ProductName { get; set; } = string.Empty;
         public DateTime LastedUpdate { get; set; }
         public string? InventoryBy { get; set; }
-
+        public string? note { get; set; }
         public int DiffQuantity {  get; set; }
 
     }
