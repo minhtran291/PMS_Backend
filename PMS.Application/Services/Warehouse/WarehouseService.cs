@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PMS.Application.DTOs.PO;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Application.Services.Base;
@@ -234,18 +235,18 @@ namespace PMS.Application.Services.Warehouse
                 }
                 foreach (var p in listLotp)
                 {
-                    var product = await _unitOfWork.Product.Query().FirstOrDefaultAsync(pr=>pr.ProductID==p.ProductID);
-                    var sup = await _unitOfWork.Supplier.Query().FirstOrDefaultAsync(sp=>sp.Id==p.SupplierID);
+                    var product = await _unitOfWork.Product.Query().FirstOrDefaultAsync(pr => pr.ProductID == p.ProductID);
+                    var sup = await _unitOfWork.Supplier.Query().FirstOrDefaultAsync(sp => sp.Id == p.SupplierID);
                     result.Add(new LotProductDTO
                     {
                         LotID = p.LotID,
-                        ProductName=product.ProductName,
-                        SupplierName=sup.Name,
-                        InputDate=p.InputDate,
-                        ExpiredDate=p.ExpiredDate,
-                        InputPrice=p.InputPrice,
-                        SalePrice=p.SalePrice,
-                        LotQuantity=p.LotQuantity,
+                        ProductName = product.ProductName,
+                        SupplierName = sup.Name,
+                        InputDate = p.InputDate,
+                        ExpiredDate = p.ExpiredDate,
+                        InputPrice = p.InputPrice,
+                        SalePrice = p.SalePrice,
+                        LotQuantity = p.LotQuantity,
                     });
                 }
                 return new ServiceResult<List<LotProductDTO>>
@@ -275,7 +276,7 @@ namespace PMS.Application.Services.Warehouse
             {
 
                 var lotProduct = await _unitOfWork.LotProduct.Query()
-                    .FirstOrDefaultAsync(lp => lp.WarehouselocationID == whlcid && lp.LotID==lotid);
+                    .FirstOrDefaultAsync(lp => lp.WarehouselocationID == whlcid && lp.LotID == lotid);
 
                 if (lotProduct == null)
                 {
@@ -290,9 +291,9 @@ namespace PMS.Application.Services.Warehouse
                 {
 
                     lotProduct.SalePrice = newSalePrice;
-                     _unitOfWork.LotProduct.Update(lotProduct);
+                    _unitOfWork.LotProduct.Update(lotProduct);
                     await _unitOfWork.CommitAsync();
-                    
+
 
                     var product = await _unitOfWork.Product.Query().FirstOrDefaultAsync(p => p.ProductID == lotProduct.ProductID);
                     var supplier = await _unitOfWork.Supplier.Query().FirstOrDefaultAsync(s => s.Id == lotProduct.SupplierID);
@@ -316,7 +317,7 @@ namespace PMS.Application.Services.Warehouse
                         Message = $"Cập nhật giá bán thành công cho sản phẩm ở lot {lotid}.",
                         Data = resultDto
                     };
-                    
+
                 }
                 else
                 {
@@ -343,8 +344,113 @@ namespace PMS.Application.Services.Warehouse
             }
         }
 
+        public async Task<ServiceResult<List<LotProductDTO>>> UpdatePhysicalInventoryAsync(string userId, int whlcid, List<PhysicalInventoryUpdateDTO> updates)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var lots = await _unitOfWork.LotProduct.Query()
+                    .Where(lp => lp.WarehouselocationID == whlcid)
+                    .ToListAsync();
 
-        
+                if (!lots.Any())
+                {
+                    return new ServiceResult<List<LotProductDTO>>
+                    {
+                        Data = null,
+                        Message = $"Không tìm thấy lô hàng nào trong vị trí kho {whlcid}",
+                        StatusCode = 404,
+                        Success = false
+                    };
+                }
 
+                var updatedLots = new List<LotProductDTO>();
+
+
+                foreach (var update in updates)
+                {
+                    var lot = lots.FirstOrDefault(l => l.LotID == update.LotID);
+                    if (lot != null)
+                    {
+                        var diff = lot.LotQuantity - update.RealQuantity;
+                        var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+                        lot.LotQuantity = update.RealQuantity;
+                        lot.lastedUpdate = DateTime.Now;
+                        lot.inventoryBy = user?.FullName ?? "Không xác định";
+                        _unitOfWork.LotProduct.Update(lot);
+
+
+                        var product = await _unitOfWork.Product.Query()
+                            .FirstOrDefaultAsync(p => p.ProductID == lot.ProductID);
+                        var supplier = await _unitOfWork.Supplier.Query()
+                            .FirstOrDefaultAsync(s => s.Id == lot.SupplierID);
+
+                        updatedLots.Add(new LotProductDTO
+                        {
+                            LotID = lot.LotID,
+                            InputDate = lot.InputDate,
+                            ExpiredDate = lot.ExpiredDate,
+                            InputPrice = lot.InputPrice,
+                            SalePrice = lot.SalePrice,
+                            LotQuantity = lot.LotQuantity,
+                            ProductName = product?.ProductName ?? "Không xác định",
+                            SupplierName = supplier?.Name ?? "Không xác định",
+                            DiffQuantity = diff,
+                            InventoryBy= user?.FullName ?? "Không xác định"
+
+                        });
+                    }
+                }
+
+                await _unitOfWork.CommitAsync();
+
+
+                var affectedProductIds = lots
+                    .Select(l => l.ProductID)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var pid in affectedProductIds)
+                {
+
+                    var totalQuantity = await _unitOfWork.LotProduct.Query()
+                        .Where(lp => lp.ProductID == pid)
+                        .SumAsync(lp => lp.LotQuantity);
+
+                    var product = await _unitOfWork.Product.Query()
+                        .FirstOrDefaultAsync(p => p.ProductID == pid);
+
+                    if (product != null)
+                    {
+                        product.TotalCurrentQuantity = totalQuantity;
+                        _unitOfWork.Product.Update(product);
+                    }
+                }
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ServiceResult<List<LotProductDTO>>
+                {
+                    Data = updatedLots,
+                    Message = $"Đã cập nhật kiểm kê vật lý và đồng bộ tồn kho sản phẩm cho vị trí kho {whlcid}",
+                    StatusCode = 200,
+                    Success = true
+                };
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Lỗi khi cập nhật kiểm kê vật lý cho kho {whlcid}", whlcid);
+
+                return new ServiceResult<List<LotProductDTO>>
+                {
+                    Data = null,
+                    Message = "Đã xảy ra lỗi khi kiểm kê vật lý",
+                    StatusCode = 400,
+                    Success = false
+                };
+            }
+        }
     }
 }
