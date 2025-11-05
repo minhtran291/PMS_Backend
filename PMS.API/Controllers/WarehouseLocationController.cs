@@ -93,20 +93,6 @@ namespace PMS.API.Controllers
             });
         }
 
-        /// <summary>
-        /// https://localhost:7213/api/WarehouseLocation/storeLot
-        /// Gán lô hàng (Lot) vào vị trí trong kho
-        /// </summary>
-        //[HttpPut("storeLot")]
-        //public async Task<IActionResult> StoreLotInWarehouse([FromBody] StoringLot dto)
-        //{
-        //    if (!ModelState.IsValid)
-        //        return BadRequest(ModelState);
-
-        //    var result = await _warehouseLocationService.StoringLotInWarehouseLocation(dto);
-        //    return HandleServiceResult(result);
-        //}
-
         [HttpDelete]
         [Route("delete")]
         public async Task<IActionResult> DeleteWarehouseLocation(int warehouseLocationId)

@@ -180,32 +180,7 @@ namespace PMS.Data.Migrations
 
                     b.HasKey("CategoryID");
 
-                    b.ToTable("Categories", (string)null);
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDept", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("DeptAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("SalesOrderId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SalesOrderId");
-
-                    b.ToTable("CustomerDepts", (string)null);
+                    b.ToTable("Categories");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
@@ -237,7 +212,7 @@ namespace PMS.Data.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("CustomerProfiles", (string)null);
+                    b.ToTable("CustomerProfiles");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.GoodReceiptNote", b =>
@@ -278,7 +253,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("POID");
 
-                    b.ToTable("GoodReceiptNotes", (string)null);
+                    b.ToTable("GoodReceiptNotes");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.GoodReceiptNoteDetail", b =>
@@ -307,7 +282,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("ProductID");
 
-                    b.ToTable("GoodReceiptNoteDetails", (string)null);
+                    b.ToTable("GoodReceiptNoteDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
@@ -317,6 +292,9 @@ namespace PMS.Data.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LotID"));
+
+                    b.Property<int>("Diff")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("ExpiredDate")
                         .HasColumnType("date");
@@ -342,6 +320,16 @@ namespace PMS.Data.Migrations
                     b.Property<int>("WarehouselocationID")
                         .HasColumnType("int");
 
+                    b.Property<string>("inventoryBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("lastedUpdate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.HasKey("LotID");
 
                     b.HasIndex("ProductID");
@@ -350,7 +338,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("WarehouselocationID");
 
-                    b.ToTable("LotProducts", (string)null);
+                    b.ToTable("LotProducts");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Notification", b =>
@@ -394,7 +382,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("Notifications", (string)null);
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
@@ -441,7 +429,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("CategoryID");
 
-                    b.ToTable("Products", (string)null);
+                    b.ToTable("Products");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.PurchasingOrder", b =>
@@ -487,7 +475,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PurchasingOrders", (string)null);
+                    b.ToTable("PurchasingOrders");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.PurchasingOrderDetail", b =>
@@ -537,7 +525,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("ProductID");
 
-                    b.ToTable("PurchasingOrderDetails", (string)null);
+                    b.ToTable("PurchasingOrderDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.PurchasingRequestForQuotation", b =>
@@ -582,7 +570,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PurchasingRequestForQuotations", (string)null);
+                    b.ToTable("PurchasingRequestForQuotations");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.PurchasingRequestProduct", b =>
@@ -605,7 +593,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("ProductID");
 
-                    b.ToTable("PurchasingRequestProducts", (string)null);
+                    b.ToTable("PurchasingRequestProducts");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Quotation", b =>
@@ -633,7 +621,7 @@ namespace PMS.Data.Migrations
                     b.HasIndex("PRFQID")
                         .IsUnique();
 
-                    b.ToTable("Quotations", (string)null);
+                    b.ToTable("Quotations");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.QuotationDetail", b =>
@@ -675,7 +663,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("QID");
 
-                    b.ToTable("QuotationDetails", (string)null);
+                    b.ToTable("QuotationDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.RequestSalesQuotation", b =>
@@ -704,7 +692,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("RequestSalesQuotations", (string)null);
+                    b.ToTable("RequestSalesQuotations");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.RequestSalesQuotationDetails", b =>
@@ -719,7 +707,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("RequestSalesQuotationDetails", (string)null);
+                    b.ToTable("RequestSalesQuotationDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrder", b =>
@@ -754,7 +742,7 @@ namespace PMS.Data.Migrations
 
                     b.HasKey("OrderId");
 
-                    b.ToTable("SalesOrders", (string)null);
+                    b.ToTable("SalesOrders");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDetails", b =>
@@ -785,7 +773,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("SalesOrderId");
 
-                    b.ToTable("SalesOrderDetails", (string)null);
+                    b.ToTable("SalesOrderDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotaionDetails", b =>
@@ -822,7 +810,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("TaxId");
 
-                    b.ToTable("SalesQuotaionDetails", (string)null);
+                    b.ToTable("SalesQuotaionDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotation", b =>
@@ -875,7 +863,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("SsId");
 
-                    b.ToTable("SalesQuotations", (string)null);
+                    b.ToTable("SalesQuotations");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotationComment", b =>
@@ -904,7 +892,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SalesQuotationComments", (string)null);
+                    b.ToTable("SalesQuotationComments");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotationNote", b =>
@@ -929,7 +917,7 @@ namespace PMS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("SalesQuotationNotes", (string)null);
+                    b.ToTable("SalesQuotationNotes");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.StaffProfile", b =>
@@ -957,7 +945,7 @@ namespace PMS.Data.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("StaffProfiles", (string)null);
+                    b.ToTable("StaffProfiles");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Supplier", b =>
@@ -1001,7 +989,7 @@ namespace PMS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Suppliers", (string)null);
+                    b.ToTable("Suppliers");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.TaxPolicy", b =>
@@ -1030,7 +1018,7 @@ namespace PMS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("TaxPolicies", (string)null);
+                    b.ToTable("TaxPolicies");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Warehouse", b =>
@@ -1056,7 +1044,7 @@ namespace PMS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Warehouses", (string)null);
+                    b.ToTable("Warehouses");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.WarehouseLocation", b =>
@@ -1082,7 +1070,7 @@ namespace PMS.Data.Migrations
 
                     b.HasIndex("WarehouseId");
 
-                    b.ToTable("WarehouseLocations", (string)null);
+                    b.ToTable("WarehouseLocations");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Identity.User", b =>
@@ -1575,25 +1563,6 @@ namespace PMS.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDetails", b =>
-                {
-                    b.HasOne("PMS.Core.Domain.Entities.LotProduct", "Lot")
-                        .WithMany("SalesOrderDetails")
-                        .HasForeignKey("LotId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
-                        .WithMany("SalesOrderDetails")
-                        .HasForeignKey("SalesOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Lot");
-
-                    b.Navigation("SalesOrder");
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.StaffProfile", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Identity.User", "User")
@@ -1636,11 +1605,6 @@ namespace PMS.Data.Migrations
                     b.Navigation("SalesOrderDetails");
 
                     b.Navigation("SalesQuotaionDetails");
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
-                {
-                    b.Navigation("SalesOrderDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
@@ -1707,13 +1671,6 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.StaffProfile", b =>
                 {
                     b.Navigation("SalesQuotations");
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrder", b =>
-                {
-                    b.Navigation("CustomerDepts");
-
-                    b.Navigation("SalesOrderDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Supplier", b =>
