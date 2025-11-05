@@ -171,5 +171,39 @@ namespace PMS.API.Controllers
             var result = await _warehouseService.UpdatePhysicalInventoryAsync(userId,whlcid, updates);
             return HandleServiceResult(result);
         }
+
+
+        /// <summary>
+        /// Báo cáo kiểm kê vật lý theo tháng và năm
+        /// https://localhost:7213/api/Warehouse/reportphysicalInventory?month=11&&year=2025
+        /// </summary>
+        [HttpGet("reportphysicalInventory")]
+        public async Task<IActionResult> ReportPhysicalInventoryByMonth(
+            [FromQuery] int month,
+            [FromQuery] int year)
+        {
+            var result = await _warehouseService.ReportPhysicalInventoryByMonth(month, year);
+            return HandleServiceResult(result);
+        }
+
+
+
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/reportphysicalInventory/excel/{11}/{2025}
+        /// </summary>
+        /// <param name="month"></param>
+        /// <param name="year"></param>
+        /// <returns></returns>
+        [HttpGet("reportphysicalInventory/excel/{month}/{year}")]
+        [Authorize(Roles = UserRoles.MANAGER)]
+        public async Task<IActionResult> GeneratePhysicalInventoryExcel(int month, int year)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+            var fileBytes = await _warehouseService.GeneratePhysicalInventoryReportExcelAsync(month, year, userId);
+            string fileName = $"BaoCaoKiemKe_{month:D2}_{year}.xlsx";
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
     }
 }
