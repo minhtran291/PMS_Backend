@@ -16,5 +16,8 @@ namespace PMS.Application.Services.Warehouse
         Task<ServiceResult<LotProductDTO>> UpdateSalePriceAsync(int whlcid, int lotid, decimal newSalePrice);
         Task<ServiceResult<List<LotProductDTO>>> UpdatePhysicalInventoryAsync(string userId, int whlcid, List<PhysicalInventoryUpdateDTO> updates);
 
+        Task<ServiceResult<IEnumerable<LotProductDTO>>> ReportPhysicalInventoryByMonth(int month, int year);
+        Task<byte[]> GeneratePhysicalInventoryReportExcelAsync(int month, int year, string userId);
+
     }
 }

@@ -1,10 +1,16 @@
-﻿using AutoMapper;
+﻿using System.Drawing;
+using System.Text;
+using AutoMapper;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 using PMS.Application.DTOs.PO;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Application.Services.Base;
+using PMS.Application.Services.ExternalService;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Data.UnitOfWork;
@@ -13,7 +19,7 @@ namespace PMS.Application.Services.Warehouse
 {
     public class WarehouseService(IUnitOfWork unitOfWork,
         IMapper mapper,
-        ILogger<WarehouseService> logger) : Service(unitOfWork, mapper), IWarehouseService
+        ILogger<WarehouseService> logger, IWebHostEnvironment webHostEnvironment, IPdfService pdfService) : Service(unitOfWork, mapper), IWarehouseService
     {
         private readonly ILogger<WarehouseService> _logger = logger;
 
@@ -407,7 +413,7 @@ namespace PMS.Application.Services.Warehouse
 
                 await _unitOfWork.CommitAsync();
 
-
+                //
                 var affectedProductIds = lots
                     .Select(l => l.ProductID)
                     .Distinct()
@@ -455,5 +461,178 @@ namespace PMS.Application.Services.Warehouse
                 };
             }
         }
+
+        public async Task<ServiceResult<IEnumerable<LotProductDTO>>> ReportPhysicalInventoryByMonth(int month, int year)
+        {
+            if (month < 1 || month > 12 || year < 2000)
+            {
+                return new ServiceResult<IEnumerable<LotProductDTO>>
+                {
+                    Data = null,
+                    Message = "Tháng hoặc năm không hợp lệ.",
+                    StatusCode = 400,
+                    Success = false
+                };
+            }
+
+
+            //startDate = new DateTime(2025, 11, 1)
+            // Kết quả: 2025 - 11 - 01
+
+            //startDate.AddMonths(1)
+            // Tăng lên 1 tháng: 2025 - 12 - 01
+
+            //.AddDays(-1)
+            // Lùi lại 1 ngày: 2025 - 11 - 30 
+            // chính là ngày cuối cùng của tháng 11 năm 2025.
+
+
+
+            var startDate = new DateTime(year, month, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            var lotProducts = await _unitOfWork.LotProduct.Query()
+                .Include(l => l.Product)               
+                .Include(l => l.WarehouseLocation)      
+                .Where(l => l.lastedUpdate != null
+                            && l.lastedUpdate >= startDate
+                            && l.lastedUpdate <= endDate)
+                .ToListAsync();
+
+            if (lotProducts == null || !lotProducts.Any())
+            {
+                return new ServiceResult<IEnumerable<LotProductDTO>>
+                {
+                    Data = null,
+                    Message = "Không có lô nào được kiểm kê trong tháng này.",
+                    StatusCode = 404,
+                    Success = false
+                };
+            }
+
+
+            var lotProductDtos = _mapper.Map<IEnumerable<LotProductDTO>>(lotProducts);
+
+            return new ServiceResult<IEnumerable<LotProductDTO>>
+            {
+                Data = lotProductDtos,
+                Message = $"Báo cáo kiểm kê vật lý tháng {month}/{year} thành công.",
+                StatusCode = 200,
+                Success = true
+            };
+        }
+
+        public async Task<byte[]> GeneratePhysicalInventoryReportExcelAsync(int month, int year, string userId)
+        {
+            if (month < 1 || month > 12 || year < 2000)
+                throw new Exception("Tháng hoặc năm không hợp lệ.");
+
+            var startDate = new DateTime(year, month, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+            var lots = await _unitOfWork.LotProduct.Query()
+                .Include(lp => lp.Product)
+                .Include(lp => lp.Supplier)
+                .Where(lp => lp.lastedUpdate >= startDate && lp.lastedUpdate <= endDate)
+                .ToListAsync();
+
+            if (!lots.Any())
+                throw new Exception($"Không có dữ liệu kiểm kê vật lý trong tháng {month}/{year}.");
+           
+            using var package = new ExcelPackage();
+            var worksheet = package.Workbook.Worksheets.Add($"KK_{month:D2}_{year}");
+
+            
+            worksheet.Cells["A1"].Value = "CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY";
+            worksheet.Cells["A1:J1"].Merge = true;
+            worksheet.Cells["A1"].Style.Font.Bold = true;
+            worksheet.Cells["A1"].Style.Font.Size = 14;
+            worksheet.Cells["A1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+
+            worksheet.Cells["A2"].Value = "BIÊN BẢN KIỂM KÊ VẬT TƯ, CÔNG CỤ, SẢN PHẨM, HÀNG HÓA";
+            worksheet.Cells["A2:J2"].Merge = true;
+            worksheet.Cells["A2"].Style.Font.Bold = true;
+            worksheet.Cells["A2"].Style.Font.Size = 13;
+            worksheet.Cells["A2"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+
+            worksheet.Cells["A3"].Value = $"Tháng/Năm: {month}/{year}";
+            worksheet.Cells["A4"].Value = $"Người kiểm tra: {user.FullName}";
+            worksheet.Cells["A5"].Value = $"Số lượng lô hàng kiểm kê: {lots.Count}";
+            worksheet.Cells["A6"].Value = "Thông tư: 133/2016/TT-BTC Ngày 26/3/2016 của BTC";
+
+            int startRow = 8;
+            string[] headers = {
+            "STT", "Tên sản phẩm", "Nhà cung cấp", "Số lượng",
+            "Chênh lệch", "Giá nhập", "Giá bán", "Phụ trách", "Hạn sản phẩm", "Ngày kiểm kê", "Ghi chú"
+    };
+
+            for (int i = 0; i < headers.Length; i++)
+            {
+                worksheet.Cells[startRow, i + 1].Value = headers[i];
+            }
+
+            using (var range = worksheet.Cells[startRow, 1, startRow, headers.Length])
+            {
+                range.Style.Font.Bold = true;
+                range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(40, 167, 69)); 
+                range.Style.Font.Color.SetColor(Color.White);
+                range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                range.Style.Border.BorderAround(ExcelBorderStyle.Thin);
+            }
+
+
+            int currentRow = startRow + 1;
+            int index = 1;
+            foreach (var lot in lots)
+            {
+                worksheet.Cells[currentRow, 1].Value = index++;
+                worksheet.Cells[currentRow, 2].Value = lot.Product?.ProductName ?? "—";
+                worksheet.Cells[currentRow, 3].Value = lot.Supplier?.Name ?? "—";
+                worksheet.Cells[currentRow, 4].Value = lot.LotQuantity;
+                worksheet.Cells[currentRow, 5].Value = lot.Diff;
+                worksheet.Cells[currentRow, 6].Value = lot.InputPrice;
+                worksheet.Cells[currentRow, 7].Value = lot.SalePrice;
+                worksheet.Cells[currentRow, 8].Value = lot.inventoryBy ?? "—";
+                worksheet.Cells[currentRow, 9].Value = lot.ExpiredDate.ToString("dd/MM/yyyy");
+                worksheet.Cells[currentRow, 10].Value = lot.lastedUpdate.ToString("dd/MM/yyyy HH:mm");
+                worksheet.Cells[currentRow, 11].Value = lot.note?? "-";
+
+
+                worksheet.Cells[currentRow, 4].Style.Numberformat.Format = "#,##0";
+                worksheet.Cells[currentRow, 5].Style.Numberformat.Format = "#,##0";
+                worksheet.Cells[currentRow, 6].Style.Numberformat.Format = "#,##0.00";
+                worksheet.Cells[currentRow, 7].Style.Numberformat.Format = "#,##0.00";
+
+                currentRow++;
+            }
+
+
+            worksheet.Cells[currentRow + 2, 1].Value = $"Người lập báo cáo: {user.FullName}";
+            worksheet.Cells[currentRow + 2, 1, currentRow + 2, 5].Merge = true;
+            worksheet.Cells[currentRow + 2, 1].Style.Font.Italic = true;
+
+            worksheet.Cells[currentRow + 3, 1].Value = $"Ngày xuất báo cáo: {DateTime.Now:dd/MM/yyyy HH:mm}";
+            worksheet.Cells[currentRow + 3, 1, currentRow + 3, 5].Merge = true;
+            worksheet.Cells[currentRow + 3, 1].Style.Font.Italic = true;
+
+
+            worksheet.Cells[1, 1, currentRow + 3, headers.Length].AutoFitColumns();
+
+
+            using (var range = worksheet.Cells[startRow, 1, currentRow - 1, headers.Length])
+            {
+                range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+            }
+
+            return package.GetAsByteArray();
+        }
+
+
     }
 }
