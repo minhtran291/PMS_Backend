@@ -377,6 +377,8 @@ namespace PMS.Application.Services.Warehouse
                         lot.LotQuantity = update.RealQuantity;
                         lot.lastedUpdate = DateTime.Now;
                         lot.inventoryBy = user?.FullName ?? "Không xác định";
+                        lot.Diff = diff;
+                        lot.note = update.note;
                         _unitOfWork.LotProduct.Update(lot);
 
 
@@ -396,8 +398,9 @@ namespace PMS.Application.Services.Warehouse
                             ProductName = product?.ProductName ?? "Không xác định",
                             SupplierName = supplier?.Name ?? "Không xác định",
                             DiffQuantity = diff,
-                            InventoryBy= user?.FullName ?? "Không xác định"
-
+                            InventoryBy = user?.FullName ?? "Không xác định",
+                            LastedUpdate = lot.lastedUpdate,
+                            note = lot.note
                         });
                     }
                 }
