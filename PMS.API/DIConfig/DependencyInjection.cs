@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using PMS.API.BackgroundTasks;
 using System.Text;
 
 namespace PMS.API.DIConfig
@@ -41,6 +42,11 @@ namespace PMS.API.DIConfig
 
             var context = new Helpers.Pdf.CustomAssemblyLoadContext();
             context.LoadUnmanagedLibrary(wkhtmlPath);
+        }
+
+        public static void AddBackgroundServices(this IServiceCollection services)
+        {
+            services.AddHostedService<SalesQuotationStatusUpdater>();
         }
     }
 }

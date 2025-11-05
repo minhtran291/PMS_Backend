@@ -8,6 +8,7 @@ using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using PMS.Application.DTOs.PO;
 using PMS.Application.Services.Base;
+using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.PO;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
@@ -16,7 +17,7 @@ using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Services.POService
 {
-    public class POService(IUnitOfWork unitOfWork, IMapper mapper, IWebHostEnvironment webHostEnvironment)
+    public class POService(IUnitOfWork unitOfWork, IMapper mapper, IWebHostEnvironment webHostEnvironment, IPdfService pdfService)
         : Service(unitOfWork, mapper), IPOService
     {
         public async Task<ServiceResult<IEnumerable<POViewDTO>>> GetAllPOAsync()
@@ -69,8 +70,6 @@ namespace PMS.API.Services.POService
                 Message = "Thành công"
             };
         }
-
-
 
         public async Task<ServiceResult<POPaidViewDTO>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
         {
@@ -585,24 +584,7 @@ namespace PMS.API.Services.POService
 </body>
 </html>";
 
-
-            var converter = new SynchronizedConverter(new PdfTools());
-            var doc = new HtmlToPdfDocument()
-            {
-                GlobalSettings = {
-            PaperSize = PaperKind.A4,
-            Orientation = Orientation.Portrait,
-            DocumentTitle = $"PO Payment Report #{po.POID}"
-        },
-                Objects = {
-            new ObjectSettings {
-                HtmlContent = html,
-                WebSettings = { DefaultEncoding = "utf-8", LoadImages = true }
-            }
-        }
-            };
-
-            var pdfBytes = converter.Convert(doc);
+            var pdfBytes = pdfService.GeneratePdfFromHtml(html);
             return pdfBytes;
         }
 

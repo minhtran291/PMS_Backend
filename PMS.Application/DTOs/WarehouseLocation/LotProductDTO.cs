@@ -14,9 +14,14 @@ namespace PMS.Application.DTOs.WarehouseLocation
         public decimal InputPrice { get; set; }
         public DateTime ExpiredDate { get; set; }
         public int LotQuantity { get; set; }
-        public int SupplierID { get; set; }
+        //public int SupplierID { get; set; }
         public string SupplierName { get; set; } = string.Empty;
-        public int ProductID { get; set; }
+        //public int ProductID { get; set; }
         public string ProductName { get; set; } = string.Empty;
+        public DateTime LastedUpdate { get; set; }
+        public string? InventoryBy { get; set; }
+        public string? note { get; set; }
+        public int DiffQuantity {  get; set; }
+
     }
 }

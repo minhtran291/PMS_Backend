@@ -183,31 +183,6 @@ namespace PMS.Data.Migrations
                     b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDept", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("DeptAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("SalesOrderId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SalesOrderId");
-
-                    b.ToTable("CustomerDepts");
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -271,6 +246,9 @@ namespace PMS.Data.Migrations
                     b.Property<decimal>("Total")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int?>("warehouseID")
+                        .HasColumnType("int");
+
                     b.HasKey("GRNID");
 
                     b.HasIndex("POID");
@@ -315,6 +293,9 @@ namespace PMS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LotID"));
 
+                    b.Property<int>("Diff")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("ExpiredDate")
                         .HasColumnType("date");
 
@@ -338,6 +319,16 @@ namespace PMS.Data.Migrations
 
                     b.Property<int>("WarehouselocationID")
                         .HasColumnType("int");
+
+                    b.Property<string>("inventoryBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("lastedUpdate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("LotID");
 
@@ -717,6 +708,72 @@ namespace PMS.Data.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("RequestSalesQuotationDetails");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrder", b =>
+                {
+                    b.Property<string>("OrderId")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreateAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("CreateBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DepositAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OrderTotalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SalesQuotationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("OrderId");
+
+                    b.ToTable("SalesOrders");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDetails", b =>
+                {
+                    b.Property<int>("SalesOrderDetailsId")
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesOrderDetailsId"));
+
+                    b.Property<int>("LotId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,1)");
+
+                    b.Property<string>("SalesOrderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("SalesOrderDetailsId");
+
+                    b.HasIndex("LotId");
+
+                    b.HasIndex("SalesOrderId");
+
+                    b.ToTable("SalesOrderDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotaionDetails", b =>
@@ -1408,6 +1465,25 @@ namespace PMS.Data.Migrations
                     b.Navigation("RequestSalesQuotation");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDetails", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.LotProduct", "Lot")
+                        .WithMany("SalesOrderDetails")
+                        .HasForeignKey("LotId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
+                        .WithMany("SalesOrderDetails")
+                        .HasForeignKey("SalesOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Lot");
+
+                    b.Navigation("SalesOrder");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotaionDetails", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Entities.LotProduct", "LotProduct")
@@ -1487,25 +1563,6 @@ namespace PMS.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDetails", b =>
-                {
-                    b.HasOne("PMS.Core.Domain.Entities.LotProduct", "Lot")
-                        .WithMany("SalesOrderDetails")
-                        .HasForeignKey("LotId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
-                        .WithMany("SalesOrderDetails")
-                        .HasForeignKey("SalesOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Lot");
-
-                    b.Navigation("SalesOrder");
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.StaffProfile", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Identity.User", "User")
@@ -1545,12 +1602,9 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
-                    b.Navigation("SalesQuotaionDetails");
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
-                {
                     b.Navigation("SalesOrderDetails");
+
+                    b.Navigation("SalesQuotaionDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
@@ -1595,6 +1649,13 @@ namespace PMS.Data.Migrations
                     b.Navigation("SalesQuotations");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrder", b =>
+                {
+                    b.Navigation("CustomerDepts");
+
+                    b.Navigation("SalesOrderDetails");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotation", b =>
                 {
                     b.Navigation("SalesQuotaionDetails");
@@ -1610,13 +1671,6 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.StaffProfile", b =>
                 {
                     b.Navigation("SalesQuotations");
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrder", b =>
-                {
-                    b.Navigation("CustomerDepts");
-
-                    b.Navigation("SalesOrderDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Supplier", b =>

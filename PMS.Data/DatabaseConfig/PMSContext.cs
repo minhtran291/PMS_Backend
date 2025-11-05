@@ -290,6 +290,11 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(lp => lp.SalePrice)
                     .HasColumnType("decimal(18,2)");
 
+                entity.Property(lp => lp.lastedUpdate).HasColumnType("date");
+                entity.Property(lp => lp.inventoryBy);
+                entity.Property(lp => lp.note).HasMaxLength(500);
+                entity.Property(lp => lp.Diff);
+
                 entity.HasOne(lp => lp.Product)
                     .WithMany(p => p.LotProducts)
                     .HasForeignKey(lp => lp.ProductID)
@@ -743,6 +748,9 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.Property(grn => grn.Description)
                     .HasMaxLength(500);
+
+                entity.Property(grn => grn.warehouseID);
+
 
                 entity.HasOne(grn => grn.PurchasingOrder)
                     .WithMany(grn => grn.GoodReceiptNotes)
