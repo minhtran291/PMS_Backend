@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PMS.Application.DTOs.PO;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Application.Services.Warehouse;
@@ -24,7 +26,7 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         [HttpGet]
         [Route("get-all-warehouse")]
-        //[Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> WarehouseList()
         {
             var result = await _warehouseService.GetListWarehouseAsync();
@@ -67,7 +69,7 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         [HttpGet]
         [Route("get-warehouse-details/{warehouseId}")]
-       // [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> WarehouseDetails(int warehouseId)
         {
             var result = await _warehouseService.ViewWarehouseDetailsAysnc(warehouseId);
@@ -99,7 +101,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="whlcid">ID vị trí trong kho</param>
         [HttpGet("warehouse-location/{whlcid}")]
-        // [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> GetAllLotByWHLID(int whlcid)
         {
             try
@@ -130,12 +132,44 @@ namespace PMS.API.Controllers
         /// <param name="newSalePrice"></param>
         /// <returns></returns>
         [HttpPut("warehouse-location/{whlcid}/lot/{lotid}/update-saleprice")]
-        // [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> UpdateSalePrice(int whlcid, int lotid, [FromBody] decimal newSalePrice)
         {
             var result = await _warehouseService.UpdateSalePriceAsync(whlcid, lotid, newSalePrice);
             return HandleServiceResult(result);
         }
 
+
+        /// <summary>
+        /// Cập nhật kiểm kê vật lý (Physical Inventory) của tất cả lô hàng trong vị trí kho
+        /// https://localhost:7213/api/Warehouse/physicalInventory/{whlcid}
+        /// </summary>
+        /// <param name="whlcid">ID vị trí kho</param>
+        /// <param name="updates">Danh sách cập nhật số lượng thực tế</param>
+        /// <returns>Danh sách lô hàng đã được cập nhật</returns>
+        [HttpPut("physicalInventory/{whlcid}")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)] 
+        public async Task<IActionResult> UpdatePhysicalInventory(
+            int whlcid,
+            [FromBody] List<PhysicalInventoryUpdateDTO> updates)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+
+            if (updates == null || updates.Count == 0)
+            {
+                return BadRequest(new
+                {
+                    Message = "Danh sách cập nhật không được rỗng."
+                });
+            }
+
+            var result = await _warehouseService.UpdatePhysicalInventoryAsync(userId,whlcid, updates);
+            return HandleServiceResult(result);
+        }
     }
 }

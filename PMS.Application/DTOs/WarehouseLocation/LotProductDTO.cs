@@ -18,6 +18,10 @@ namespace PMS.Application.DTOs.WarehouseLocation
         public string SupplierName { get; set; } = string.Empty;
         //public int ProductID { get; set; }
         public string ProductName { get; set; } = string.Empty;
-        //public int warehouselocationId {  get; set; }
+        public DateTime LastedUpdate { get; set; }
+        public string? InventoryBy { get; set; }
+
+        public int DiffQuantity {  get; set; }
+
     }
 }

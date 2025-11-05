@@ -30,6 +30,9 @@ namespace PMS.Core.Domain.Entities
 
         [ForeignKey("WarehouseLocation")]
         public  int WarehouselocationID { get; set; }
+
+        public DateTime lastedUpdate {  get; set; }
+        public string? inventoryBy {  get; set; }
         public virtual Product Product { get; set; } = null!;
         public virtual Supplier Supplier { get; set; } = null!;
         public virtual ICollection<SalesQuotaionDetails> SalesQuotaionDetails { get; set; } = [];
