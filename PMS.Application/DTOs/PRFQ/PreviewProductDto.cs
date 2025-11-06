@@ -8,6 +8,7 @@ namespace PMS.Application.DTOs.PRFQ
 {
     public class PreviewProductDto
     {
+        public int STT {  get; set; }
         public int ProductID { get; set; }
         public string ProductName { get; set; }
         public string Description { get; set; }

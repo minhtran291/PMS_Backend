@@ -20,6 +20,7 @@ using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
+using PMS.Core.Domain.Helper;
 using PMS.Core.Domain.Identity;
 
 using PMS.Data.UnitOfWork;
@@ -304,9 +305,9 @@ namespace PMS.API.Services.PRFQService
                 var productIds = new List<int>();
                 int row = 11;
 
-                while (!string.IsNullOrEmpty(worksheet.Cells[row, 1].Text))
+                while (!string.IsNullOrEmpty(worksheet.Cells[row, 2].Text))
                 {
-                    if (int.TryParse(worksheet.Cells[row, 1].Text?.Trim(), out int productId))
+                    if (int.TryParse(worksheet.Cells[row, 2].Text?.Trim(), out int productId))
                         productIds.Add(productId);
                     row++;
                 }
@@ -343,17 +344,22 @@ namespace PMS.API.Services.PRFQService
                 {
                     try
                     {
-                        if (!int.TryParse(worksheet.Cells[row, 1].Text?.Trim(), out int productId))
+                        if (!int.TryParse(worksheet.Cells[row, 2].Text?.Trim(), out int productId))
+                        {
+                            row++;
+                            continue;
+                        }
+                        if (!int.TryParse(worksheet.Cells[row, 1].Text?.Trim(), out int stt))
                         {
                             row++;
                             continue;
                         }
 
-                        var description = worksheet.Cells[row, 3].Text?.Trim();
-                        var dvt = worksheet.Cells[row, 4].Text?.Trim();
-                        var unitPriceText = worksheet.Cells[row, 5].Text?.Trim();
+                        var description = worksheet.Cells[row, 4].Text?.Trim();
+                        var dvt = worksheet.Cells[row, 5].Text?.Trim();
+                        var unitPriceText = worksheet.Cells[row, 6].Text?.Trim();
 
-                        var expiredCell = worksheet.Cells[row, 6];
+                        var expiredCell = worksheet.Cells[row, 7];
                         var expiredDateDisplay = expiredCell.Text?.Trim();
 
                         decimal.TryParse(unitPriceText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal unitPrice);
@@ -370,6 +376,7 @@ namespace PMS.API.Services.PRFQService
 
                         products.Add(new PreviewProductDto
                         {
+                            STT= stt,
                             ProductID = productId,
                             ProductName = info?.ProductName ?? "Unknown",
                             Description = description,
@@ -413,6 +420,7 @@ namespace PMS.API.Services.PRFQService
 
         private byte[] GenerateExcel(PurchasingRequestForQuotation prfq)
         {
+
             var fullPrfq = _unitOfWork.PurchasingRequestForQuotation
                 .GetByIdAsync(prfq.PRFQID, q => q
                     .Include(p => p.Supplier)
@@ -426,26 +434,18 @@ namespace PMS.API.Services.PRFQService
             using var package = new ExcelPackage();
             var ws = package.Workbook.Worksheets.Add("Yêu cầu báo giá");
 
-            // Cấu hình chung
+ 
             ws.Cells.Style.Font.Name = "Arial";
             ws.Cells.Style.Font.Size = 11;
-            ws.Cells.Style.WrapText = false;
             ws.DefaultRowHeight = 18;
+            ws.Cells.Style.WrapText = false;
 
-            // Tiêu đề
+
             ws.Cells[1, 1, 1, 8].Merge = true;
             ws.Cells[1, 1].Value = "YÊU CẦU BÁO GIÁ (REQUEST FOR QUOTATION)";
-            ws.Cells[1, 1].Style.Font.Bold = true;
-            ws.Cells[1, 1].Style.Font.Size = 18;
-            ws.Cells[1, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            ws.Cells[1, 1].Style.VerticalAlignment = ExcelVerticalAlignment.Center;
-            ws.Row(1).Height = 30;
-            ws.Cells[1, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[1, 1].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 102, 204));
-            ws.Cells[1, 1].Style.Font.Color.SetColor(Color.White);
-            ws.Cells[1, 1].Style.Border.BorderAround(ExcelBorderStyle.Medium);
+            ws.Cells[1, 1].Style.ApplyTitleStyle(18, Color.FromArgb(0, 102, 204));
 
-            // Logo
+
             var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.png");
             if (File.Exists(logoPath))
             {
@@ -454,161 +454,129 @@ namespace PMS.API.Services.PRFQService
                 picture.SetSize(120, 50);
             }
 
-            int currentRow = 3;
+            int row = 3;
 
-            // Header bên gửi / nhận
-            ws.Cells[currentRow, 1, currentRow, 4].Merge = true;
-            ws.Cells[currentRow, 1].Value = "BÊN GỬI / SENDER";
-            ws.Cells[currentRow, 1].Style.Font.Bold = true;
-            ws.Cells[currentRow, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[currentRow, 1].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(240, 240, 255));
-            ws.Cells[currentRow, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            ws.Cells[currentRow, 1].Style.Border.BorderAround(ExcelBorderStyle.Medium);
 
-            ws.Cells[currentRow, 5, currentRow, 8].Merge = true;
-            ws.Cells[currentRow, 5].Value = "BÊN NHẬN / RECEIVER";
-            ws.Cells[currentRow, 5].Style.Font.Bold = true;
-            ws.Cells[currentRow, 5].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[currentRow, 5].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(240, 240, 255));
-            ws.Cells[currentRow, 5].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            ws.Cells[currentRow, 5].Style.Border.BorderAround(ExcelBorderStyle.Medium);
-            currentRow++;
+            ws.Cells[row, 1, row, 4].Merge = true;
+            ws.Cells[row, 1].Value = "BÊN GỬI / SENDER";
+            ws.Cells[row, 1].Style.ApplyHeaderBox(Color.FromArgb(240, 240, 255));
 
-            // GỬI
-            ws.Cells[currentRow, 1].Value = "Người gửi:";
-            ws.Cells[currentRow, 2].Value = fullPrfq.User?.UserName ?? "N/A";
-            ws.Cells[currentRow, 3].Value = "Số PRFQID:";
-            ws.Cells[currentRow, 3].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
-            ws.Cells[currentRow, 4].Value = prfq.PRFQID;
-            ws.Cells[currentRow, 3].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+            ws.Cells[row, 5, row, 8].Merge = true;
+            ws.Cells[row, 5].Value = "BÊN NHẬN / RECEIVER";
+            ws.Cells[row, 5].Style.ApplyHeaderBox(Color.FromArgb(240, 240, 255));
 
-            // NHẬN
-            ws.Cells[currentRow, 5].Value = "Tên NCC:";
-            ws.Cells[currentRow, 6, currentRow, 8].Merge = true;
-            ws.Cells[currentRow, 6].Value = fullPrfq.Supplier?.Name ?? "—";
-            currentRow++;
+            row++;
 
-            ws.Cells[currentRow, 1].Value = "Mã số thuế:";
-            ws.Cells[currentRow, 2].Value = fullPrfq.TaxCode ?? "—";
-            ws.Cells[currentRow, 3].Value = "SĐT:";
-            ws.Cells[currentRow, 4].Value = fullPrfq.MyPhone ?? "—";
 
-            ws.Cells[currentRow, 5].Value = "Email:";
-            ws.Cells[currentRow, 6, currentRow, 8].Merge = true;
-            ws.Cells[currentRow, 6].Value = fullPrfq.Supplier?.Email ?? "—";
-            currentRow++;
+            ws.Cells[row, 1].Value = "Người gửi:";
+            ws.Cells[row, 2].Value = fullPrfq.User?.FullName ?? "N/A";
+            ws.Cells[row, 3].Value = "Số PRFQID:";
+            ws.Cells[row, 4].Value = prfq.PRFQID;
 
-            ws.Cells[currentRow, 1].Value = "Địa chỉ:";
-            ws.Cells[currentRow, 2, currentRow, 4].Merge = true;
-            ws.Cells[currentRow, 2].Value = fullPrfq.MyAddress ?? "—";
+            ws.Cells[row, 5].Value = "Tên NCC:";
+            ws.Cells[row, 6, row, 8].Merge = true;
+            ws.Cells[row, 6].Value = fullPrfq.Supplier?.Name ?? "—";
+            row++;
 
-            ws.Cells[currentRow, 5].Value = "Địa chỉ:";
-            ws.Cells[currentRow, 6, currentRow, 8].Merge = true;
-            ws.Cells[currentRow, 6].Value = fullPrfq.Supplier?.Address ?? "—";
-            currentRow++;
+            ws.Cells[row, 1].Value = "Mã số thuế:";
+            ws.Cells[row, 2].Value = fullPrfq.TaxCode ?? "—";
+            ws.Cells[row, 3].Value = "SĐT:";
+            ws.Cells[row, 4].Value = fullPrfq.MyPhone ?? "—";
 
-            ws.Cells[currentRow, 1].Value = "Ngày gửi:";
-            ws.Cells[currentRow, 2].Value = fullPrfq.RequestDate.ToString("dd/MM/yyyy");
+            ws.Cells[row, 5].Value = "Email:";
+            ws.Cells[row, 6, row, 8].Merge = true;
+            ws.Cells[row, 6].Value = fullPrfq.Supplier?.Email ?? "—";
+            row++;
 
-            ws.Cells[currentRow, 5].Value = "Liên lạc:";
-            ws.Cells[currentRow, 6, currentRow, 8].Merge = true;
-            ws.Cells[currentRow, 6].Value = fullPrfq.Supplier?.PhoneNumber ?? "—";
+            ws.Cells[row, 1].Value = "Địa chỉ:";
+            ws.Cells[row, 2, row, 4].Merge = true;
+            ws.Cells[row, 2].Value = fullPrfq.MyAddress ?? "—";
 
-            ws.Cells[3, 1, currentRow, 4].Style.Border.BorderAround(ExcelBorderStyle.Medium);
-            ws.Cells[3, 5, currentRow, 8].Style.Border.BorderAround(ExcelBorderStyle.Medium);
+            ws.Cells[row, 5].Value = "Địa chỉ:";
+            ws.Cells[row, 6, row, 8].Merge = true;
+            ws.Cells[row, 6].Value = fullPrfq.Supplier?.Address ?? "—";
+            row++;
 
-            currentRow += 2;
+            ws.Cells[row, 1].Value = "Ngày gửi:";
+            ws.Cells[row, 2].Value = fullPrfq.RequestDate.ToString("dd/MM/yyyy");
 
-            // Tiêu đề danh sách sản phẩm
-            ws.Cells[currentRow, 1, currentRow, 8].Merge = true;
-            ws.Cells[currentRow, 1].Value = "DANH SÁCH SẢN PHẨM (PRODUCT LIST)";
-            ws.Cells[currentRow, 1].Style.Font.Bold = true;
-            ws.Cells[currentRow, 1].Style.Font.Size = 14;
-            ws.Cells[currentRow, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            ws.Cells[currentRow, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[currentRow, 1].Style.Fill.BackgroundColor.SetColor(Color.LightGray);
-            ws.Cells[currentRow, 1].Style.Border.BorderAround(ExcelBorderStyle.Thin);
-            currentRow++;
+            ws.Cells[row, 5].Value = "Liên lạc:";
+            ws.Cells[row, 6, row, 8].Merge = true;
+            ws.Cells[row, 6].Value = fullPrfq.Supplier?.PhoneNumber ?? "—";
 
-            // Header bảng sản phẩm : sltt ko can  "Số lượng tối thiểu"
-            string[] headers = { "Số thứ tự", "Tên sản phẩm", "Mô tả", "Đơn vị" };
+            ws.Cells[3, 1, row, 4].Style.Border.BorderAround(ExcelBorderStyle.Medium);
+            ws.Cells[3, 5, row, 8].Style.Border.BorderAround(ExcelBorderStyle.Medium);
+            row += 2;
+
+
+            ws.Cells[row, 1, row, 8].Merge = true;
+            ws.Cells[row, 1].Value = "DANH SÁCH SẢN PHẨM (PRODUCT LIST)";
+            ws.Cells[row, 1].Style.ApplyTitleSection(Color.LightGray);
+            row++;
+
+
+            string[] headers = { "Số thứ tự", "Mã số", "Tên sản phẩm", "Mô tả", "Đơn vị" };
             for (int i = 0; i < headers.Length; i++)
-            {
-                ws.Cells[currentRow, i + 1].Value = headers[i];
-            }
+                ws.Cells[row, i + 1].Value = headers[i];
 
-            ws.Cells[currentRow, 1, currentRow, 8].Style.Font.Bold = true;
-            ws.Cells[currentRow, 1, currentRow, 8].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[currentRow, 1, currentRow, 8].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(0, 153, 0));
-            ws.Cells[currentRow, 1, currentRow, 8].Style.Font.Color.SetColor(Color.White);
-            ws.Cells[currentRow, 1, currentRow, 8].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            currentRow++;
+            ws.Cells[row, 1, row, 8].Style.ApplyTableHeader(Color.FromArgb(0, 153, 0));
+            row++;
 
-            // Nội dung sản phẩm
+
+            int index = 1;
             foreach (var prp in fullPrfq.PRPS)
             {
-                ws.Cells[currentRow, 1].Value = prp.Product.ProductID;
-                ws.Cells[currentRow, 2].Value = prp.Product.ProductName;
-                ws.Cells[currentRow, 3].Value = prp.Product.ProductDescription;
-                ws.Cells[currentRow, 4].Value = prp.Product.Unit;
-                //ws.Cells[currentRow, 5].Value = prp.Product.MinQuantity;
-                currentRow++;
+                ws.Cells[row, 1].Value = index++;
+                ws.Cells[row, 2].Value = prp.Product.ProductID;
+                ws.Cells[row, 3].Value = prp.Product.ProductName;
+                ws.Cells[row, 4].Value = prp.Product.ProductDescription;
+                ws.Cells[row, 5].Value = prp.Product.Unit;
+                row++;
             }
 
-            // Kẻ bảng
-            var tableRange = ws.Cells[11, 1, currentRow - 1, 8];
-            tableRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-            tableRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-            tableRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-            tableRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
-            tableRange.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
 
-            currentRow += 2;
+            var tableRange = ws.Cells[11, 1, row - 1, 8];
+            tableRange.Style.ApplyThinBorder();
 
-            // Ghi chú
-            ws.Cells[currentRow, 1, currentRow, 8].Merge = true;
-            ws.Cells[currentRow, 1].Value = "GHI CHÚ (NOTES)";
-            ws.Cells[currentRow, 1].Style.Font.Bold = true;
-            ws.Cells[currentRow, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[currentRow, 1].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(240, 240, 255));
-            ws.Cells[currentRow, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-            currentRow++;
+            row += 2;
+
+            // --- Ghi chú ---
+            ws.Cells[row, 1, row, 8].Merge = true;
+            ws.Cells[row, 1].Value = "GHI CHÚ (NOTES)";
+            ws.Cells[row, 1].Style.ApplyHeaderBox(Color.FromArgb(240, 240, 255));
+            row++;
 
             string[] notes = {
         "• Vui lòng phản hồi báo giá qua email hoặc hệ thống trong thời gian sớm nhất.",
         "• Báo giá cần ghi rõ điều kiện thanh toán và thời gian giao hàng.",
         "• Đảm bảo tính trung thực, rõ ràng trong báo giá."
     };
-
             foreach (var note in notes)
             {
-                ws.Cells[currentRow, 1, currentRow, 8].Merge = true;
-                ws.Cells[currentRow, 1].Value = note;
-                ws.Cells[currentRow, 1].Style.Font.Italic = true;
-                ws.Cells[currentRow, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
-                currentRow++;
+                ws.Cells[row, 1, row, 8].Merge = true;
+                ws.Cells[row, 1].Value = note;
+                ws.Cells[row, 1].Style.Font.Italic = true;
+                ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+                row++;
             }
 
-            currentRow += 3;
+            // --- Footer ---
+            row += 3;
+            ws.Cells[row, 1, row, 8].Merge = true;
+            ws.Cells[row, 1].Value = "(Khởi tạo từ CÔNG TY TNHH DƯỢC PHẨM SỐ 17 – MST: 030203002865 – Hotline: 0398233047)";
+            ws.Cells[row, 1].Style.Font.Italic = true;
+            ws.Cells[row, 1].Style.Font.Size = 9;
+            ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-            // Footer
-            ws.Cells[currentRow, 1, currentRow, 8].Merge = true;
-            ws.Cells[currentRow, 1].Value =
-                "(Khởi tạo từ CÔNG TY TNHH DƯỢC PHẨM SỐ 17 – MST: 030203002865 – Hotline: 0398233047)";
-            ws.Cells[currentRow, 1].Style.Font.Italic = true;
-            ws.Cells[currentRow, 1].Style.Font.Size = 9;
-            ws.Cells[currentRow, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-
-            // Tự động điều chỉnh độ rộng
+            // --- Điều chỉnh hiển thị ---
             ws.Cells[ws.Dimension.Address].AutoFitColumns();
-
             for (int i = 1; i <= 8; i++)
                 ws.Column(i).Width = Math.Min(ws.Column(i).Width, 100);
-
             ws.View.ZoomScale = 100;
 
             return package.GetAsByteArray();
         }
+
 
         private async Task<byte[]> GeneratePOExcelAsync(string userId, PurchasingOrder po)
         {
@@ -621,7 +589,7 @@ namespace PMS.API.Services.PRFQService
             ws.Cells.Style.WrapText = false;
             ws.DefaultRowHeight = 18;
 
-            // Tiêu đề đơn hàng
+
             ws.Cells[1, 1, 1, 10].Merge = true;
             ws.Cells[1, 1].Value = "ĐƠN HÀNG (PURCHASE ORDER CONFIRMATION)";
             ws.Cells[1, 1].Style.Font.Bold = true;
@@ -633,7 +601,7 @@ namespace PMS.API.Services.PRFQService
             ws.Cells[1, 1].Style.Font.Color.SetColor(Color.White);
             ws.Cells[1, 1].Style.Border.BorderAround(ExcelBorderStyle.Medium);
 
-            // Logo
+
             var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.png");
             if (File.Exists(logoPath))
             {
@@ -642,14 +610,14 @@ namespace PMS.API.Services.PRFQService
                 picture.SetSize(120, 50);
             }
 
-            // Thông tin PO
+
             ws.Cells[3, 1].Value = "Số đơn hàng (PO No):";
             ws.Cells[3, 2].Value = po.POID;
             ws.Cells[4, 1].Value = "Ngày lập đơn (Date):";
             ws.Cells[4, 2].Value = DateTime.Now.ToString("dd/MM/yyyy");
             ws.Cells[3, 1, 4, 1].Style.Font.Bold = true;
 
-            // dữ liệu liên quan
+
             var Quotation = await _unitOfWork.Quotation.Query()
                 .FirstOrDefaultAsync(q => q.QID == po.QID);
             if (Quotation == null)
@@ -665,7 +633,7 @@ namespace PMS.API.Services.PRFQService
             if (user == null)
                 throw new Exception("Lỗi khi tạo file excel");
 
-            // Bên bán
+
             ws.Cells[6, 1, 6, 4].Merge = true;
             ws.Cells[6, 1].Value = "BÊN BÁN HÀNG (SELLER)";
             ws.Cells[6, 1].Style.Font.Bold = true;
@@ -684,7 +652,7 @@ namespace PMS.API.Services.PRFQService
             ws.Cells[10, 1].Value = "Liên lạc (Phone):";
             ws.Cells[10, 2].Value = supplier.PhoneNumber ?? "—";
 
-            // Bên mua
+
             ws.Cells[6, 6, 6, 10].Merge = true;
             ws.Cells[6, 6].Value = "BÊN MUA HÀNG (BUYER)";
             ws.Cells[6, 6].Style.Font.Bold = true;
@@ -1224,84 +1192,108 @@ namespace PMS.API.Services.PRFQService
             };
 
             await _unitOfWork.PurchasingOrder.AddAsync(po);
-            await _unitOfWork.CommitAsync();
+            await _unitOfWork.CommitAsync(); 
 
             var products = await _unitOfWork.Product.Query()
                 .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
 
-            var selectedProductQuantities = input.Details
-                .Where(d => d.Quantity > 0)
-                .ToDictionary(d => d.ProductID, d => d.Quantity);
+            const int excelStartRow = 11;
 
             var poDetails = new List<PurchasingOrderDetail>();
             var quotationDetails = new List<QuotationDetail>();
 
-            int row = 11;
-            while (!string.IsNullOrEmpty(worksheet.Cells[row, 1].Text))
+            
+            if (isNewQuotation)
             {
-                var productIdText = worksheet.Cells[row, 1].Text?.Trim();
-                if (!int.TryParse(productIdText, out int productId))
+                int currentRow = excelStartRow;
+                while (true)
                 {
-                    row++;
-                    continue;
-                }
+                    var productIdText = worksheet.Cells[currentRow, 2].Text?.Trim();
+                    if (string.IsNullOrEmpty(productIdText))
+                        break; 
 
-                var description = worksheet.Cells[row, 3].Text?.Trim();
-                var dvt = worksheet.Cells[row, 4].Text?.Trim();
-                var unitPriceText = worksheet.Cells[row, 5].Text?.Trim();
-                var expiredDateText = worksheet.Cells[row, 6].Text?.Trim();
+                    if (!int.TryParse(productIdText, out int productId))
+                        throw new Exception($"Không thể đọc ProductID tại dòng {currentRow}.");
 
-                decimal.TryParse(unitPriceText, out decimal unitPrice);
-                DateTime expiredDate = DateTime.MinValue;
-                try { expiredDate = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(expiredDateText, row); } catch { }
+                    var description = worksheet.Cells[currentRow, 4].Text?.Trim();
+                    var dvt = worksheet.Cells[currentRow, 5].Text?.Trim();
+                    var unitPriceText = worksheet.Cells[currentRow, 6].Text?.Trim();
+                    var expiredDateText = worksheet.Cells[currentRow, 7].Text?.Trim();
 
-                var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
+                    decimal.TryParse(unitPriceText, out decimal unitPrice);
+                    DateTime expiredDate = DateTime.MinValue;
+                    try { expiredDate = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(expiredDateText, currentRow); } catch { }
 
-                if (selectedProductQuantities.TryGetValue(productId, out int quantity))
-                {
-                    var total = quantity * unitPrice * 1.1m;
-                    poDetails.Add(new PurchasingOrderDetail
-                    {
-                        POID = po.POID,
-                        ProductName = productName,
-                        Description = description,
-                        DVT = dvt,
-                        Quantity = quantity,
-                        UnitPrice = unitPrice,
-                        UnitPriceTotal = total,
-                        ExpiredDate = expiredDate,
-                        ProductID = productId
-                    });
-                    po.Total += total;
-                }
+                    var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
 
-                if (isNewQuotation)
-                {
                     quotationDetails.Add(new QuotationDetail
                     {
                         QID = qId,
                         ProductID = productId,
                         ProductName = productName,
                         ProductDescription = description ?? string.Empty,
-                        ProductUnit = dvt ?? string.Empty,
+                        ProductUnit = (dvt ?? string.Empty).Length > 100
+                            ? (dvt ?? string.Empty).Substring(0, 100)
+                            : (dvt ?? string.Empty),
                         UnitPrice = unitPrice,
                         ProductDate = expiredDate
                     });
+
+                    currentRow++;
                 }
 
-                row++;
+                if (quotationDetails.Count > 0)
+                    _unitOfWork.QuotationDetail.AddRange(quotationDetails);
+            }
+
+            
+            ///
+            foreach (var item in input.Details.Where(d => d.Quantity > 0))
+            {
+                int row = excelStartRow + item.STT - 1;
+
+                var productIdText = worksheet.Cells[row, 2].Text?.Trim();
+                if (!int.TryParse(productIdText, out int productId))
+                    throw new Exception($"Không thể đọc ProductID tại dòng {row} (STT {item.STT}).");
+
+                var description = worksheet.Cells[row, 4].Text?.Trim();
+                var dvt = worksheet.Cells[row, 5].Text?.Trim();
+                var unitPriceText = worksheet.Cells[row, 6].Text?.Trim();
+                var expiredDateText = worksheet.Cells[row, 7].Text?.Trim();
+
+                decimal.TryParse(unitPriceText, out decimal unitPrice);
+                DateTime expiredDate = DateTime.MinValue;
+                try { expiredDate = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(expiredDateText, row); } catch { }
+
+                var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
+                decimal total = item.Quantity * unitPrice * 1.1m;
+
+                poDetails.Add(new PurchasingOrderDetail
+                {
+                    POID = po.POID,
+                    ProductID = productId,
+                    ProductName = productName,
+                    Description = description,
+                    DVT = dvt,
+                    Quantity = item.Quantity,
+                    UnitPrice = unitPrice,
+                    UnitPriceTotal = total,
+                    ExpiredDate = expiredDate
+                });
+
+                po.Total += total;
             }
 
             if (poDetails.Count == 0)
                 throw new Exception("Không có sản phẩm nào được chọn để đặt hàng.");
 
             _unitOfWork.PurchasingOrderDetail.AddRange(poDetails);
-            if (isNewQuotation && quotationDetails.Count > 0)
-                _unitOfWork.QuotationDetail.AddRange(quotationDetails);
 
             await _unitOfWork.CommitAsync();
+
             return po;
         }
+
 
         private async Task SendEmailAndNotificationAsync(PurchasingOrder po, Supplier supplier, User senderUser, ExcelWorksheet worksheet, PurchasingOrderStatus status, string userId)
 
