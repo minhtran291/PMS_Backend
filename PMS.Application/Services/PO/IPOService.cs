@@ -21,8 +21,9 @@ namespace PMS.Application.Services.PO
 
         Task<ServiceResult<POPaidViewDTO>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO);
 
-        Task<ServiceResult<bool>> ChangeStatusAsync(int poid, PurchasingOrderStatus newStatus);
-        
+        Task<ServiceResult<bool>> ChangeStatusAsync(string userId, int poid, PurchasingOrderStatus newStatus);
+
+
         Task<byte[]> GeneratePOPaymentPdfAsync(int poid);
 
     }

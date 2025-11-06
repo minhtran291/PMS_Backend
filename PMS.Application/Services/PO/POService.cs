@@ -9,15 +9,17 @@ using OfficeOpenXml.Style;
 using PMS.Application.DTOs.PO;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
+using PMS.Application.Services.Notification;
 using PMS.Application.Services.PO;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
+using PMS.Core.Domain.Identity;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Services.POService
 {
-    public class POService(IUnitOfWork unitOfWork, IMapper mapper, IWebHostEnvironment webHostEnvironment, IPdfService pdfService)
+    public class POService(IUnitOfWork unitOfWork, IMapper mapper, IWebHostEnvironment webHostEnvironment, IPdfService pdfService, INotificationService notificationService)
         : Service(unitOfWork, mapper), IPOService
     {
         public async Task<ServiceResult<IEnumerable<POViewDTO>>> GetAllPOAsync()
@@ -309,8 +311,9 @@ namespace PMS.API.Services.POService
             }
         }
 
-        public async Task<ServiceResult<bool>> ChangeStatusAsync(int poid, PurchasingOrderStatus newStatus)
+        public async Task<ServiceResult<bool>> ChangeStatusAsync(string userId,int poid, PurchasingOrderStatus newStatus)
         {
+            var senderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
             try
             {
                 var existingPO = await _unitOfWork.PurchasingOrder
@@ -346,6 +349,21 @@ namespace PMS.API.Services.POService
                 _unitOfWork.PurchasingOrder.Update(existingPO);
                 await _unitOfWork.CommitAsync();
 
+                await notificationService.SendNotificationToRolesAsync(
+                userId,
+                ["ACCOUNTANT"],
+                "Yêu cầu Thanh toán",
+                $"Đơn hàng {existingPO.POID} đã được chấp nhận, Nhân viên {senderUser.FullName} yêu cầu thanh toán cho đơn hàng ",
+                Core.Domain.Enums.NotificationType.Message
+                );
+
+                await notificationService.SendNotificationToRolesAsync(
+                userId,
+                ["WAREHOUSE_STAFF"],
+                "Yêu cầu nhập kho",
+                $"Nhân viên {senderUser.FullName} yêu cầu Tạo phiếu nhập kho cho đơn hàng: {existingPO.POID} ",
+                Core.Domain.Enums.NotificationType.Message
+                );
                 return ServiceResult<bool>.SuccessResult(true,
                     $"Cập nhật trạng thái đơn hàng {poid} thành công: {newStatus}", 200);
             }
