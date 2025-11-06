@@ -98,7 +98,7 @@ namespace PMS.API.Controllers
 
             if (resp == "00") // Thành công
             {
-                var result = await _salesOrder.ConfirmPaymentAsync(orderId, amountVnd, "VNPay", txn);
+                var result = await _vnPay.VNPayConfirmPaymentAsync(orderId, amountVnd, "VNPay", txn);
                 return StatusCode(result.StatusCode, new
                 {
                     success = result.Success,

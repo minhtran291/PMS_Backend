@@ -8,9 +8,10 @@ namespace PMS.Core.Domain.Enums
 {
     public enum SalesOrderStatus
     {
-        Pending = 0,
-        Deposited = 1,
-        Paid = 2,
-        Complete = 3
+        Draft = 0,
+        Send = 1,
+        Deposited = 2,
+        Paid = 3,
+        Complete = 4
     }
 }

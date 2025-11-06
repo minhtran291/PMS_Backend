@@ -857,7 +857,9 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(sod => sod.SalesOrderId)
                     .IsRequired();
 
-                entity.Property(sod => sod.LotId)
+                entity.Property(sod => sod.LotId);
+
+                entity.Property(sod => sod.ProductId)
                     .IsRequired();
 
                 entity.Property(sod => sod.Quantity)
@@ -877,6 +879,11 @@ namespace PMS.Data.DatabaseConfig
                       .WithMany(l => l.SalesOrderDetails) 
                       .HasForeignKey(d => d.LotId)
                       .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(d => d.Product)
+                    .WithMany() 
+                    .HasForeignKey(d => d.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<CustomerDept>(entity =>
