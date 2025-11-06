@@ -9,9 +9,10 @@ namespace PMS.Application.DTOs.PO
 {
     public class PurchaseOrderDetailInput
     {
-        [Required(ErrorMessage = "ID sản phẩm là bắt buộc")]
-        public required int ProductID { get; set; }
+        [Required(ErrorMessage = "STT là bắt buộc")]
+        public required int STT { get; set; }
         [Required(ErrorMessage = "Số lượng sản phẩm là bắt buộc")]
         public required int Quantity { get; set; }
+
     }
 }
