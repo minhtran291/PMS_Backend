@@ -38,5 +38,6 @@ namespace PMS.Core.Domain.Entities
         public virtual ICollection<LotProduct> LotProducts { get; set; } = new List<LotProduct>();
         public virtual ICollection<GoodReceiptNoteDetail> GoodReceiptNoteDetails { get; set; } = new List<GoodReceiptNoteDetail>();
         public virtual ICollection<SalesQuotaionDetails> SalesQuotaionDetails { get; set; } = [];
+        public virtual ICollection<SalesOrderDetails> SalesOrderDetails { get; set; } = [];
     }
 }

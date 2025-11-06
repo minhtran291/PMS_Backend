@@ -27,12 +27,10 @@ namespace PMS.API.Controllers
         [HttpPost("fefo-plan")]
         public async Task<IActionResult> BuildFefoPlan([FromBody] FEFOPlanRequestDTO request)
         {
-            var result = await _service.BuildFefoPlanAsync(request);
-            return StatusCode(result.StatusCode, new
+            //var result = await _service.BuildFefoPlanAsync(request);
+            return StatusCode(200, new
             {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
+                message = "",
             });
         }
 
@@ -45,12 +43,10 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> SendOrder(string orderId)
         {
-            var result = await _service.SendOrderAsync(orderId);
-            return StatusCode(result.StatusCode, new
+            //var result = await _service.SendOrderAsync(orderId);
+            return StatusCode(200, new
             {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
+                message = "",
             });
         }
 
@@ -62,12 +58,10 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.SALES_STAFF)]
         public async Task<IActionResult> ConfirmPaymentManual(string orderId)
         {
-            var result = await _service.ConfirmPaymentAsync(orderId);
-            return StatusCode(result.StatusCode, new
+            //var result = await _service.ConfirmPaymentAsync(orderId);
+            return StatusCode(200, new
             {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
+                message = "",
             });
         }
 
@@ -78,12 +72,10 @@ namespace PMS.API.Controllers
         [HttpGet("details/{orderId}")]
         public async Task<IActionResult> GetDetails(string orderId)
         {
-            var result = await _service.GetOrderDetailsAsync(orderId);
-            return StatusCode(result.StatusCode, new
+            //var result = await _service.GetOrderDetailsAsync(orderId);
+            return StatusCode(200, new
             {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
+                message = "",
             });
         }
 
@@ -96,12 +88,10 @@ namespace PMS.API.Controllers
         public async Task<IActionResult> ListMyOrders()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
-            var result = await _service.ListOrdersAsync(userId);
-            return StatusCode(result.StatusCode, new
+            //var result = await _service.ListOrdersAsync(userId);
+            return StatusCode(200, new
             {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
+                message = "",
             });
         }
 
@@ -113,12 +103,10 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> MarkComplete(string orderId)
         {
-            var result = await _service.MarkCompleteAsync(orderId);
-            return StatusCode(result.StatusCode, new
+            //var result = await _service.MarkCompleteAsync(orderId);
+            return StatusCode(200, new
             {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
+                message = "",
             });
         }
 
@@ -131,12 +119,10 @@ namespace PMS.API.Controllers
         public async Task<IActionResult> CreateDraftFromSalesQuotation([FromQuery] int salesQuotationId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
-            var result = await _service.CreateDraftFromSalesQuotationAsync(salesQuotationId, userId);
-            return StatusCode(result.StatusCode, new
+            //var result = await _service.CreateDraftFromSalesQuotationAsync(salesQuotationId, userId);
+            return StatusCode(200, new
             {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
+                message = "",
             });
         }
 
@@ -148,12 +134,10 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> UpdateDraftQuantities(string orderId, [FromBody] List<DraftSalesOrderDTO> items)
         {
-            var result = await _service.UpdateDraftQuantitiesAsync(orderId, items);
-            return StatusCode(result.StatusCode, new
+            //var result = await _service.UpdateDraftQuantitiesAsync(orderId, items);
+            return StatusCode(200, new
             {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
+                message = "",
             });
         }
 
@@ -165,12 +149,10 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> DeleteDraft(string orderId)
         {
-            var result = await _service.DeleteDraftAsync(orderId);
-            return StatusCode(result.StatusCode, new
+            //var result = await _service.DeleteDraftAsync(orderId);
+            return StatusCode(200, new
             {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
+                message = "",
             });
         }
     }
