@@ -1322,6 +1322,7 @@ namespace PMS.API.Services.PRFQService
                 $"Nhân viên {senderUser.UserName} đã gửi mail đặt hàng đến NCC: {supplier.Name}",
                 Core.Domain.Enums.NotificationType.Reminder
             );
+
         }
 
     }

@@ -24,7 +24,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet("getAllPo")]
-        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF}")]
+        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF}")]
         public async Task<IActionResult> GetAllPurchaseOrders()
         {
             var result = await _poService.GetAllPOAsync();
@@ -99,7 +99,13 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> ChangeStatus(int poid, [FromQuery] PurchasingOrderStatus newStatus)
         {
-            var result = await _poService.ChangeStatusAsync(poid, newStatus);
+            if (!ModelState.IsValid)
+                return BadRequest(new { Message = "Dữ liệu không hợp lệ.", Errors = ModelState });
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+            var result = await _poService.ChangeStatusAsync(userId,poid, newStatus);
             return HandleServiceResult(result);
         }
 
