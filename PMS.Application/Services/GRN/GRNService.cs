@@ -213,7 +213,6 @@ namespace PMS.API.Services.GRNService
             }
         }
 
-
         private async Task HandleLotProductsAsync(IEnumerable<IGRNDetail> grnDetails, int supplierId, DateTime inputDate, int warehouseLocationID)
         {
             try
@@ -233,12 +232,12 @@ namespace PMS.API.Services.GRNService
                         lp.ProductID == detail.ProductID &&
                         lp.SupplierID == supplierId &&
                         lp.ExpiredDate.Date == detail.ExpiredDate.Date &&
-                        lp.WarehouselocationID == warehouseLocationID);
+                        lp.WarehouselocationID == warehouseLocationID&& 
+                        lp.InputPrice==detail.UnitPrice);
 
                     if (existingLot != null)
                     {
-                        existingLot.LotQuantity += detail.Quantity;
-                        existingLot.InputPrice = detail.UnitPrice;
+                        existingLot.LotQuantity += detail.Quantity;                       
                         existingLot.InputDate = inputDate;
                         updatedLots.Add(existingLot);
                     }

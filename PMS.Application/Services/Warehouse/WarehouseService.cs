@@ -253,6 +253,10 @@ namespace PMS.Application.Services.Warehouse
                         InputPrice = p.InputPrice,
                         SalePrice = p.SalePrice,
                         LotQuantity = p.LotQuantity,
+                        DiffQuantity = p.Diff,
+                        InventoryBy = p.inventoryBy,
+                        LastedUpdate = p.lastedUpdate,
+                        note = p.note,
                     });
                 }
                 return new ServiceResult<List<LotProductDTO>>
@@ -492,8 +496,8 @@ namespace PMS.Application.Services.Warehouse
             var endDate = startDate.AddMonths(1).AddDays(-1);
 
             var lotProducts = await _unitOfWork.LotProduct.Query()
-                .Include(l => l.Product)               
-                .Include(l => l.WarehouseLocation)      
+                .Include(l => l.Product)
+                .Include(l => l.WarehouseLocation)
                 .Where(l => l.lastedUpdate != null
                             && l.lastedUpdate >= startDate
                             && l.lastedUpdate <= endDate)
@@ -539,11 +543,11 @@ namespace PMS.Application.Services.Warehouse
 
             if (!lots.Any())
                 throw new Exception($"Không có dữ liệu kiểm kê vật lý trong tháng {month}/{year}.");
-           
+
             using var package = new ExcelPackage();
             var worksheet = package.Workbook.Worksheets.Add($"KK_{month:D2}_{year}");
 
-            
+
             worksheet.Cells["A1"].Value = "CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY";
             worksheet.Cells["A1:J1"].Merge = true;
             worksheet.Cells["A1"].Style.Font.Bold = true;
@@ -576,7 +580,7 @@ namespace PMS.Application.Services.Warehouse
             {
                 range.Style.Font.Bold = true;
                 range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(40, 167, 69)); 
+                range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(40, 167, 69));
                 range.Style.Font.Color.SetColor(Color.White);
                 range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                 range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
@@ -598,7 +602,7 @@ namespace PMS.Application.Services.Warehouse
                 worksheet.Cells[currentRow, 8].Value = lot.inventoryBy ?? "—";
                 worksheet.Cells[currentRow, 9].Value = lot.ExpiredDate.ToString("dd/MM/yyyy");
                 worksheet.Cells[currentRow, 10].Value = lot.lastedUpdate.ToString("dd/MM/yyyy HH:mm");
-                worksheet.Cells[currentRow, 11].Value = lot.note?? "-";
+                worksheet.Cells[currentRow, 11].Value = lot.note ?? "-";
 
 
                 worksheet.Cells[currentRow, 4].Style.Numberformat.Format = "#,##0";
