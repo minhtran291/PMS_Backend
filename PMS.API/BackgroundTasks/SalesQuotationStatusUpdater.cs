@@ -30,7 +30,7 @@ namespace PMS.API.BackgroundTasks
                 }
 
                 var now = DateTime.Now;
-                var nextRun = now.Date.AddDays(1).AddHours(2);
+                var nextRun = now.Date.AddDays(1);
                 var delay = nextRun - now;
 
                 await Task.Delay(delay, stoppingToken);
