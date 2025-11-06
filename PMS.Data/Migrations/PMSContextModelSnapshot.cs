@@ -183,6 +183,31 @@ namespace PMS.Data.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDept", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DeptAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("SalesOrderId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SalesOrderId");
+
+                    b.ToTable("CustomerDepts");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -754,7 +779,10 @@ namespace PMS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesOrderDetailsId"));
 
-                    b.Property<int>("LotId")
+                    b.Property<int?>("LotId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("Quantity")
@@ -770,6 +798,8 @@ namespace PMS.Data.Migrations
                     b.HasKey("SalesOrderDetailsId");
 
                     b.HasIndex("LotId");
+
+                    b.HasIndex("ProductId");
 
                     b.HasIndex("SalesOrderId");
 
@@ -1470,6 +1500,11 @@ namespace PMS.Data.Migrations
                     b.HasOne("PMS.Core.Domain.Entities.LotProduct", "Lot")
                         .WithMany("SalesOrderDetails")
                         .HasForeignKey("LotId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PMS.Core.Domain.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -1480,6 +1515,8 @@ namespace PMS.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Lot");
+
+                    b.Navigation("Product");
 
                     b.Navigation("SalesOrder");
                 });

@@ -21,22 +21,6 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// GET: https://localhost:7213/api/SalesOrder/quotation-products/{qid}
-        /// Lấy danh sách sản phẩm thuộc Quotation được chỉ định.
-        /// </summary>
-        [HttpGet("quotation-products/{qid}")]
-        public async Task<IActionResult> GetQuotationProducts(int qid)
-        {
-            var result = await _service.GetQuotationProductsAsync(qid);
-            return StatusCode(result.StatusCode, new
-            {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
-            });
-        }
-
-        /// <summary>
         /// POST: https://localhost:7213/api/SalesOrder/fefo-plan
         /// Nhập danh sách {productId, quantity} để tính FEFO theo LotProduct.
         /// </summary>
@@ -53,15 +37,15 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: https://localhost:7213/api/SalesOrder/create
-        /// Tạo SalesOrder ở trạng thái Pending từ kết quả FEFO (chưa trừ kho).
+        /// POST: https://localhost:7213/api/SalesOrder/send/{orderId}
+        /// Customer gửi đơn (Draft -> Send). Hệ thống kiểm tra tồn kho và cảnh báo
+        /// tới PURCHASES_STAFF nếu thiếu/sắp hết.
         /// </summary>
-        [HttpPost("create")]
+        [HttpPost("send/{orderId}")]
         [Authorize(Roles = UserRoles.CUSTOMER)]
-        public async Task<IActionResult> CreateOrder([FromBody] FEFOPlanRequestDTO request)
+        public async Task<IActionResult> SendOrder(string orderId)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
-            var result = await _service.CreateOrderFromQuotationAsync(request, createdBy: userId);
+            var result = await _service.SendOrderAsync(orderId);
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,
@@ -76,9 +60,9 @@ namespace PMS.API.Controllers
         /// </summary>
         [HttpPost("confirm-payment")]
         [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.SALES_STAFF)]
-        public async Task<IActionResult> ConfirmPaymentManual(string orderId, decimal amountVnd, string method = "Manual", string? txnId = null)
+        public async Task<IActionResult> ConfirmPaymentManual(string orderId)
         {
-            var result = await _service.ConfirmPaymentAsync(orderId, amountVnd, method, txnId);
+            var result = await _service.ConfirmPaymentAsync(orderId);
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,
@@ -89,11 +73,99 @@ namespace PMS.API.Controllers
 
         /// <summary>
         /// GET: https://localhost:7213/api/SalesOrder/details/{orderId}
+        /// Lấy chi tiết sales order
         /// </summary>
         [HttpGet("details/{orderId}")]
         public async Task<IActionResult> GetDetails(string orderId)
         {
             var result = await _service.GetOrderDetailsAsync(orderId);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// GET: https://localhost:7213/api/SalesOrder/list
+        /// Trả về danh sách SalesOrder theo user hiện tại (customer chỉ thấy đơn của mình).
+        /// </summary>
+        [HttpGet("list")]
+        [Authorize]
+        public async Task<IActionResult> ListMyOrders()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
+            var result = await _service.ListOrdersAsync(userId);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// POST: https://localhost:7213/api/SalesOrder/complete/{orderId}
+        /// Customer đánh dấu hoàn tất đơn (chỉ khi đã thanh toán và nhận được hàng).
+        /// </summary>
+        [HttpPost("complete/{orderId}")]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
+        public async Task<IActionResult> MarkComplete(string orderId)
+        {
+            var result = await _service.MarkCompleteAsync(orderId);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// POST: https://localhost:7213/api/SalesOrder/draft/create?salesQuotationId=123
+        /// Tạo SalesOrder trạng thái Draft từ SalesQuotation.
+        /// </summary>
+        [HttpPost("draft/create")]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
+        public async Task<IActionResult> CreateDraftFromSalesQuotation([FromQuery] int salesQuotationId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            var result = await _service.CreateDraftFromSalesQuotationAsync(salesQuotationId, userId);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// PUT: https://localhost:7213/api/SalesOrder/draft/{orderId}/quantities
+        /// Cập nhật số lượng từng sản phẩm trong Draft (chỉ thay đổi Quantity).
+        /// </summary>
+        [HttpPut("draft/{orderId}/quantities")]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
+        public async Task<IActionResult> UpdateDraftQuantities(string orderId, [FromBody] List<DraftSalesOrderDTO> items)
+        {
+            var result = await _service.UpdateDraftQuantitiesAsync(orderId, items);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// DELETE: https://localhost:7213/api/SalesOrder/draft/{orderId}
+        /// Xoá SalesOrder khi còn ở trạng thái Draft.
+        /// </summary>
+        [HttpDelete("draft/{orderId}")]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
+        public async Task<IActionResult> DeleteDraft(string orderId)
+        {
+            var result = await _service.DeleteDraftAsync(orderId);
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,
