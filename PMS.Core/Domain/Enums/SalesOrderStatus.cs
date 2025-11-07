@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace PMS.Core.Domain.Enums
 {
-    public enum SalesOrderStatus
+    public enum SalesOrderStatus : byte
     {
         Draft = 0,
         Send = 1,

@@ -99,68 +99,68 @@ namespace PMS.Application.Services.VNpay
             return string.Concat(hmac.ComputeHash(Encoding.UTF8.GetBytes(data)).Select(b => b.ToString("x2")));
         }
 
-        public async Task<ServiceResult<bool>> VNPayConfirmPaymentAsync(string salesOrderId, decimal amountVnd, string gateway, string? externalTxnId)
-        {
-            try
-            {
-                var order = await _unitOfWork.SalesOrder.Query()
-                    .FirstOrDefaultAsync(o => o.OrderId == salesOrderId);
+        //public async Task<ServiceResult<bool>> VNPayConfirmPaymentAsync(int salesOrderId, decimal amountVnd, string gateway, string? externalTxnId)
+        //{
+        //    try
+        //    {
+        //        var order = await _unitOfWork.SalesOrder.Query()
+        //            .FirstOrDefaultAsync(o => o.OrderId == salesOrderId);
 
-                if (order == null)
-                {
-                    return new ServiceResult<bool>
-                    {
-                        StatusCode = 404,
-                        Message = "Không tìm thấy đơn hàng",
-                        Data = false
-                    };
-                }
+        //        if (order == null)
+        //        {
+        //            return new ServiceResult<bool>
+        //            {
+        //                StatusCode = 404,
+        //                Message = "Không tìm thấy đơn hàng",
+        //                Data = false
+        //            };
+        //        }
 
-                if (order.Status != SalesOrderStatus.Send)
-                {
-                    return new ServiceResult<bool>
-                    {
-                        StatusCode = 400,
-                        Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã gửi (Send).",
-                        Data = false
-                    };
-                }
+        //        if (order.Status != SalesOrderStatus.Send)
+        //        {
+        //            return new ServiceResult<bool>
+        //            {
+        //                StatusCode = 400,
+        //                Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã gửi (Send).",
+        //                Data = false
+        //            };
+        //        }
 
-                if (amountVnd < order.OrderTotalPrice)
-                {
-                    order.Status = SalesOrderStatus.Deposited;
-                    order.DepositAmount = amountVnd;
-                }
-                else
-                {
-                    order.Status = SalesOrderStatus.Paid;
-                    order.DepositAmount = order.OrderTotalPrice;
-                }
+        //        if (amountVnd < order.OrderTotalPrice)
+        //        {
+        //            order.Status = SalesOrderStatus.Deposited;
+        //            order.DepositAmount = amountVnd;
+        //        }
+        //        else
+        //        {
+        //            order.Status = SalesOrderStatus.Paid;
+        //            order.DepositAmount = order.OrderTotalPrice;
+        //        }
 
-                _unitOfWork.SalesOrder.Update(order);
-                await _unitOfWork.CommitAsync();
+        //        _unitOfWork.SalesOrder.Update(order);
+        //        await _unitOfWork.CommitAsync();
 
-                _logger.LogInformation(
-                    "VNPay IPN OK. Order={OrderId}, Amount={Amount}, Txn={Txn}, NewStatus={Status}",
-                    salesOrderId, amountVnd, externalTxnId, order.Status);
+        //        _logger.LogInformation(
+        //            "VNPay IPN OK. Order={OrderId}, Amount={Amount}, Txn={Txn}, NewStatus={Status}",
+        //            salesOrderId, amountVnd, externalTxnId, order.Status);
 
-                return new ServiceResult<bool>
-                {
-                    StatusCode = 200,
-                    Message = "Xác nhận thanh toán thành công.",
-                    Data = true
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "VNPayConfirmPaymentAsync fail. Order={OrderId}", salesOrderId);
-                return new ServiceResult<bool>
-                {
-                    StatusCode = 500,
-                    Message = "Lỗi xác nhận thanh toán",
-                    Data = false
-                };
-            }
-        }
+        //        return new ServiceResult<bool>
+        //        {
+        //            StatusCode = 200,
+        //            Message = "Xác nhận thanh toán thành công.",
+        //            Data = true
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "VNPayConfirmPaymentAsync fail. Order={OrderId}", salesOrderId);
+        //        return new ServiceResult<bool>
+        //        {
+        //            StatusCode = 500,
+        //            Message = "Lỗi xác nhận thanh toán",
+        //            Data = false
+        //        };
+        //    }
+        //}
     }
 }
