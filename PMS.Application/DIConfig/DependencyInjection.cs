@@ -55,7 +55,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IGRNService, GRNService>();
             services.AddScoped<ISalesQuotationService, SalesQuotationService>();
             services.AddScoped<IQuotationService, QuotationService>();
-            services.AddScoped<ISalesOrderService, SalesOrderService>();
+            //services.AddScoped<ISalesOrderService, SalesOrderService>();
             // VNPay
             services.AddScoped<IVnPayService, VnPayService>();
         }

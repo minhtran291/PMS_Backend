@@ -15,6 +15,7 @@ namespace PMS.Core.Domain.Entities
         public required string CreateBy { get; set; }
         public DateTime CreateAt { get; set; }
         public SalesOrderStatus Status { get; set; }
+        public decimal TotalPrice { get; set; }
         public bool IsDeposited { get; set; }
 
         public virtual ICollection<SalesOrderDetails> SalesOrderDetails { get; set; } = [];

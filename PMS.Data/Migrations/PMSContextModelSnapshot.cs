@@ -748,6 +748,10 @@ namespace PMS.Data.Migrations
                     b.Property<byte>("Status")
                         .HasColumnType("TINYINT");
 
+                    b.Property<decimal>("TotalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.HasKey("OrderId");
 
                     b.HasIndex("CreateBy");
@@ -765,6 +769,14 @@ namespace PMS.Data.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("SubTotalPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("SalesOrderId", "ProductId");
 

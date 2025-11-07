@@ -13,9 +13,9 @@ namespace PMS.Application.Services.SalesOrder
     public interface ISalesOrderService
     {
         //Sales Order Draft
-        //Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(int salesQuotationId, string createdBy);
-        //Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(string orderId, List<DraftSalesOrderDTO> items);
-        //Task<ServiceResult<bool>> DeleteDraftAsync(string orderId);
+        Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(int salesQuotationId, string createdBy);
+        Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(string orderId, List<DraftSalesOrderDTO> items);
+        Task<ServiceResult<bool>> DeleteDraftAsync(string orderId);
 
         // Send Order and check current product quantity
         //Task<ServiceResult<object>> SendOrderAsync(string orderId);
