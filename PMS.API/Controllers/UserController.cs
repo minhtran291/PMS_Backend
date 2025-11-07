@@ -10,6 +10,8 @@ using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Identity;
 using PMS.Data.UnitOfWork;
+using Microsoft.AspNetCore.Hosting;
+using System.IO;
 
 namespace PMS.API.Controllers
 {
@@ -19,9 +21,11 @@ namespace PMS.API.Controllers
     {
 
         private readonly IUserService _userService;
-        public UserController(IUserService userService)
+        private readonly IWebHostEnvironment _env;
+        public UserController(IUserService userService, IWebHostEnvironment env)
         {
             _userService = userService;
+            _env = env;
         }
 
         //https://localhost:7213/api/User/register
@@ -221,6 +225,116 @@ namespace PMS.API.Controllers
                 message = result.Message,
                 data = result.Data,
             });
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/User/upload-avatar
+        /// Upload avatar cho user
+        /// </summary>
+        [HttpPost("upload-avatar")]
+        public async Task<IActionResult> UploadAvatar(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return StatusCode(400, new { success = false, message = "File không hợp lệ", data = (string?)null });
+            }
+
+            var allowedExt = new[] { ".jpg", ".jpeg", ".png" };
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExt.Contains(ext))
+            {
+                return StatusCode(400, new { success = false, message = "Định dạng không hỗ trợ (chỉ jpg, jpeg, png)", data = (string?)null });
+            }
+
+            var imagesDir = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images");
+            if (!Directory.Exists(imagesDir)) Directory.CreateDirectory(imagesDir);
+
+            var fileName = $"avatar_{Guid.NewGuid():N}{ext}";
+            var physicalPath = Path.Combine(imagesDir, fileName);
+            await using (var stream = new FileStream(physicalPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var relativePath = $"/images/{fileName}";
+            var fullUrl = $"{Request.Scheme}://{Request.Host}{relativePath}";
+            return StatusCode(200, new { success = true, message = "Tải ảnh thành công", data = relativePath, fullUrl });
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/User/upload-business-certificate
+        /// Upload ảnh chứng nhận kinh doanh cho customer
+        /// </summary>
+        [HttpPost("upload-business-certificate")]
+        [Authorize]
+        public async Task<IActionResult> UploadBusinessCertificate(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return StatusCode(400, new { success = false, message = "File không hợp lệ", data = (string?)null });
+            }
+
+            // Validate file size (max 5MB)
+            if (file.Length > 5 * 1024 * 1024)
+            {
+                return StatusCode(400, new { success = false, message = "Kích thước file không được vượt quá 5MB", data = (string?)null });
+            }
+
+            var allowedExt = new[] { ".jpg", ".jpeg", ".png" };
+            var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (!allowedExt.Contains(ext))
+            {
+                return StatusCode(400, new { success = false, message = "Định dạng không hỗ trợ (chỉ jpg, jpeg, png)", data = (string?)null });
+            }
+
+            var imagesDir = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "images", "certificates");
+            if (!Directory.Exists(imagesDir)) Directory.CreateDirectory(imagesDir);
+
+            var fileName = $"certificate_{Guid.NewGuid():N}{ext}";
+            var physicalPath = Path.Combine(imagesDir, fileName);
+            await using (var stream = new FileStream(physicalPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var relativePath = $"/images/certificates/{fileName}";
+            var fullUrl = $"{Request.Scheme}://{Request.Host}{relativePath}";
+            return StatusCode(200, new { success = true, message = "Tải ảnh chứng nhận kinh doanh thành công", data = relativePath, fullUrl });
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/User/customer-status
+        /// Kiểm tra trạng thái customer và thông tin bổ sung
+        /// </summary>
+        [HttpGet("customer-status")]
+        [Authorize]
+        public async Task<IActionResult> GetCustomerStatus()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+
+            var result = await _userService.GetCustomerStatusAsync(userId);
+            return HandleServiceResult(result);
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/User/submit-additional-info
+        /// Customer submit thông tin bổ sung (mã số thuế, mã số kinh doanh, địa chỉ)
+        /// </summary>
+        [HttpPost("submit-additional-info")]
+        [Authorize]
+        public async Task<IActionResult> SubmitCustomerAdditionalInfo([FromBody] CustomerAdditionalInfoDTO additionalInfo)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+
+            var result = await _userService.SubmitCustomerAdditionalInfoAsync(userId, additionalInfo);
+            return HandleServiceResult(result);
         }
     }
 
