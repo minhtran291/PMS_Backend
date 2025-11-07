@@ -235,9 +235,11 @@ namespace PMS.API.Services.GRNService
 
         public async Task<ServiceResult<GRNViewDTO>> GetGRNDetailAsync(int grnId)
         {
+
             var grn = await _unitOfWork.GoodReceiptNote.Query()
                 .Include(g => g.GoodReceiptNoteDetails)
                 .FirstOrDefaultAsync(g => g.GRNID == grnId);
+
 
             if (grn == null)
             {
@@ -249,6 +251,17 @@ namespace PMS.API.Services.GRNService
                     Success = false
                 };
             }
+
+
+            var productIds = grn.GoodReceiptNoteDetails
+                .Select(d => d.ProductID)
+                .Distinct()
+                .ToList();
+
+
+            var products = await _unitOfWork.Product.Query()
+                .Where(p => productIds.Contains(p.ProductID))
+                .ToListAsync();
 
 
             var user = await _unitOfWork.Users.Query()
@@ -264,12 +277,18 @@ namespace PMS.API.Services.GRNService
                 CreateBy = user?.FullName ?? "Không xác định",
                 Description = grn.Description,
                 POID = grn.POID,
-                GRNDetailViewDTO = grn.GoodReceiptNoteDetails.Select(d => new GRNDetailViewDTO
+                GRNDetailViewDTO = grn.GoodReceiptNoteDetails.Select(d =>
                 {
-                    GRNDID = d.GRNDID,
-                    ProductID = d.ProductID,
-                    UnitPrice = d.UnitPrice,
-                    Quantity = d.Quantity
+                    var product = products.FirstOrDefault(p => p.ProductID == d.ProductID);
+
+                    return new GRNDetailViewDTO
+                    {
+                        GRNDID = d.GRNDID,
+                        ProductID = d.ProductID,
+                        UnitPrice = d.UnitPrice,
+                        Quantity = d.Quantity,
+                        ProductName = product?.ProductName ?? "Không xác định"
+                    };
                 }).ToList()
             };
 
@@ -277,9 +296,11 @@ namespace PMS.API.Services.GRNService
             {
                 Data = grnDto,
                 StatusCode = 200,
-                Success = true
+                Success = true,
+                Message = "Lấy chi tiết phiếu nhập kho thành công"
             };
         }
+
 
         public async Task<byte[]> GeneratePDFGRNAsync(int grnId)
         {
@@ -635,7 +656,10 @@ namespace PMS.API.Services.GRNService
                     .SumAsync(d => (decimal?)d.Quantity) ?? 0;
 
                 var totalAfterThis = totalReceivedBefore + grnItem.Quantity;
-
+                    if(totalAfterThis == totalReceivedBefore)
+                {
+                    return ServiceResult<bool>.SuccessResult(true,$"Đơn hàng đã vào kho đủ",200);
+                }
                 if (totalAfterThis > poDetail.Quantity)
                     return ServiceResult<bool>.Fail(
                         $"Tổng số lượng nhập cho sản phẩm '{poDetail.ProductName}' ({totalAfterThis}) vượt quá số lượng trong đơn hàng ({poDetail.Quantity}).",
@@ -659,6 +683,7 @@ namespace PMS.API.Services.GRNService
                 CreateBy = userId,
                 Description = dto.Description,
                 POID = poId,
+                warehouseID= dto.WarehouseLocationID,
             };
 
             await _unitOfWork.GoodReceiptNote.AddAsync(grn);
