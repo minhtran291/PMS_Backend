@@ -657,9 +657,9 @@ namespace PMS.API.Services.GRNService
 
                 var totalAfterThis = totalReceivedBefore + grnItem.Quantity;
                     if(totalAfterThis == totalReceivedBefore)
-                {
-                    return ServiceResult<bool>.SuccessResult(true,$"Đơn hàng đã vào kho đủ",200);
-                }
+                    {
+                        return ServiceResult<bool>.SuccessResult(true,$"Đơn hàng đã vào kho đủ",200);
+                    }
                 if (totalAfterThis > poDetail.Quantity)
                     return ServiceResult<bool>.Fail(
                         $"Tổng số lượng nhập cho sản phẩm '{poDetail.ProductName}' ({totalAfterThis}) vượt quá số lượng trong đơn hàng ({poDetail.Quantity}).",

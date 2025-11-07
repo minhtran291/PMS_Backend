@@ -39,26 +39,25 @@ namespace PMS.Tests.Services.Purchasing
         {
             base.BaseSetup();
 
-            // Mock repositories
+
             _prfqRepoMock = new Mock<IPurchasingRequestForQuotationRepository>();
             _prpRepoMock = new Mock<IPurchasingRequestProductRepository>();
             _supplierRepoMock = new Mock<ISupplierRepository>();
             _productRepoMock = new Mock<IProductRepository>();
 
-            // Setup UnitOfWork to return mocked repos
             UnitOfWorkMock.Setup(u => u.PurchasingRequestForQuotation).Returns(_prfqRepoMock.Object);
             UnitOfWorkMock.Setup(u => u.PurchasingRequestProduct).Returns(_prpRepoMock.Object);
             UnitOfWorkMock.Setup(u => u.Supplier).Returns(_supplierRepoMock.Object);
             UnitOfWorkMock.Setup(u => u.Product).Returns(_productRepoMock.Object);
 
-            // Setup GetByIdAsync with Include
+
             UnitOfWorkMock.Setup(u => u.PurchasingRequestForQuotation.GetByIdAsync(
                 It.IsAny<int>(),
                 It.IsAny<Func<IQueryable<PurchasingRequestForQuotation>, IQueryable<PurchasingRequestForQuotation>>>()))
                 .Returns<int, Func<IQueryable<PurchasingRequestForQuotation>, IQueryable<PurchasingRequestForQuotation>>>(
                     (id, include) => _prfqRepoMock.Object.GetByIdAsync(id, include));
 
-            // Initialize service
+
             _prfqService = new PRFQService(
                 UnitOfWorkMock.Object,
                 MapperMock.Object,
@@ -72,15 +71,15 @@ namespace PMS.Tests.Services.Purchasing
         [Test]
         public async Task CreatePRFQAsync_UserNotFound_Returns404()
         {
-            // Arrange
+
             UserManagerMock.Setup(m => m.FindByIdAsync(TestUserId))
                 .ReturnsAsync((User)null);
 
-            // Act
+
             var result = await _prfqService.CreatePRFQAsync(
                 TestUserId, TestSupplierId, "123456789", "0901234567", "Hà Nội", TestProductIds, PRFQStatus.Draft);
 
-            // Assert
+
             Assert.Multiple(() =>
             {
                 Assert.That(result.StatusCode, Is.EqualTo(404));
@@ -114,7 +113,7 @@ namespace PMS.Tests.Services.Purchasing
         [Test]
         public async Task CreatePRFQAsync_ProductNotFound_Returns400()
         {
-            // Arrange
+
             var user = new User { Id = TestUserId, FullName = "Nguyễn Văn A" };
             var supplier = new Supplier { Id = TestSupplierId, Status = SupplierStatus.Active };
 
@@ -126,11 +125,11 @@ namespace PMS.Tests.Services.Purchasing
                 .Returns(new[] { new Product { ProductID = 201, Status = true, MaxQuantity = 2000, MinQuantity = 10, TotalCurrentQuantity = 30, ProductName = "abc", Unit = "Hộp" } }
                     .ToAsyncQueryable());
 
-            // Act
+
             var result = await _prfqService.CreatePRFQAsync(
                 TestUserId, TestSupplierId, "123456789", "0901234567", "Hà Nội", TestProductIds, PRFQStatus.Draft);
 
-            // Assert
+
             Assert.Multiple(() =>
             {
                 Assert.That(result.StatusCode, Is.EqualTo(400));
@@ -141,7 +140,7 @@ namespace PMS.Tests.Services.Purchasing
         [Test]
         public async Task CreatePRFQAsync_InactiveProduct_Returns400()
         {
-            // Arrange
+
             var user = new User { Id = TestUserId, FullName = "Nguyễn Văn A" };
             var supplier = new Supplier { Id = TestSupplierId, Status = SupplierStatus.Active };
             var products = new[]
@@ -160,11 +159,9 @@ namespace PMS.Tests.Services.Purchasing
             _productRepoMock.Setup(r => r.Query())
                 .Returns(products.ToAsyncQueryable());
 
-            // Act
             var result = await _prfqService.CreatePRFQAsync(
                 TestUserId, TestSupplierId, "123456789", "0901234567", "Hà Nội", TestProductIds, PRFQStatus.Draft);
 
-            // Assert
             Assert.Multiple(() =>
             {
                 Assert.That(result.StatusCode, Is.EqualTo(400));
@@ -175,7 +172,7 @@ namespace PMS.Tests.Services.Purchasing
         [Test]
         public async Task CreatePRFQAsync_DraftStatus_Success_NoEmailSent()
         {
-            // Arrange
+
             var user = new User { Id = TestUserId, FullName = "Nguyễn Văn A" };
             var supplier = new Supplier { Id = TestSupplierId, Status = SupplierStatus.Active, Email = "ncc@test.com" };
             var products = TestProductIds.Select(id => new Product
@@ -205,11 +202,10 @@ namespace PMS.Tests.Services.Purchasing
                 .Callback<PurchasingRequestProduct>(addedPrps.Add)
                 .Returns(Task.CompletedTask);
 
-            // Act
             var result = await _prfqService.CreatePRFQAsync(
                 TestUserId, TestSupplierId, "123456789", "0901234567", "Hà Nội", TestProductIds, PRFQStatus.Draft);
 
-            // Assert
+
             Assert.Multiple(() =>
             {
                 Assert.That(result.StatusCode, Is.EqualTo(200));
@@ -229,7 +225,7 @@ namespace PMS.Tests.Services.Purchasing
         [Test]
         public async Task CreatePRFQAsync_SentStatus_Success_EmailSent()
         {
-            // Arrange
+
             var user = new User { Id = TestUserId, FullName = "Nguyễn Văn A" };
             var supplier = new Supplier { Id = TestSupplierId, Status = SupplierStatus.Active, Email = "ncc@test.com", Name = "NCC ABC" };
             var products = TestProductIds.Select(id => new Product
@@ -258,7 +254,7 @@ namespace PMS.Tests.Services.Purchasing
             _prpRepoMock.Setup(r => r.AddAsync(It.IsAny<PurchasingRequestProduct>()))
                 .Returns(Task.CompletedTask);
 
-            // Mock full PRFQ with includes
+
             var fullPrfq = new PurchasingRequestForQuotation
             {
                 PRFQID = prfqId,
@@ -281,11 +277,10 @@ namespace PMS.Tests.Services.Purchasing
                 It.IsAny<Func<IQueryable<PurchasingRequestForQuotation>, IQueryable<PurchasingRequestForQuotation>>>()))
                 .ReturnsAsync(fullPrfq);
 
-            // Act
             var result = await _prfqService.CreatePRFQAsync(
                 TestUserId, TestSupplierId, "123456789", "0901234567", "Hà Nội", TestProductIds, PRFQStatus.Sent);
 
-            // Assert
+
             Assert.That(result.StatusCode, Is.EqualTo(200));
             Assert.That(result.Data, Is.EqualTo(prfqId));
 
