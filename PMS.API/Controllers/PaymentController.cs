@@ -30,44 +30,48 @@ namespace PMS.API.Controllers
         [HttpPost("create-payment")]
         public async Task<IActionResult> CreatePayment(string orderId, string paymentType = "deposit")
         {
-            var details = await _salesOrder.GetOrderDetailsAsync(orderId);
-            if (!details.Success || details.Data == null)
+            //var details = await _salesOrder.GetOrderDetailsAsync(orderId);
+            //if (!details.Success || details.Data == null)
+            //{
+            //    return StatusCode(details.StatusCode, new
+            //    {
+            //        success = details.Success,
+            //        message = details.Message,
+            //        data = details.Data
+            //    });
+            //}
+
+            //// Lấy total từ payload (anonymous object) => dynamic
+            //dynamic dto = details.Data!;
+            //decimal total = dto.OrderTotalPrice;
+
+            //decimal amount = paymentType.Equals("deposit", StringComparison.OrdinalIgnoreCase)
+            //    ? Math.Round(total / 10m, 0) 
+            //    : total;
+
+            //var orderInfo = paymentType.Equals("deposit", StringComparison.OrdinalIgnoreCase)
+            //    ? $"Thanh toán cọc đơn {orderId}"
+            //    : $"Thanh toán toàn bộ đơn {orderId}";
+
+            //var url = _vnPay.CreatePaymentUrl(orderId, (long)amount, orderInfo);
+            //var qr = _vnPay.GenerateQrDataUrl(url);
+
+            //return Ok(new
+            //{
+            //    success = true,
+            //    message = "Khởi tạo thanh toán VNPay thành công",
+            //    data = new
+            //    {
+            //        orderId,
+            //        paymentType,
+            //        amount,
+            //        paymentUrl = url,
+            //        qrDataUrl = qr
+            //    }
+            //});
+            return StatusCode(200, new
             {
-                return StatusCode(details.StatusCode, new
-                {
-                    success = details.Success,
-                    message = details.Message,
-                    data = details.Data
-                });
-            }
-
-            // Lấy total từ payload (anonymous object) => dynamic
-            dynamic dto = details.Data!;
-            decimal total = dto.OrderTotalPrice;
-
-            decimal amount = paymentType.Equals("deposit", StringComparison.OrdinalIgnoreCase)
-                ? Math.Round(total / 10m, 0) 
-                : total;
-
-            var orderInfo = paymentType.Equals("deposit", StringComparison.OrdinalIgnoreCase)
-                ? $"Thanh toán cọc đơn {orderId}"
-                : $"Thanh toán toàn bộ đơn {orderId}";
-
-            var url = _vnPay.CreatePaymentUrl(orderId, (long)amount, orderInfo);
-            var qr = _vnPay.GenerateQrDataUrl(url);
-
-            return Ok(new
-            {
-                success = true,
-                message = "Khởi tạo thanh toán VNPay thành công",
-                data = new
-                {
-                    orderId,
-                    paymentType,
-                    amount,
-                    paymentUrl = url,
-                    qrDataUrl = qr
-                }
+                message = "",
             });
         }
 
@@ -80,39 +84,43 @@ namespace PMS.API.Controllers
         [IgnoreAntiforgeryToken]
         public async Task<IActionResult> InstantPaymentNotification()
         {
-            if (!_vnPay.ValidateReturn(Request.Query, out var data))
+            //if (!_vnPay.ValidateReturn(Request.Query, out var data))
+            //{
+            //    return BadRequest(new { success = false, message = "Chữ ký VNPay không hợp lệ." });
+            //}
+
+            //var orderId = data.ContainsKey("vnp_TxnRef") ? data["vnp_TxnRef"] : "";
+            //var resp = data.ContainsKey("vnp_ResponseCode") ? data["vnp_ResponseCode"] : "";
+            //var amountRaw = data.ContainsKey("vnp_Amount") ? data["vnp_Amount"] : "0";
+            //var txn = data.ContainsKey("vnp_BankTranNo") ? data["vnp_BankTranNo"] : null;
+
+            //if (string.IsNullOrWhiteSpace(orderId))
+            //    return BadRequest(new { success = false, message = "Thiếu mã đơn hàng" });
+
+            //if (!long.TryParse(amountRaw, out var amountTimes100)) amountTimes100 = 0;
+            //decimal amountVnd = amountTimes100 / 100m;
+
+            //if (resp == "00") // Thành công
+            //{
+            //    var result = await _vnPay.VNPayConfirmPaymentAsync(orderId, amountVnd, "VNPay", txn);
+            //    return StatusCode(result.StatusCode, new
+            //    {
+            //        success = result.Success,
+            //        message = result.Message,
+            //        data = result.Data
+            //    });
+            //}
+
+            //// Thất bại/huỷ
+            //return Ok(new
+            //{
+            //    success = false,
+            //    message = $"Giao dịch VNPay thất bại (code={resp})",
+            //    data
+            //});
+            return StatusCode(200, new
             {
-                return BadRequest(new { success = false, message = "Chữ ký VNPay không hợp lệ." });
-            }
-
-            var orderId = data.ContainsKey("vnp_TxnRef") ? data["vnp_TxnRef"] : "";
-            var resp = data.ContainsKey("vnp_ResponseCode") ? data["vnp_ResponseCode"] : "";
-            var amountRaw = data.ContainsKey("vnp_Amount") ? data["vnp_Amount"] : "0";
-            var txn = data.ContainsKey("vnp_BankTranNo") ? data["vnp_BankTranNo"] : null;
-
-            if (string.IsNullOrWhiteSpace(orderId))
-                return BadRequest(new { success = false, message = "Thiếu mã đơn hàng" });
-
-            if (!long.TryParse(amountRaw, out var amountTimes100)) amountTimes100 = 0;
-            decimal amountVnd = amountTimes100 / 100m;
-
-            if (resp == "00") // Thành công
-            {
-                var result = await _salesOrder.ConfirmPaymentAsync(orderId, amountVnd, "VNPay", txn);
-                return StatusCode(result.StatusCode, new
-                {
-                    success = result.Success,
-                    message = result.Message,
-                    data = result.Data
-                });
-            }
-
-            // Thất bại/huỷ
-            return Ok(new
-            {
-                success = false,
-                message = $"Giao dịch VNPay thất bại (code={resp})",
-                data
+                message = "",
             });
         }
 
