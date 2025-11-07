@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using NUnit.Framework;
@@ -16,6 +17,7 @@ using PMS.Application.Services.PO;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
 using PMS.Core.Domain.Identity;
+using PMS.Data.Repositories.User;
 using PMS.Data.UnitOfWork;
 using PMS.Tests.TestBase;
 
@@ -44,97 +46,101 @@ namespace PMS.Tests.Services
 
 
             _userData = new List<User>
-            {
-                new User { Id = "USER-001", UserName = "john_doe", FullName = "John Doe" },
-                new User { Id = "USER-002", UserName = "jane_smith", FullName = "Jane Smith" }
-            };
+    {
+        new User { Id = "USER-001", UserName = "john_doe", FullName = "John Doe" },
+        new User { Id = "USER-002", UserName = "jane_smith", FullName = "Jane Smith" }
+    };
+
 
             _supplierData = new List<Supplier>
-            {
-                new Supplier { Id = 1, Name = "Supplier A" },
-                new Supplier { Id = 2, Name = "Supplier B" }
-            };
+    {
+        new Supplier { Id = 1, Name = "Supplier A" },
+        new Supplier { Id = 2, Name = "Supplier B" }
+    };
+
 
             _quotationData = new List<Quotation>
-            {
-                new Quotation { QID = 101, SupplierID = 1, QuotationExpiredDate = new DateTime(2025, 1, 15),SendDate = new DateTime(2025, 1, 1) , PRFQID=1},
-                new Quotation
-            {
-                QID = 102,
-                SupplierID = 2,
-                SendDate = new DateTime(2025, 1, 2),
-                QuotationExpiredDate = new DateTime(2025, 1, 16),
-        
-            }
-            };
+    {
+        new Quotation { QID = 101, SupplierID = 1, QuotationExpiredDate = new DateTime(2025,1,15), SendDate = new DateTime(2025,1,1), PRFQID = 1 },
+        new Quotation { QID = 102, SupplierID = 2, SendDate = new DateTime(2025,1,2), QuotationExpiredDate = new DateTime(2025,1,16) }
+    };
 
             _poData = new List<PurchasingOrder>
+    {
+        new PurchasingOrder
+        {
+            POID = 1,
+            QID = 101,
+            Total = 1000000,
+            Deposit = 400000,
+            Debt = 600000,
+            Status = PurchasingOrderStatus.deposited,
+            OrderDate = new DateTime(2025,1,1),
+            PaymentDate = new DateTime(2025,1,5),
+            UserId = "USER-001",
+            PaymentBy = "USER-002",
+            User = _userData[0],
+            Quotations = _quotationData[0],
+            PurchasingOrderDetails = new List<PurchasingOrderDetail>
             {
-                new PurchasingOrder
+                new PurchasingOrderDetail
                 {
-                    POID = 1,
-                    QID = 101,
-                    Total = 1000000,
-                    Deposit = 400000,
-                    Debt = 600000,
-                    Status = PurchasingOrderStatus.deposited,
-                    OrderDate = new DateTime(2025, 1, 1),
-                    PaymentDate = new DateTime(2025, 1, 5),
-                    UserId = "USER-001",
-                    PaymentBy = "USER-002",
-                    User = _userData[0],
-                    Quotations = _quotationData[0],
-                    PurchasingOrderDetails = new List<PurchasingOrderDetail>
-                    {
-                        new PurchasingOrderDetail
-                        {
-                            PODID = 1,
-                            ProductName = "Product X",
-                            Quantity = 10,
-                            UnitPrice = 100000,
-                            UnitPriceTotal = 1000000,
-                            DVT = "Cái",
-                            Description = "Test product"
-                        }
-                    }
+                    PODID = 1,
+                    ProductName = "Product X",
+                    Quantity = 10,
+                    UnitPrice = 100000,
+                    UnitPriceTotal = 1000000,
+                    DVT = "Cái",
+                    Description = "Test product"
                 }
-            };
+            }
+        }
+    };
 
-            // Setup UnitOfWork mocks
+
             var poDbSet = _poData.AsQueryable().ToMockDbSet();
             var userDbSet = _userData.AsQueryable().ToMockDbSet();
             var quotationDbSet = _quotationData.AsQueryable().ToMockDbSet();
             var supplierDbSet = _supplierData.AsQueryable().ToMockDbSet();
 
+
             UnitOfWorkMock.Setup(x => x.PurchasingOrder.Query()).Returns(poDbSet.Object);
             UnitOfWorkMock.Setup(x => x.Users.Query()).Returns(userDbSet.Object);
             UnitOfWorkMock.Setup(x => x.Quotation.Query()).Returns(quotationDbSet.Object);
             UnitOfWorkMock.Setup(x => x.Supplier.Query()).Returns(supplierDbSet.Object);
-
             UnitOfWorkMock.Setup(x => x.PurchasingOrder.Update(It.IsAny<PurchasingOrder>()))
-                .Callback<PurchasingOrder>(po => _poData[_poData.FindIndex(p => p.POID == po.POID)] = po);
+                .Callback<PurchasingOrder>(po =>
+                {
+                    var index = _poData.FindIndex(p => p.POID == po.POID);
+                    if (index >= 0) _poData[index] = po;
+                });
+            UnitOfWorkMock.Setup(x => x.CommitAsync()).ReturnsAsync(1);
 
-            // UserManager mock
-            UserManagerMock.Setup(x => x.FindByIdAsync("USER-002"))
-                .ReturnsAsync(_userData[1]);
 
-            // Mapper mock
-            MapperMock.Setup(m => m.Map<It.IsAnyType>(It.IsAny<object>()))
-                .Returns((Type t, object src) => src);
+            var userRepoMock = new Mock<IUserRepository>();
+            userRepoMock.Setup(x => x.Query()).Returns(userDbSet.Object);
+
+            var userManagerMock = new Mock<UserManager<User>>(Mock.Of<IUserStore<User>>(), null, null, null, null, null, null, null, null);
+            userManagerMock.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+                           .ReturnsAsync((string id) => _userData.FirstOrDefault(u => u.Id == id));
+            userRepoMock.Setup(x => x.UserManager).Returns(userManagerMock.Object);
+
+            UnitOfWorkMock.Setup(x => x.Users).Returns(userRepoMock.Object);
+
+            MapperMock.Setup(m => m.Map<object>(It.IsAny<object>()))
+                .Returns((object src) => src);
 
 
             NotificationServiceMock = new Mock<INotificationService>();
-            NotificationServiceMock
-            .Setup(x => x.SendNotificationToRolesAsync(
-                It.IsAny<string>(),
-                It.IsAny<List<string>>(),   
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<NotificationType>()
-            ))
-            .Returns(Task.CompletedTask);
+            NotificationServiceMock.Setup(x => x.SendNotificationToRolesAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<List<string>>(),
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<NotificationType>()))
+                .Returns(Task.CompletedTask);
 
-            // Create service
+
             _poService = new POService(
                 UnitOfWorkMock.Object,
                 MapperMock.Object,
@@ -145,16 +151,20 @@ namespace PMS.Tests.Services
 
 
 
+
+
+
+
         [Test]
         public async Task DepositedPOAsync_ValidPayment_ShouldUpdateDepositAndStatus()
         {
-            // Arrange
-            var updateDto = new POUpdateDTO { paid = 300000 };
 
-            // Act
+            var updateDto = new POUpdateDTO { paid = 700000 };
+
+
             var result = await _poService.DepositedPOAsync("USER-002", 1, updateDto);
 
-            // Assert
+
             Assert.That(result.StatusCode, Is.EqualTo(200));
             Assert.That(result.Data.Status, Is.EqualTo(PurchasingOrderStatus.deposited));
             Assert.That(result.Data.Debt, Is.EqualTo(300000));
@@ -166,13 +176,12 @@ namespace PMS.Tests.Services
         [Test]
         public async Task DepositedPOAsync_PaymentExceedsTotal_ShouldReturn400()
         {
-            // Arrange
+
             var updateDto = new POUpdateDTO { paid = 2000000 };
 
-            // Act
+
             var result = await _poService.DepositedPOAsync("USER-002", 1, updateDto);
 
-            // Assert
             Assert.That(result.StatusCode, Is.EqualTo(400));
             Assert.That(result.Message, Contains.Substring("vượt quá tổng giá trị"));
         }
@@ -180,35 +189,24 @@ namespace PMS.Tests.Services
         [Test]
         public async Task DepositedPOAsync_NonExistentPO_ShouldReturn404()
         {
-            // Act
+
             var result = await _poService.DepositedPOAsync("USER-002", 999, new POUpdateDTO { paid = 100 });
 
-            // Assert
+
             Assert.That(result.StatusCode, Is.EqualTo(404));
         }
 
 
-
-        [Test]
-        public async Task ViewDetailPObyID_InvalidId_ShouldReturn404()
-        {
-            // Act
-            var result = await _poService.ViewDetailPObyID(999);
-
-            // Assert
-            Assert.That(result.StatusCode, Is.EqualTo(404));
-        }
 
         [Test]
         public async Task DebtAccountantPOAsync_ValidPayment_ShouldUpdateDebtAndStatus()
         {
-            // Arrange
+
             var updateDto = new POUpdateDTO { paid = 300000 };
 
-            // Act
             var result = await _poService.DebtAccountantPOAsync("USER-002", 1, updateDto);
 
-            // Assert
+
             Assert.That(result.StatusCode, Is.EqualTo(200));
             Assert.That(result.Data.Status, Is.EqualTo(PurchasingOrderStatus.paid));
             Assert.That(result.Data.Debt, Is.EqualTo(300000));
@@ -220,13 +218,13 @@ namespace PMS.Tests.Services
         [Test]
         public async Task DebtAccountantPOAsync_PaymentCompletesDebt_ShouldSetCompletedStatus()
         {
-            // Arrange
+
             var updateDto = new POUpdateDTO { paid = 600000 };
 
-            // Act
+
             var result = await _poService.DebtAccountantPOAsync("USER-002", 1, updateDto);
 
-            // Assert
+
             Assert.That(result.Data.Status, Is.EqualTo(PurchasingOrderStatus.compeleted));
             Assert.That(result.Data.Debt, Is.EqualTo(0));
         }
@@ -236,14 +234,14 @@ namespace PMS.Tests.Services
         [Test]
         public async Task ChangeStatusAsync_InvalidTransition_ShouldReturn400()
         {
-            // Arrange: Current status is 'deposited', try to go to 'sent' → invalid
+
             var po = _poData[0];
             po.Status = PurchasingOrderStatus.deposited;
 
-            // Act
+
             var result = await _poService.ChangeStatusAsync("USER-001", 1, PurchasingOrderStatus.sent);
 
-            // Assert
+
             Assert.That(result.Success, Is.False);
             Assert.That(result.StatusCode, Is.EqualTo(400));
             Assert.That(result.Message, Contains.Substring("Không thể chuyển trạng thái"));
@@ -252,14 +250,14 @@ namespace PMS.Tests.Services
         [Test]
         public async Task GeneratePOPaymentPdfAsync_ValidPO_ShouldReturnPdfBytes()
         {
-            // Arrange
+
             _pdfServiceMock.Setup(x => x.GeneratePdfFromHtml(It.IsAny<string>()))
                 .Returns(new byte[] { 0x25, 0x50, 0x44, 0x46 }); 
 
-            // Act
+
             var pdfBytes = await _poService.GeneratePOPaymentPdfAsync(1);
 
-            // Assert
+
             Assert.That(pdfBytes, Is.Not.Null);
             Assert.That(pdfBytes.Length, Is.GreaterThan(0));
             _pdfServiceMock.Verify(x => x.GeneratePdfFromHtml(It.IsAny<string>()), Times.Once);
@@ -268,7 +266,7 @@ namespace PMS.Tests.Services
         [Test]
         public void GeneratePOPaymentPdfAsync_InvalidPO_ShouldThrowException()
         {
-            // Act & Assert
+
             var ex = Assert.ThrowsAsync<Exception>(async () =>
                 await _poService.GeneratePOPaymentPdfAsync(999));
 

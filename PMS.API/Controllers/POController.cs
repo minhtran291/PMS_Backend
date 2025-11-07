@@ -126,7 +126,7 @@ namespace PMS.API.Controllers
 
 
         /// <summary>
-        /// https://localhost:7213/api/PO/fullyRecive/
+        /// https://localhost:7213/api/PO/fullyRecive
         /// Lấy danh sách các Purchase Order đã nhập kho đủ hàng.
         /// </summary>
         [HttpGet("fullyRecive")]
@@ -156,7 +156,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// https://localhost:7213/api/PO/fullstatus/fully-received
+        /// https://localhost:7213/api/PO/fully-received
         /// Lấy danh sách PO đã nhập đủ hàng
         /// </summary>
         [HttpGet("fully-received")]
