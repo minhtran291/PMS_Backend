@@ -25,12 +25,12 @@ namespace PMS.Core.Domain.Constant
             {
                 var ts = validityTimeSpan.Value;
 
-                if(ts.TotalDays >= 1)
+                if (ts.TotalDays >= 1)
                 {
                     int days = (int)Math.Floor(ts.TotalDays);
                     validityText = $"{days} ngày";
                 }
-                else if(ts.TotalHours >= 1)
+                else if (ts.TotalHours >= 1)
                 {
                     int hours = (int)Math.Floor(ts.TotalHours);
                     validityText = $"{hours} giờ";
@@ -56,47 +56,30 @@ namespace PMS.Core.Domain.Constant
 
                 var note = item.Note ?? "";
 
-                if(item.LotProduct != null)
-                {
-                    var taxText = HttpUtility.HtmlEncode(item.TaxPolicy?.Name);
-                    decimal taxRate = item.TaxPolicy.Rate;
-                    var expiredDate = item.LotProduct.ExpiredDate.ToString("dd/MM/yyyy");
-                    var quantity = 1;
-                    decimal salePrice = item.LotProduct.SalePrice;
+                var taxText = HttpUtility.HtmlEncode(item.TaxPolicy?.Name);
+                decimal taxRate = item.TaxPolicy.Rate;
+                var ExpectedExpiryNote = item.ExpectedExpiryNote;
+                var quantity = 1;
+                decimal salePrice = item.SalesPrice;
 
-                    decimal itemSubTotal = quantity * salePrice;
-                    decimal itemTax = itemSubTotal * taxRate;
-                    decimal itemTotal = itemSubTotal + itemTax;
+                decimal itemSubTotal = quantity * salePrice;
+                decimal itemTax = itemSubTotal * taxRate;
+                decimal itemTotal = itemSubTotal + itemTax;
 
-                    subTotal += itemSubTotal;
-                    taxTotal += itemTax;
+                subTotal += itemSubTotal;
+                taxTotal += itemTax;
 
-                    rows.Append($@"
+                rows.Append($@"
                     <tr>
                         <td>{productName}</td>
                         <td>{unit}</td>
                         <td>{taxText}</td>
-                        <td>{expiredDate}</td>
+                        <td>{ExpectedExpiryNote}</td>
                         <td>{quantity}</td>
                         <td>{salePrice:N0} ₫</td>
                         <td>{itemTotal:N0} ₫</td>
                         <td>{note}</td>
                     </tr>");
-                }
-                else
-                {
-                    rows.Append($@"
-                    <tr>
-                        <td>{productName}</td>
-                        <td>{unit}</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>{note}</td>
-                    </tr>");
-                }
             }
 
             decimal grandTotal = subTotal + taxTotal;
