@@ -149,7 +149,14 @@ namespace PMS.Application.Services.SalesQuotation
                 if (noteValidation != null)
                     return noteValidation;
 
-                var lotsValidation = await ValidateLotsAsync(dto, rsq);
+                if (dto.Details == null || dto.Details.Count == 0)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Danh sách chi tiết báo giá không được để trống"
+                    };
+
+                var lotsValidation = await ValidateDetailsAsync(dto.Details, rsq);
                 if (lotsValidation != null)
                     return lotsValidation;
 
@@ -180,9 +187,10 @@ namespace PMS.Application.Services.SalesQuotation
                     DepositDueDays = dto.DepositDueDays,
                     SalesQuotaionDetails = dto.Details.Select(item => new SalesQuotaionDetails
                     {
-                        LotId = item.LotId,
-                        TaxId = item.TaxId,
                         ProductId = item.ProductId,
+                        SalesPrice = item.SalesPrice,
+                        ExpectedExpiryNote = item.ExpectedExpiryNote,
+                        TaxId = item.TaxId,
                         Note = item.Note,
                     }).ToList(),
                 };
@@ -239,46 +247,51 @@ namespace PMS.Application.Services.SalesQuotation
             return null;
         }
 
-        private async Task<ServiceResult<object>?> ValidateLotsAsync(CreateSalesQuotationDTO dto, Core.Domain.Entities.RequestSalesQuotation rsq)
+        private async Task<ServiceResult<object>?> ValidateDetailsAsync(List<SalesQuotationDetailsDTO> dto, Core.Domain.Entities.RequestSalesQuotation rsq)
         {
-            if (dto.Details == null || dto.Details.Count == 0)
+            var productIds = dto
+                .Select(d => d.ProductId)
+                .ToList();
+
+            if(productIds.Distinct().Count() != productIds.Count)
                 return new ServiceResult<object>
                 {
                     StatusCode = 400,
-                    Message = "Danh sách chi tiết báo giá không được để trống"
+                    Message = "Có sản phẩm bị trùng lặp"
                 };
 
-            var productIds = dto.Details
-                .Select(d => d.ProductId)
-                .Distinct()
-                .ToList();
-
             // kiem tra productId ton tai
-            var existingProductIds = await _unitOfWork.Product.Query()
+            var products = await _unitOfWork.Product.Query()
                 .Where(p => productIds.Contains(p.ProductID))
-                .Select(p => p.ProductID)
+                .Select(p => new { p.ProductID, p.Status })
                 .ToListAsync();
 
-            if (existingProductIds.Count != productIds.Count)
+            if (products.Count != productIds.Count)
                 return new ServiceResult<object>
                 {
                     StatusCode = 400,
                     Message = "Có sản phẩm không tồn tại trong hệ thống"
                 };
 
+            var inactiveProducts = products
+                .Where(p => !p.Status)
+                .Select(p => p.ProductID)
+                .ToList();
+
+            if (inactiveProducts.Any())
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = "Có sản phẩm đã ngừng bán."
+                };
+
             var validProductIds = rsq.RequestSalesQuotationDetails
                 .Select(r => r.ProductId)
-                .ToHashSet();
-
-            var lotIds = dto.Details
-                .Where(d => d.LotId.HasValue)
-                .Select(d => d.LotId!.Value)
                 .ToList();
 
             // kt productId co thuoc pham vi RSQ
-            var invalidProducts = dto.Details
-                .Where(d => !validProductIds.Contains(d.ProductId))
-                .Select(d => d.ProductId)
+            var invalidProducts = productIds
+                .Where(d => !validProductIds.Contains(d))
                 .Distinct()
                 .ToList();
 
@@ -291,137 +304,15 @@ namespace PMS.Application.Services.SalesQuotation
                 };
             }
 
-            // check trung lotId
-            if (lotIds.Count != lotIds.Distinct().Count())
-                return new ServiceResult<object>
-                {
-                    StatusCode = 400,
-                    Message = "Danh sách lô hàng có lô trùng lặp"
-                };
-
-            var lots = await _unitOfWork.LotProduct.Query()
-                .Include(l => l.Product)
-                .AsNoTracking()
-                .Where(l => lotIds.Contains(l.LotID))
-                .ToListAsync();
-
-            if (lots.Count != lotIds.Count)
-                return new ServiceResult<object>
-                {
-                    StatusCode = 400,
-                    Message = "Có lô hàng không tồn tại trong hệ thống"
-                };
-
-            //var invalidLots = lots
-            //    .Where(l => l.ExpiredDate.Date <= DateTime.Today || l.LotQuantity <= 0)
-            //    .ToList();
-
-            //if (invalidLots.Any())
-            //{
-            //    var names = string.Join(", ", invalidLots.Select(l => l.Product.ProductName));
-            //    return new ServiceResult<object>
-            //    {
-            //        StatusCode = 400,
-            //        Message = $"Các lô hàng không hợp lệ (hết hạn hoặc hết hàng): {names}"
-            //    };
-            //}
-
-            var outOfScopeLots = lots
-                .Where(l => !validProductIds.Contains(l.ProductID))
-                .ToList();
-
-            if (outOfScopeLots.Any())
-            {
-                var names = string.Join(", ", outOfScopeLots.Select(l => l.Product.ProductName));
-                return new ServiceResult<object>
-                {
-                    StatusCode = 400,
-                    Message = $"Các lô hàng sau không thuộc phạm vi yêu cầu báo giá: {names}"
-                };
-            }
-
-            // kt lo co khop voi san pham khong
-            var mismatchedLots = dto.Details
-                .Where(d => d.LotId.HasValue)
-                .Join(
-                    lots,
-                    d => d.LotId.Value,
-                    l => l.LotID,
-                    (d, l) => new { Detail = d, Lot = l }
-                )
-                .Where(x => x.Detail.ProductId != x.Lot.ProductID)
-                .Select(x => new { x.Detail.ProductId, x.Lot.Product.ProductName })
-                .ToList();
-
-            if (mismatchedLots.Any())
-            {
-                var names = string.Join(", ", mismatchedLots.Select(m => m.ProductName));
-                return new ServiceResult<object>
-                {
-                    StatusCode = 400,
-                    Message = $"Có lô hàng không khớp với sản phẩm tương ứng: {names}"
-                };
-            }
-
-            var invalidTaxRelations = dto.Details
-                .Where(d =>
-                    (d.LotId == null && d.TaxId != null) || // Lot null nhưng Tax có
-                    (d.LotId != null && d.TaxId == null))   // Lot có nhưng Tax null
-                .ToList();
-
-            if (invalidTaxRelations.Any())
-                return new ServiceResult<object>
-                {
-                    StatusCode = 400,
-                    Message = "Có chi tiết báo giá không hợp lệ: nếu chưa chọn lô thì không được chọn thuế, còn nếu đã chọn lô thì phải chọn thuế"
-                };
-
-            // check san pham co thuc su het hang
-            var productsWithoutLot = dto.Details
-                .Where(d => !d.LotId.HasValue)
-                .Select(d => d.ProductId)
-                .ToList();
-
-            if (productsWithoutLot.Any())
-            {
-                if (productsWithoutLot.Count != productsWithoutLot.Distinct().Count())
-                {
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Có sản phẩm không chọn lô bị trùng lặp trong danh sách chi tiết"
-                    };
-                }
-
-                var inStockProducts = await _unitOfWork.Product.Query()
-                    .Where(p => productsWithoutLot.Contains(p.ProductID))
-                    .Where(p => p.LotProducts.Any(lp => lp.LotQuantity > 0 && lp.ExpiredDate > DateTime.Today))
-                    .ToListAsync();
-
-                if (inStockProducts.Any())
-                {
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Các sản phẩm chưa chọn lô nhưng vẫn còn hàng"
-                    };
-                }
-            }
-
             return null;
         }
 
 
-        private async Task<ServiceResult<object>?> ValidateTaxesAsync(List<int?> dto)
+        private async Task<ServiceResult<object>?> ValidateTaxesAsync(List<int> dto)
         {
             var taxIds = dto
-                .Where(d => d.HasValue)
-                .Select(d => d!.Value)
                 .Distinct()
                 .ToList();
-
-            if (!taxIds.Any())
-                return null;
 
             var taxPolicies = await _unitOfWork.TaxPolicy.Query()
                 .AsNoTracking()
@@ -445,6 +336,7 @@ namespace PMS.Application.Services.SalesQuotation
                 var staffProfile = await ValidateSalesStaffStringId(ssId);
 
                 var salesQuotation = await _unitOfWork.SalesQuotation.Query()
+                    .Include(sq => sq.RequestSalesQuotation)
                     .Include(sq => sq.SalesQuotaionDetails)
                     .FirstOrDefaultAsync(sq => sq.Id == dto.SqId);
 
@@ -460,7 +352,7 @@ namespace PMS.Application.Services.SalesQuotation
                 if (noteValidation != null)
                     return noteValidation;
 
-                var lotValidation = ValidateDetailsUpdate(salesQuotation.SalesQuotaionDetails.ToList(), dto.Details);
+                var lotValidation = await ValidateDetailsAsync(dto.Details, salesQuotation.RequestSalesQuotation);
                 if (lotValidation != null)
                     return lotValidation;
 
@@ -487,15 +379,20 @@ namespace PMS.Application.Services.SalesQuotation
 
                 salesQuotation.DepositDueDays = dto.DepositDueDays;
 
-                foreach (var detailDto in dto.Details)
+                if(dto.Details.Count > 0)
                 {
-                    var record = salesQuotation.SalesQuotaionDetails
-                        .FirstOrDefault(d => d.Id == detailDto.sqdId);
-
-                    if (record != null)
+                    foreach (var detailDto in dto.Details)
                     {
-                        record.TaxId = detailDto.TaxId;
-                        record.Note = detailDto.Note;
+                        var record = salesQuotation.SalesQuotaionDetails
+                            .FirstOrDefault(d => d.ProductId == detailDto.ProductId);
+
+                        if (record != null)
+                        {
+                            record.SalesPrice = detailDto.SalesPrice;
+                            record.ExpectedExpiryNote = detailDto.ExpectedExpiryNote;
+                            record.TaxId = detailDto.TaxId;
+                            record.Note = detailDto.Note;
+                        }
                     }
                 }
 
@@ -537,50 +434,6 @@ namespace PMS.Application.Services.SalesQuotation
                     StatusCode = 400,
                     Message = "Không thể sửa báo giá đã được gửi"
                 };
-
-            return null;
-        }
-
-        private static ServiceResult<object>? ValidateDetailsUpdate(List<SalesQuotaionDetails> list, List<UpdateSalesQuotationDetailsDTO> details)
-        {
-            var sqdIds = details.Select(d => d.sqdId).ToList();
-
-            if (sqdIds.Distinct().Count() != sqdIds.Count)
-                return new ServiceResult<object>
-                {
-                    StatusCode = 400,
-                    Message = "Có báo giá chi tiết bị trùng lặp"
-                };
-
-            var sqdId = list
-                .Where(d => sqdIds.Contains(d.Id))
-                .ToList();
-
-            if (sqdIds.Count != sqdId.Count)
-                return new ServiceResult<object>
-                {
-                    StatusCode = 400,
-                    Message = "Có chi tiết báo giá không thuộc phạm vi báo giá"
-                };
-
-            foreach (var dto in details)
-            {
-                var entity = sqdId.Find(d => d.Id == dto.sqdId);
-
-                if (entity.LotId == null && dto.TaxId != null)
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Sản phẩm đã hết hàng không thể áp thuế"
-                    };
-
-                if (entity.LotId != null && dto.TaxId == null)
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Thuế không được để chống với các sản phẩm còn hàng"
-                    };
-            }
 
             return null;
         }
@@ -716,8 +569,6 @@ namespace PMS.Application.Services.SalesQuotation
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.TaxPolicy)
                     .Include(sq => sq.SalesQuotationNote)
-                    .Include(sq => sq.SalesQuotaionDetails)
-                        .ThenInclude(sqd => sqd.LotProduct)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.Product)
                     .Include(sq => sq.StaffProfile)
@@ -929,8 +780,6 @@ namespace PMS.Application.Services.SalesQuotation
                     .Include(sq => sq.SalesQuotationComments)
                     .Include(sq => sq.RequestSalesQuotation)
                     .Include(sq => sq.SalesQuotaionDetails)
-                        .ThenInclude(d => d.LotProduct)
-                    .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(d => d.TaxPolicy)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(d => d.Product)
@@ -997,13 +846,11 @@ namespace PMS.Application.Services.SalesQuotation
 
                 foreach (var item in salesQuotation.SalesQuotaionDetails)
                 {
-                    if(item.LotProduct != null && item.TaxPolicy != null)
-                    {
                         decimal taxRate = item.TaxPolicy.Rate;
 
-                        decimal salePrice = item.LotProduct.SalePrice;
+                        decimal salesPrice = item.SalesPrice;
 
-                        decimal itemSubTotal = 1 * salePrice;
+                        decimal itemSubTotal = 1 * salesPrice;
                         decimal itemTax = itemSubTotal * taxRate;
                         decimal itemTotal = itemSubTotal + itemTax;
 
@@ -1012,31 +859,17 @@ namespace PMS.Application.Services.SalesQuotation
 
                         var detail = new ViewSalesQuotationDetailsDTO
                         {
-                            Id = item.Id,
                             ProductName = item.Product.ProductName,
                             Unit = item.Product.Unit,
                             TaxText = item.TaxPolicy.Name,
-                            ExpiredDate = item.LotProduct.ExpiredDate.ToString("dd/MM/yyyy"),
+                            ExpectedExpiryNote = item.ExpectedExpiryNote,
                             minQuantity = 1,
-                            SalesPrice = salePrice,
+                            SalesPrice = salesPrice,
                             ItemTotal = itemTotal,
                             Note = item.Note
                         };
 
                         details.Add(detail);
-                    }
-                    else
-                    {
-                        var detail = new ViewSalesQuotationDetailsDTO
-                        {
-                            Id = item.Id,
-                            ProductName = item.Product.ProductName,
-                            Unit = item.Product.Unit,
-                            Note = item.Note
-                        };
-
-                        details.Add(detail);
-                    }
                 }
 
                 decimal grandTotal = subTotal + taxTotal;

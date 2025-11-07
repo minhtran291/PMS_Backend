@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using PMS.Application.DTOs.SQ;
 using PMS.Application.Services.Base;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
 using PMS.Data.UnitOfWork;
 
@@ -51,6 +52,7 @@ namespace PMS.API.Services.QuotationService
         {
             try
             {
+                
                 var quotations = await _unitOfWork.Quotation.Query().ToListAsync();
 
                 if (quotations == null || !quotations.Any())
@@ -58,24 +60,46 @@ namespace PMS.API.Services.QuotationService
                     return ServiceResult<List<QuotationDTO>>.Fail("Không có báo giá nào trong hệ thống", 404);
                 }
 
+                
+                var supplierIds = quotations.Select(q => q.SupplierID).Distinct().ToList();
+
+              
+                var suppliers = await _unitOfWork.Supplier.Query()
+                    .Where(sp => supplierIds.Contains(sp.Id))
+                    .ToListAsync();
+
                 var now = DateTime.Now;
 
-                var result = quotations.Select(q => new QuotationDTO
+               
+                var result = quotations.Select(q =>
                 {
-                    QID = q.QID,
-                    SendDate = q.SendDate,
-                    SupplierID = q.SupplierID,
-                    QuotationExpiredDate = q.QuotationExpiredDate,
-                    Status = q.QuotationExpiredDate >= now
-                        ? SupplierQuotationStatus.InDate
-                        : SupplierQuotationStatus.OutOfDate
+                    var supplier = suppliers.FirstOrDefault(sp => sp.Id == q.SupplierID);
+
+                    return new QuotationDTO
+                    {
+                        QID = q.QID,
+                        SendDate = q.SendDate,
+                        SupplierID = q.SupplierID,
+                        SupplierName = supplier?.Name ?? "Không xác định",
+                        QuotationExpiredDate = q.QuotationExpiredDate,
+                        Status = q.QuotationExpiredDate >= now
+                            ? SupplierQuotationStatus.InDate
+                            : SupplierQuotationStatus.OutOfDate
+                    };
                 }).ToList();
 
-                return ServiceResult<List<QuotationDTO>>.SuccessResult(result, "Lấy danh sách báo giá kèm trạng thái hạn thành công", 200);
+                return ServiceResult<List<QuotationDTO>>.SuccessResult(
+                    result,
+                    "Lấy danh sách báo giá kèm trạng thái hạn thành công",
+                    200
+                );
             }
             catch (Exception ex)
             {
-                return ServiceResult<List<QuotationDTO>>.Fail($"Lỗi khi lấy danh sách báo giá: {ex.Message}", 500);
+                return ServiceResult<List<QuotationDTO>>.Fail(
+                    $"Lỗi khi lấy danh sách báo giá: {ex.Message}",
+                    500
+                );
             }
         }
 

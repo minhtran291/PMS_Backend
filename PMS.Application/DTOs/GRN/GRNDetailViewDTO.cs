@@ -11,6 +11,7 @@ namespace PMS.Application.DTOs.GRN
         public int GRNDID { get; set; }
         public int ProductID { get; set; }
 
+        public string? ProductName { get; set; }
         public decimal UnitPrice { get; set; }
 
         public int Quantity { get; set; }
