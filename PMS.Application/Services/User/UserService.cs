@@ -629,6 +629,240 @@ namespace PMS.Application.Services.User
             var common = await query.FirstOrDefaultAsync(u => u.Id == userId);
             return _mapper.Map<DTOs.Profile.CommonProfileDTO>(common);
         }
+
+        public async Task<ServiceResult<CustomerStatusDTO>> GetCustomerStatusAsync(string userId)
+        {
+            try
+            {
+                _logger.LogInformation($"Kiểm tra trạng thái customer: {userId}");
+
+                // Kiểm tra user có tồn tại không
+                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning($"Không tìm thấy user với ID: {userId}");
+                    return new ServiceResult<CustomerStatusDTO>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy người dùng",
+                        Data = null
+                    };
+                }
+
+                // Kiểm tra user có phải customer không
+                var roles = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
+                if (!roles.Contains(UserRoles.CUSTOMER))
+                {
+                    _logger.LogWarning($"User {userId} không phải customer");
+                    return new ServiceResult<CustomerStatusDTO>
+                    {
+                        StatusCode = 403,
+                        Message = "Chỉ customer mới có thể kiểm tra trạng thái",
+                        Data = null
+                    };
+                }
+
+                // Kiểm tra customer profile
+                var customerProfile = await _unitOfWork.CustomerProfile.Query()
+                    .FirstOrDefaultAsync(cp => cp.UserId == userId);
+
+                var hasAdditionalInfo = customerProfile != null &&
+                                       customerProfile.Mst.HasValue &&
+                                       customerProfile.Mshkd.HasValue &&
+                                       !string.IsNullOrEmpty(customerProfile.ImageCnkd);
+
+                var needsAdditionalInfo = !hasAdditionalInfo;
+
+                var statusDTO = new CustomerStatusDTO
+                {
+                    UserStatus = user.UserStatus,
+                    HasAdditionalInfo = hasAdditionalInfo,
+                    NeedsAdditionalInfo = needsAdditionalInfo,
+                    Message = user.UserStatus switch
+                    {
+                        UserStatus.Block => "Tài khoản của bạn đã bị khóa",
+                        UserStatus.Inactive => hasAdditionalInfo ? "Thông tin của bạn đang chờ manager duyệt" : "Bạn cần bổ sung thông tin mã số thuế và mã số kinh doanh",
+                        UserStatus.Active => "Tài khoản của bạn đã được kích hoạt",
+                        _ => "Trạng thái không xác định"
+                    }
+                };
+
+                _logger.LogInformation($"Trạng thái customer {userId}: {statusDTO.UserStatus}, HasAdditionalInfo: {statusDTO.HasAdditionalInfo}");
+                return new ServiceResult<CustomerStatusDTO>
+                {
+                    StatusCode = 200,
+                    Message = "Lấy trạng thái thành công",
+                    Data = statusDTO
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Lỗi khi kiểm tra trạng thái customer: {userId}");
+                return new ServiceResult<CustomerStatusDTO>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi xảy ra khi kiểm tra trạng thái",
+                    Data = null
+                };
+            }
+        }
+
+        public async Task<ServiceResult<bool>> SubmitCustomerAdditionalInfoAsync(string userId, CustomerAdditionalInfoDTO additionalInfo)
+        {
+            try
+            {
+                _logger.LogInformation($"Bắt đầu submit thông tin bổ sung cho customer: {userId}");
+
+                // Kiểm tra user có tồn tại không
+                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    _logger.LogWarning($"Không tìm thấy user với ID: {userId}");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy người dùng",
+                        Data = false
+                    };
+                }
+
+                // Kiểm tra user có phải customer không
+                var roles = await _unitOfWork.Users.UserManager.GetRolesAsync(user);
+                if (!roles.Contains(UserRoles.CUSTOMER))
+                {
+                    _logger.LogWarning($"User {userId} không phải customer");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 403,
+                        Message = "Chỉ customer mới có thể submit thông tin bổ sung",
+                        Data = false
+                    };
+                }
+
+                // Kiểm tra customer profile có tồn tại không
+                var customerProfile = await _unitOfWork.CustomerProfile.Query()
+                    .FirstOrDefaultAsync(cp => cp.UserId == userId);
+
+                if (customerProfile == null)
+                {
+                    _logger.LogWarning($"Không tìm thấy customer profile cho user: {userId}");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy thông tin customer",
+                        Data = false
+                    };
+                }
+
+                // Kiểm tra customer đã submit thông tin bổ sung chưa
+                if (customerProfile.Mst.HasValue && customerProfile.Mshkd.HasValue)
+                {
+                    _logger.LogWarning($"Customer {userId} đã submit thông tin bổ sung");
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Bạn đã submit thông tin bổ sung rồi",
+                        Data = false
+                    };
+                }
+
+                // Validate MST và MSHKD format
+                if (additionalInfo.Mst <= 0 || additionalInfo.Mst.ToString().Length != 10)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Mã số thuế phải có đúng 10 chữ số",
+                        Data = false
+                    };
+                }
+
+                if (additionalInfo.Mshkd <= 0 || additionalInfo.Mshkd.ToString().Length != 10)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Mã số kinh doanh phải có đúng 10 chữ số",
+                        Data = false
+                    };
+                }
+
+                // Validate address
+                if (string.IsNullOrWhiteSpace(additionalInfo.Address))
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Địa chỉ không được để trống",
+                        Data = false
+                    };
+                }
+
+                if (additionalInfo.Address.Length > 256)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Địa chỉ không được vượt quá 256 ký tự",
+                        Data = false
+                    };
+                }
+
+                // Validate ImageCnkd
+                if (string.IsNullOrWhiteSpace(additionalInfo.ImageCnkd))
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Ảnh chứng nhận kinh doanh là bắt buộc",
+                        Data = false
+                    };
+                }
+
+                // Cập nhật thông tin bổ sung
+                customerProfile.Mst = additionalInfo.Mst;
+                customerProfile.Mshkd = additionalInfo.Mshkd;
+                customerProfile.ImageCnkd = additionalInfo.ImageCnkd;
+                // Không cập nhật ImageByt nữa
+
+                // Cập nhật địa chỉ của user
+                user.Address = additionalInfo.Address;
+
+                // Cập nhật trạng thái user thành Inactive để chờ manager duyệt
+                user.UserStatus = UserStatus.Inactive;
+
+                _unitOfWork.CustomerProfile.Update(customerProfile);
+                await _unitOfWork.Users.UserManager.UpdateAsync(user);
+                await _unitOfWork.CommitAsync();
+
+                // Gửi thông báo cho manager
+                await _notificationService.SendNotificationToRolesAsync(
+                    userId, // senderId
+                    new List<string> { UserRoles.MANAGER }, // targetRoles
+                    "Yêu cầu duyệt thông tin customer",
+                    $"Customer {user.UserName} đã submit thông tin bổ sung và cần được duyệt",
+                    NotificationType.System
+                );
+
+                _logger.LogInformation($"Submit thông tin bổ sung thành công cho customer: {userId}");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Submit thông tin bổ sung thành công. Vui lòng chờ manager duyệt.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Lỗi khi submit thông tin bổ sung cho customer: {userId}");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi xảy ra khi submit thông tin bổ sung",
+                    Data = false
+                };
+            }
+        }
     }
 }
 
