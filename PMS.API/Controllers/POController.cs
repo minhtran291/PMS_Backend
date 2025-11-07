@@ -123,5 +123,68 @@ namespace PMS.API.Controllers
             var pdfBytes = await _poService.GeneratePOPaymentPdfAsync(poid);
             return File(pdfBytes, "application/pdf", $"PO_{poid}_Payment.pdf");
         }
+
+
+        /// <summary>
+        /// https://localhost:7213/api/PO/fullyRecive/
+        /// Lấy danh sách các Purchase Order đã nhập kho đủ hàng.
+        /// </summary>
+        [HttpGet("fullyRecive")]
+        public async Task<IActionResult> GetFullyReceivedPOsAsync()
+        {
+            var result = await _poService.GetAllPOWithGRNArchiveAsync();
+
+            if (result == null)
+                return NotFound(new { Message = "Không tìm thấy dữ liệu." });
+
+            if (result.StatusCode != 200)
+                return StatusCode(result.StatusCode, new { result.Message });
+
+            return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
+        /// https://localhost:7213/api/PO/fullstatus/by-receiving-status
+        /// Lấy tất cả PO được phân loại theo trạng thái nhập kho (đủ, một phần, chưa nhập)
+        /// </summary>
+        [HttpGet("by-receiving-status")]
+        public async Task<IActionResult> GetPOByReceivingStatusAsync()
+        {
+            var result = await _poService.GetPOByReceivingStatusAsync();
+            return StatusCode(result.StatusCode, result);
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/PO/fullstatus/fully-received
+        /// Lấy danh sách PO đã nhập đủ hàng
+        /// </summary>
+        [HttpGet("fully-received")]
+        public async Task<IActionResult> GetFullyReceivedAsync()
+        {
+            var result = await _poService.GetPOByReceivingStatusAsync();
+            return Ok(result.Data["FullyReceived"]);
+        }
+
+        /// <summary>
+        /// 
+        /// Lấy danh sách PO mới nhập một phần hàng
+        /// </summary>
+        [HttpGet("partially-received")]
+        public async Task<IActionResult> GetPartiallyReceivedAsync()
+        {
+            var result = await _poService.GetPOByReceivingStatusAsync();
+            return Ok(result.Data["PartiallyReceived"]);
+        }
+
+        /// <summary>
+        /// Lấy danh sách PO chưa nhập hàng nào
+        /// </summary>
+        [HttpGet("not-received")]
+        public async Task<IActionResult> GetNotReceivedAsync()
+        {
+            var result = await _poService.GetPOByReceivingStatusAsync();
+            return Ok(result.Data["NotReceived"]);
+        }
     }
 }
