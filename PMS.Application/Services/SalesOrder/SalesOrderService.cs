@@ -686,23 +686,28 @@ namespace PMS.Application.Services.SalesOrder
         //        _unitOfWork.SalesOrder.Update(so);
         //        await _unitOfWork.CommitAsync();
 
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Cập nhật số lượng bản nháp thành công",
-        //            Data = true
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync");
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi khi cập nhật số lượng bản nháp",
-        //            Data = false
-        //        };
-        //    }
-        //}
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật số lượng bản nháp thành công",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi cập nhật số lượng bản nháp",
+                    Data = false
+                };
+            }
+        }
+
+        //Generate SalesOrderId
+        private static string GenerateSalesOrderId()
+            => $"SO{DateTime.Now:yyyyMMddHHmmssfff}";
+
     }
 }
