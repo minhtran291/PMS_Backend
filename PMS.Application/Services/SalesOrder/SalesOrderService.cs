@@ -209,6 +209,7 @@ namespace PMS.Application.Services.SalesOrder
 
                 var so = new Core.Domain.Entities.SalesOrder
                 {
+                    OrderId = GenerateSalesOrderId(),
                     SalesQuotationId = sq.Id,
                     CreateBy = createdBy,
                     CreateAt = DateTime.Now,
@@ -225,10 +226,10 @@ namespace PMS.Application.Services.SalesOrder
                     var sod = new SalesOrderDetails
                     {
                         SalesOrderId = so.OrderId,
-                        LotId = null,                
+                        LotId = qd.LotId,                
                         ProductId = qd.ProductId,     
                         Quantity = 0,            
-                        UnitPrice = 0     
+                        UnitPrice = qd.LotProduct.SalePrice     
                     };
                     await _unitOfWork.SalesOrderDetails.AddAsync(sod);
                 }
@@ -247,7 +248,7 @@ namespace PMS.Application.Services.SalesOrder
                         d.ProductId,
                         ProductName = d.Product.ProductName,
                         Quantity = 0,
-                        UnitPrice = 0m
+                        UnitPrice = d.LotProduct != null ? d.LotProduct.SalePrice : 0m
                     }).ToList()
                 };
 
@@ -714,5 +715,10 @@ namespace PMS.Application.Services.SalesOrder
                 };
             }
         }
+
+        //Generate SalesOrderId
+        private static string GenerateSalesOrderId()
+            => $"SO{DateTime.Now:yyyyMMddHHmmssfff}";
+
     }
 }
