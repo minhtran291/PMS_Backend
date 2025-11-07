@@ -1,17 +1,12 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
-using NUnit.Framework;
-using PMS.Application.DTOs.Auth;
 using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.Notification;
 using PMS.Application.Services.User;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Identity;
 using PMS.Tests.TestBase;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using MockQueryable.Moq;
 
 namespace PMS.Tests
 {
