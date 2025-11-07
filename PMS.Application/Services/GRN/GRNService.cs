@@ -105,114 +105,7 @@ namespace PMS.API.Services.GRNService
                 return ServiceResult<int>.Fail($"Lỗi khi tạo phiếu nhập kho: {ex.Message}", 500);
             }
         }
-
-        public async Task<ServiceResult<bool>> CreateGRNByManually(string userId, int poId, GRNManuallyDTO GRNManuallyDTO)
-        {
-            await _unitOfWork.BeginTransactionAsync();
-            try
-            {
-                var po = await _unitOfWork.PurchasingOrder.Query()
-                    .Include(p => p.PurchasingOrderDetails)
-                    .FirstOrDefaultAsync(p => p.POID == poId);
-
-                if (po == null)
-                {
-                    return new ServiceResult<bool>
-                    {
-                        Data = false,
-                        Message = $"Không tồn tại đơn mua hàng với ID:{poId}",
-                        StatusCode = 404
-                    };
-                }
-
-                // Danh sách sản phẩm thuộc PO
-                var poProductNames = po.PurchasingOrderDetails
-                    .Select(x => x.ProductName.Trim().ToLower())
-                    .ToHashSet();
-
-                // Danh sách ProductID từ DTO
-                var grnProductIds = GRNManuallyDTO.GRNDManuallyDTOs.Select(x => x.ProductID).ToList();
-
-                // Lấy thông tin sản phẩm từ bảng Product
-                var grnProducts = await _unitOfWork.Product.Query()
-                    .Where(p => grnProductIds.Contains(p.ProductID))
-                    .Select(p => new { p.ProductID, p.ProductName })
-                    .ToListAsync();
-
-                // Kiểm tra sản phẩm không tồn tại trong hệ thống
-                var missingProducts = grnProductIds.Except(grnProducts.Select(p => p.ProductID)).ToList();
-                if (missingProducts.Any())
-                {
-                    return new ServiceResult<bool>
-                    {
-                        Data = false,
-                        Message = $"Một số sản phẩm không tồn tại trong hệ thống: {string.Join(", ", missingProducts)}",
-                        StatusCode = 400
-                    };
-                }
-
-                // Kiểm tra sản phẩm không thuộc PO
-                var invalidProducts = grnProducts
-                    .Where(p => !poProductNames.Contains(p.ProductName.Trim().ToLower()))
-                    .Select(p => p.ProductName)
-                    .ToList();
-
-                if (invalidProducts.Any())
-                {
-                    return new ServiceResult<bool>
-                    {
-                        Data = false,
-                        Message = $"Một số sản phẩm không thuộc đơn mua hàng này: {string.Join(", ", invalidProducts)}",
-                        StatusCode = 400
-                    };
-                }
-
-                // Tạo phiếu nhập kho
-                var total = GRNManuallyDTO.GRNDManuallyDTOs.Sum(x => x.Quantity * x.UnitPrice);
-                var newGRN = new GoodReceiptNote
-                {
-                    Source = GRNManuallyDTO.Source,
-                    CreateDate = DateTime.Now,
-                    Total = total,
-                    CreateBy = userId,
-                    Description = GRNManuallyDTO.Description,
-                    POID = poId,
-                };
-
-                await _unitOfWork.GoodReceiptNote.AddAsync(newGRN);
-
-                // Thêm chi tiết phiếu nhập
-                var GRND = GRNManuallyDTO.GRNDManuallyDTOs.Select(grnd => new GoodReceiptNoteDetail
-                {
-                    ProductID = grnd.ProductID,
-                    UnitPrice = grnd.UnitPrice,
-                    Quantity = grnd.Quantity,
-                    GRNID = newGRN.GRNID
-                }).ToList();
-
-                _unitOfWork.GoodReceiptNoteDetail.AddRange(GRND);
-                await HandleLotProductsAsync(GRNManuallyDTO.GRNDManuallyDTOs.Cast<IGRNDetail>(), po.Quotations.SupplierID, newGRN.CreateDate, GRNManuallyDTO.WarehouseLocationID);
-                await _unitOfWork.CommitAsync();
-                await _unitOfWork.CommitTransactionAsync();
-
-                // Đếm số phiếu nhập
-                var grnCount = await _unitOfWork.GoodReceiptNote.Query()
-                    .CountAsync(s => s.POID == poId);
-
-                return new ServiceResult<bool>
-                {
-                    Data = true,
-                    Message = $"Phiếu nhập kho lần {grnCount} cho PO: {poId} đã tạo thành công",
-                    StatusCode = 200
-                };
-            }
-            catch (Exception ex)
-            {
-                await _unitOfWork.RollbackTransactionAsync();
-                throw new Exception(ex.Message);
-            }
-        }
-
+       
         private async Task HandleLotProductsAsync(IEnumerable<IGRNDetail> grnDetails, int supplierId, DateTime inputDate, int warehouseLocationID)
         {
             try
@@ -620,7 +513,174 @@ namespace PMS.API.Services.GRNService
             return pdfBytes;
         }
 
+        public async Task<ServiceResult<bool>> CreateGRNByManually(string userId, int poId, GRNManuallyDTO dto)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                // lay po
+                var po = await GetPurchasingOrderAsync(poId);
+                if (po == null)
+                    return ServiceResult<bool>.Fail($"Không tồn tại đơn mua hàng với ID:{poId}", 404);
 
+                // kiem tra sp hop le
+                var productCheckResult = await ValidateProductsAsync(po, dto);
+                if (!productCheckResult.Data)
+                    return productCheckResult;
+
+                // kiem tra gia va so luong
+                var validationResult = await ValidateQuantityAndPriceAsync(po, dto);
+                if (!validationResult.Data)
+                    return validationResult;
+
+                // tao grn 
+                var newGRN = await CreateGoodReceiptNoteAsync(userId, poId, dto);
+                await AddGoodReceiptNoteDetailsAsync(newGRN, dto);
+
+                // lot handler
+                await HandleLotProductsAsync(
+                    dto.GRNDManuallyDTOs.Cast<IGRNDetail>(),
+                    po.Quotations?.SupplierID ?? 0,
+                    newGRN.CreateDate,
+                    dto.WarehouseLocationID
+                );
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                // count grn
+                var grnCount = await _unitOfWork.GoodReceiptNote.Query()
+                    .CountAsync(s => s.POID == poId);
+
+                return ServiceResult<bool>.SuccessResult(
+                    true,
+                    $"Phiếu nhập kho lần {grnCount} cho PO: {poId} đã tạo thành công"
+                );
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw new Exception(ex.Message);
+            }
+        }
+
+
+        private async Task<PurchasingOrder?> GetPurchasingOrderAsync(int poId)
+        {
+            return await _unitOfWork.PurchasingOrder.Query()
+                .Include(p => p.PurchasingOrderDetails)
+                .Include(p => p.Quotations)
+                .FirstOrDefaultAsync(p => p.POID == poId);
+        }
+
+
+        private async Task<ServiceResult<bool>> ValidateProductsAsync(PurchasingOrder po, GRNManuallyDTO dto)
+        {
+            var poProductNames = po.PurchasingOrderDetails
+                .Select(x => x.ProductName.Trim().ToLower())
+                .ToHashSet();
+
+            var grnProductIds = dto.GRNDManuallyDTOs.Select(x => x.ProductID).ToList();
+
+            var grnProducts = await _unitOfWork.Product.Query()
+                .Where(p => grnProductIds.Contains(p.ProductID))
+                .Select(p => new { p.ProductID, p.ProductName })
+                .ToListAsync();
+
+            var missingProducts = grnProductIds.Except(grnProducts.Select(p => p.ProductID)).ToList();
+            if (missingProducts.Any())
+                return ServiceResult<bool>.Fail(
+                    $"Một số sản phẩm không tồn tại trong hệ thống: {string.Join(", ", missingProducts)}",
+                    400
+                );
+
+            var invalidProducts = grnProducts
+                .Where(p => !poProductNames.Contains(p.ProductName.Trim().ToLower()))
+                .Select(p => p.ProductName)
+                .ToList();
+
+            if (invalidProducts.Any())
+                return ServiceResult<bool>.Fail(
+                    $"Một số sản phẩm không thuộc đơn mua hàng này: {string.Join(", ", invalidProducts)}",
+                    400
+                );
+
+            return ServiceResult<bool>.SuccessResult(true);
+        }
+
+
+        private async Task<ServiceResult<bool>> ValidateQuantityAndPriceAsync(PurchasingOrder po, GRNManuallyDTO dto)
+        {
+            foreach (var grnItem in dto.GRNDManuallyDTOs)
+            {
+                var poDetail = po.PurchasingOrderDetails
+                    .FirstOrDefault(d => d.ProductID == grnItem.ProductID);
+
+                if (poDetail == null)
+                    return ServiceResult<bool>.Fail(
+                        $"Sản phẩm ID {grnItem.ProductID} không tồn tại trong đơn mua hàng.",
+                        400
+                    );
+
+                if (grnItem.UnitPrice != poDetail.UnitPrice)
+                    return ServiceResult<bool>.Fail(
+                        $"Đơn giá sản phẩm '{poDetail.ProductName}' không khớp với đơn hàng. " +
+                        $"Đơn hàng: {poDetail.UnitPrice}, GRN: {grnItem.UnitPrice}",
+                        400
+                    );
+
+                var totalReceivedBefore = await _unitOfWork.GoodReceiptNoteDetail.Query()
+                    .Include(d => d.GoodReceiptNote)
+                    .Where(d => d.ProductID == grnItem.ProductID && d.GoodReceiptNote.POID == po.POID)
+                    .SumAsync(d => (decimal?)d.Quantity) ?? 0;
+
+                var totalAfterThis = totalReceivedBefore + grnItem.Quantity;
+
+                if (totalAfterThis > poDetail.Quantity)
+                    return ServiceResult<bool>.Fail(
+                        $"Tổng số lượng nhập cho sản phẩm '{poDetail.ProductName}' ({totalAfterThis}) vượt quá số lượng trong đơn hàng ({poDetail.Quantity}).",
+                        400
+                    );
+            }
+
+            return ServiceResult<bool>.SuccessResult(true);
+        }
+
+
+        private async Task<GoodReceiptNote> CreateGoodReceiptNoteAsync(string userId, int poId, GRNManuallyDTO dto)
+        {
+            var total = dto.GRNDManuallyDTOs.Sum(x => x.Quantity * x.UnitPrice);
+
+            var grn = new GoodReceiptNote
+            {
+                Source = dto.Source,
+                CreateDate = DateTime.Now,
+                Total = total,
+                CreateBy = userId,
+                Description = dto.Description,
+                POID = poId,
+            };
+
+            await _unitOfWork.GoodReceiptNote.AddAsync(grn);
+            await _unitOfWork.CommitAsync(); // để có GRNID
+
+            return grn;
+        }
+
+
+        private async Task AddGoodReceiptNoteDetailsAsync(GoodReceiptNote grn, GRNManuallyDTO dto)
+        {
+            var details = dto.GRNDManuallyDTOs.Select(d => new GoodReceiptNoteDetail
+            {
+                ProductID = d.ProductID,
+                UnitPrice = d.UnitPrice,
+                Quantity = d.Quantity,
+                GRNID = grn.GRNID
+            }).ToList();
+
+            _unitOfWork.GoodReceiptNoteDetail.AddRange(details);
+            await _unitOfWork.CommitAsync();
+        }
 
     }
 }
