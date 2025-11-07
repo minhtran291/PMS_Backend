@@ -817,6 +817,10 @@ namespace PMS.Data.DatabaseConfig
                     .HasMaxLength(450)
                     .IsRequired();
 
+                entity.Property(so => so.TotalPrice)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
                 entity.Property(so => so.Status)
                     .HasConversion<byte>()
                     .HasColumnType("TINYINT")
@@ -845,6 +849,14 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasKey(sod => new { sod.SalesOrderId, sod.ProductId });
 
                 entity.Property(sod => sod.Quantity)
+                    .IsRequired();
+
+                entity.Property(sod => sod.UnitPrice)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(sod => sod.SubTotalPrice)
+                    .HasPrecision(18, 2)
                     .IsRequired();
 
                 entity.HasOne(d => d.SalesOrder)
