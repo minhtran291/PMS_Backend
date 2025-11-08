@@ -97,7 +97,7 @@ namespace PMS.API.Services.GRNService
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                return ServiceResult<int>.SuccessResult(grn.GRNID, "Thành công", 201);
+                return ServiceResult<int>.SuccessResult(grn.GRNID, "Thành công", 200);
             }
             catch (Exception ex)
             {
