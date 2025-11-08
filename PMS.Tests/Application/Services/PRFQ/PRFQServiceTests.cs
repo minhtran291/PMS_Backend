@@ -128,9 +128,22 @@ namespace PMS.Tests.Services.Purchasing
             _supplierRepoMock.Setup(r => r.Query())
                 .Returns(new[] { supplier }.ToAsyncQueryable());
 
+            var products = new[]
+            {
+                new Product
+                {
+                    ProductID = 201,
+                    Status = true,
+                    MaxQuantity = 2000,
+                    MinQuantity = 10,
+                    TotalCurrentQuantity = 30,
+                    ProductName = "abc",
+                    Unit = "Hộp"
+                }
+            };
+
             _productRepoMock.Setup(r => r.Query())
-                .Returns(new[] { new Product { ProductID = 201, Status = true, MaxQuantity = 2000, MinQuantity = 10, TotalCurrentQuantity = 30, ProductName = "abc", Unit = "Hộp" } }
-                    .ToAsyncQueryable());
+                .Returns(MockHelper.MockDbSet(products).Object);
 
 
             var result = await _prfqService.CreatePRFQAsync(
@@ -152,7 +165,7 @@ namespace PMS.Tests.Services.Purchasing
             var supplier = new Supplier { Id = TestSupplierId, Status = SupplierStatus.Active };
             var products = new[]
             {
-                new Product { ProductID = 201, Status = true,                MaxQuantity=2000,
+                new Product { ProductID = 201, Status = false,MaxQuantity=2000,
                 MinQuantity=10,
                 TotalCurrentQuantity=30,ProductName="abc",Unit="Hộp" },
                 new Product { ProductID = 202, Status = false,MaxQuantity=2000,
@@ -193,14 +206,13 @@ namespace PMS.Tests.Services.Purchasing
                 TotalCurrentQuantity = 30,
             }).ToList();
 
+            _productRepoMock.Setup(r => r.Query())
+                .Returns(MockHelper.MockDbSet(products).Object);
+
             UserManagerMock.Setup(m => m.FindByIdAsync(TestUserId)).ReturnsAsync(user);
 
-
             _supplierRepoMock.Setup(r => r.Query())
-                .Returns(new[] { supplier }.AsQueryable().ToMockDbSet().Object);
-
-            _productRepoMock.Setup(r => r.Query())
-                .Returns(products.AsQueryable().ToMockDbSet().Object);
+            .Returns(MockHelper.MockDbSet(new[] { supplier }).Object);
 
             var addedPrfq = new PurchasingRequestForQuotation { PRFQID = 0 };
             _prfqRepoMock.Setup(r => r.AddAsync(It.IsAny<PurchasingRequestForQuotation>()))
