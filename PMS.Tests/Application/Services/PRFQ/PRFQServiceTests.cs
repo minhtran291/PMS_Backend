@@ -213,8 +213,8 @@ namespace PMS.Tests.Services.Purchasing
 
             _supplierRepoMock.Setup(r => r.Query())
             .Returns(MockHelper.MockDbSet(new[] { supplier }).Object);
-
-            var addedPrfq = new PurchasingRequestForQuotation { PRFQID = 0 };
+            //
+            var addedPrfq = new PurchasingRequestForQuotation { PRFQID = 999 };
             _prfqRepoMock.Setup(r => r.AddAsync(It.IsAny<PurchasingRequestForQuotation>()))
                 .Callback<PurchasingRequestForQuotation>(e => e.PRFQID = 999)
                 .Returns(Task.CompletedTask);

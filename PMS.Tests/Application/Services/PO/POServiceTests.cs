@@ -150,11 +150,6 @@ namespace PMS.Tests.Services
         }
 
 
-
-
-
-
-
         [Test]
         public async Task DepositedPOAsync_ValidPayment_ShouldUpdateDepositAndStatus()
         {
@@ -197,7 +192,6 @@ namespace PMS.Tests.Services
         }
 
 
-
         [Test]
         public async Task DebtAccountantPOAsync_ValidPayment_ShouldUpdateDebtAndStatus()
         {
@@ -228,7 +222,6 @@ namespace PMS.Tests.Services
             Assert.That(result.Data.Status, Is.EqualTo(PurchasingOrderStatus.compeleted));
             Assert.That(result.Data.Debt, Is.EqualTo(0));
         }
-
 
 
         [Test]
