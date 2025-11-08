@@ -653,21 +653,13 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<SalesQuotaionDetails>(entity =>
             {
-                entity.HasKey(sqd => new {sqd.SqId, sqd.ProductId});
+                entity.HasKey(sqd => sqd.Id);
+
+                entity.Property(sqd => sqd.Id)
+                    .ValueGeneratedOnAdd();
 
                 entity.Property(sqd => sqd.Note)
                     .HasMaxLength(500);
-
-                entity.Property(sqd => sqd.SalesPrice)
-                    .HasPrecision(18, 2)
-                    .IsRequired();
-
-                entity.Property(sqd => sqd.ExpectedExpiryNote)
-                    .HasMaxLength(512)
-                    .IsRequired();
-
-                entity.Property(sqd => sqd.TaxId)
-                    .IsRequired();
 
                 entity.HasOne(sqd => sqd.TaxPolicy)
                     .WithMany(tp => tp.SalesQuotaionDetails)
@@ -678,6 +670,11 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(sq => sq.SalesQuotaionDetails)
                     .HasForeignKey(sqd => sqd.SqId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(sqd => sqd.LotProduct)
+                    .WithMany(sqd => sqd.SalesQuotaionDetails)
+                    .HasForeignKey(sqd => sqd.LotId)
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasOne(sqd => sqd.Product)
                     .WithMany(p => p.SalesQuotaionDetails)
