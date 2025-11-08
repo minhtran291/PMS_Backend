@@ -12,7 +12,7 @@ namespace PMS.Application.DTOs.PO
     {
         public int POID { get; set; }
         public decimal Total { get; set; }
-        public required DateTime OrderDate
+        public  DateTime OrderDate
         { get; set; }
         public PurchasingOrderStatus Status { get; set; }
         public decimal Deposit { get; set; }
@@ -20,7 +20,7 @@ namespace PMS.Application.DTOs.PO
         public DateTime PaymentDate { get; set; }
 
         public string UserName { get; set; } = string.Empty;
-        public required int QID { get; set; }
+        public  int QID { get; set; }
         public string? PaymentBy { get; set; }
 
         public string supplierName { get; set; }
