@@ -238,7 +238,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 var user = await _unitOfWork.Users.UserManager.FindByIdAsync(profile.UserId)
                     ?? throw new Exception("User id khong ton tai");
 
-                if (profile.Mst == null || profile.ImageCnkd == null || profile.ImageByt == null || profile.Mshkd == null)
+                if (profile.Mst == null || profile.ImageCnkd == null || profile.Mshkd == null)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
