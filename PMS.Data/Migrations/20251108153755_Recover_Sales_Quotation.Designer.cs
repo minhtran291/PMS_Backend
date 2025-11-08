@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PMS.Data.DatabaseConfig;
 
@@ -11,9 +12,11 @@ using PMS.Data.DatabaseConfig;
 namespace PMS.Data.Migrations
 {
     [DbContext(typeof(PMSContext))]
-    partial class PMSContextModelSnapshot : ModelSnapshot
+    [Migration("20251108153755_Recover_Sales_Quotation")]
+    partial class Recover_Sales_Quotation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -725,11 +728,11 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrder", b =>
                 {
-                    b.Property<int>("SalesOrderId")
+                    b.Property<int>("OrderId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesOrderId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderId"));
 
                     b.Property<DateTime>("CreateAt")
                         .HasColumnType("datetime2");
@@ -742,26 +745,15 @@ namespace PMS.Data.Migrations
                     b.Property<bool>("IsDeposited")
                         .HasColumnType("bit");
 
-                    b.Property<string>("SalesOrderCode")
-                        .IsRequired()
-                        .HasMaxLength(70)
-                        .HasColumnType("nvarchar(70)");
-
                     b.Property<int>("SalesQuotationId")
                         .HasColumnType("int");
 
                     b.Property<byte>("Status")
                         .HasColumnType("TINYINT");
 
-                    b.Property<decimal>("TotalPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("SalesOrderId");
+                    b.HasKey("OrderId");
 
                     b.HasIndex("CreateBy");
-
-                    b.HasIndex("SalesQuotationId");
 
                     b.ToTable("SalesOrders");
                 });
@@ -776,14 +768,6 @@ namespace PMS.Data.Migrations
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
-
-                    b.Property<decimal>("SubTotalPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("SalesOrderId", "ProductId");
 
@@ -814,6 +798,7 @@ namespace PMS.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<int?>("TaxId")
+                        .IsRequired()
                         .HasColumnType("int");
 
                     b.HasKey("Id");
@@ -1478,15 +1463,7 @@ namespace PMS.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PMS.Core.Domain.Entities.SalesQuotation", "SalesQuotation")
-                        .WithMany("SalesOrders")
-                        .HasForeignKey("SalesQuotationId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Customer");
-
-                    b.Navigation("SalesQuotation");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDetails", b =>
@@ -1530,7 +1507,8 @@ namespace PMS.Data.Migrations
                     b.HasOne("PMS.Core.Domain.Entities.TaxPolicy", "TaxPolicy")
                         .WithMany("SalesQuotaionDetails")
                         .HasForeignKey("TaxId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("LotProduct");
 
@@ -1680,8 +1658,6 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesQuotation", b =>
                 {
-                    b.Navigation("SalesOrders");
-
                     b.Navigation("SalesQuotaionDetails");
 
                     b.Navigation("SalesQuotationComments");

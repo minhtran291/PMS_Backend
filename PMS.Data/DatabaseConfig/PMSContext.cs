@@ -653,21 +653,13 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<SalesQuotaionDetails>(entity =>
             {
-                entity.HasKey(sqd => new {sqd.SqId, sqd.ProductId});
+                entity.HasKey(sqd => sqd.Id);
+
+                entity.Property(sqd => sqd.Id)
+                    .ValueGeneratedOnAdd();
 
                 entity.Property(sqd => sqd.Note)
                     .HasMaxLength(500);
-
-                entity.Property(sqd => sqd.SalesPrice)
-                    .HasPrecision(18, 2)
-                    .IsRequired();
-
-                entity.Property(sqd => sqd.ExpectedExpiryNote)
-                    .HasMaxLength(512)
-                    .IsRequired();
-
-                entity.Property(sqd => sqd.TaxId)
-                    .IsRequired();
 
                 entity.HasOne(sqd => sqd.TaxPolicy)
                     .WithMany(tp => tp.SalesQuotaionDetails)
@@ -678,6 +670,11 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(sq => sq.SalesQuotaionDetails)
                     .HasForeignKey(sqd => sqd.SqId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(sqd => sqd.LotProduct)
+                    .WithMany(sqd => sqd.SalesQuotaionDetails)
+                    .HasForeignKey(sqd => sqd.LotId)
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 entity.HasOne(sqd => sqd.Product)
                     .WithMany(p => p.SalesQuotaionDetails)
@@ -805,16 +802,24 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<SalesOrder>(entity =>
             {
-                entity.HasKey(so => so.OrderId);
+                entity.HasKey(so => so.SalesOrderId);
 
-                entity.Property(so => so.OrderId)
+                entity.Property(so => so.SalesOrderId)
                     .ValueGeneratedOnAdd();
+
+                entity.Property(so => so.SalesOrderCode)
+                    .HasMaxLength(70)
+                    .IsRequired();
 
                 entity.Property(so => so.SalesQuotationId)
                     .IsRequired();
 
                 entity.Property(so => so.CreateBy)
                     .HasMaxLength(450)
+                    .IsRequired();
+
+                entity.Property(so => so.TotalPrice)
+                    .HasPrecision(18, 2)
                     .IsRequired();
 
                 entity.Property(so => so.Status)
@@ -827,6 +832,13 @@ namespace PMS.Data.DatabaseConfig
                     .WithOne(d => d.SalesOrder)
                     .HasForeignKey(d => d.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                // 1 - n  (SalesQuotation -> SalesOrder)
+                entity.HasOne(so => so.SalesQuotation)
+                      .WithMany(sq => sq.SalesOrders)
+                      .HasForeignKey(so => so.SalesQuotationId)
+                      .IsRequired()
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 //1 - n (1 SalesOrder to n CustomerDepts)
                 //entity.HasMany(so => so.CustomerDepts)
@@ -845,6 +857,14 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasKey(sod => new { sod.SalesOrderId, sod.ProductId });
 
                 entity.Property(sod => sod.Quantity)
+                    .IsRequired();
+
+                entity.Property(sod => sod.UnitPrice)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(sod => sod.SubTotalPrice)
+                    .HasPrecision(18, 2)
                     .IsRequired();
 
                 entity.HasOne(d => d.SalesOrder)

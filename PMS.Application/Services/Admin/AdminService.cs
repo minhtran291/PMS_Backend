@@ -344,7 +344,7 @@ namespace PMS.Application.Services.Admin
 
         //Generate EmployeeCode acording to roles
         private static string GenerateEmployeeCode(string role )
-           => $"{role}{DateTime.Now:yyyyMMddHHmmssfff}";
+           => $"{role}{DateTime.Now:yyyyMMddHHmm}";
 
         //Change account status to Active
         public async Task <ServiceResult<bool>> ActiveAccountAsync(string userID)

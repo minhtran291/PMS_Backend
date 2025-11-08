@@ -13,11 +13,12 @@ namespace PMS.Application.Services.SalesOrder
     public interface ISalesOrderService
     {
         //Sales Order Draft
-        //Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(int salesQuotationId, string createdBy);
-        //Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(string orderId, List<DraftSalesOrderDTO> items);
-        //Task<ServiceResult<bool>> DeleteDraftAsync(string orderId);
+        Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int SalesQuotationId);
+        Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(int salesQuotationId, string createdBy);
+        Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(string orderId, List<DraftSalesOrderDTO> items);
+        Task<ServiceResult<bool>> DeleteDraftAsync(string orderId);
 
-        // Send Order and check current product quantity
+        //Send Order and check current product quantity
         //Task<ServiceResult<object>> SendOrderAsync(string orderId);
 
         //Customer mark is receipted of goods
@@ -29,7 +30,7 @@ namespace PMS.Application.Services.SalesOrder
         //Create payment
         //Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync(string orderId, string paymentType);
 
-        // Sale Staff confirm payment manual
+        //Sale Staff confirm payment manual
         //Task<ServiceResult<bool>> ConfirmPaymentAsync(string salesOrderId);
         //View Sales Orders
         //Task<ServiceResult<object>> GetOrderDetailsAsync(string orderId);
