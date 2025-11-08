@@ -1422,7 +1422,7 @@ namespace PMS.API.Services.PRFQService
 
                 if (input.Status == PurchasingOrderStatus.sent)
                 {
-                    await SendEmailAndNotificationAsync2(po, supplier, senderUser, null, input.Status, userId);
+                    await SendEmailAndNotificationAsync2(po, supplier, senderUser, input.Status, userId);
                 }
                 await _unitOfWork.CommitTransactionAsync();
 
