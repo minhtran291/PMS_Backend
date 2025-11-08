@@ -24,15 +24,15 @@ namespace PMS.API.Controllers
         /// POST: https://localhost:7213/api/SalesOrder/fefo-plan
         /// Nhập danh sách {productId, quantity} để tính FEFO theo LotProduct.
         /// </summary>
-        [HttpPost("fefo-plan")]
-        public async Task<IActionResult> BuildFefoPlan([FromBody] FEFOPlanRequestDTO request)
-        {
-            //var result = await _service.BuildFefoPlanAsync(request);
-            return StatusCode(200, new
-            {
-                message = "",
-            });
-        }
+        //[HttpPost("fefo-plan")]
+        //public async Task<IActionResult> BuildFefoPlan([FromBody] FEFOPlanRequestDTO request)
+        //{
+        //    //var result = await _service.BuildFefoPlanAsync(request);
+        //    return StatusCode(200, new
+        //    {
+        //        message = "",
+        //    });
+        //}
 
         /// <summary>
         /// POST: https://localhost:7213/api/SalesOrder/send/{orderId}
