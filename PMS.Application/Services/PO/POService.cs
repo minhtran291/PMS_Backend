@@ -606,139 +606,52 @@ namespace PMS.API.Services.POService
             return pdfBytes;
         }
 
-        public async Task<ServiceResult<IEnumerable<POViewDTO>>> GetAllPOWithGRNArchiveAsync()
+
+        public async Task<ServiceResult<Dictionary<string, IEnumerable<POQuantityStatus>>>> GetPOByReceivingStatusAsync()
         {
-
+            
             var poList = await _unitOfWork.PurchasingOrder.Query()
-                .Include(p => p.User)
-                .Include(p => p.PurchasingOrderDetails)
-                .Include(p => p.GoodReceiptNotes)
+                .AsNoTracking()
+                .Include(po => po.PurchasingOrderDetails)
+                .Include(po => po.GoodReceiptNotes)
                     .ThenInclude(grn => grn.GoodReceiptNoteDetails)
-                .Include(p => p.Quotations)
                 .ToListAsync();
 
-            var userList = await _unitOfWork.Users.Query()
-                .Select(u => new { u.Id, u.FullName })
-                .ToListAsync();
-
-
-            var supplierList = await _unitOfWork.Supplier.Query()
-                .Select(s => new { s.Id, s.Name })
-                .ToListAsync();
-
-            var result = new List<POViewDTO>();
-
-            foreach (var po in poList)
+            if (!poList.Any())
             {
-
-                var receivedMap = po.GoodReceiptNotes
-                    .SelectMany(grn => grn.GoodReceiptNoteDetails)
-                    .GroupBy(g => new { g.ProductID, g.UnitPrice })
-                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
-
-
-                bool allReceived = po.PurchasingOrderDetails.All(pod =>
+                return new ServiceResult<Dictionary<string, IEnumerable<POQuantityStatus>>>
                 {
-                    var key = new { pod.ProductID, pod.UnitPrice };
-                    return receivedMap.TryGetValue(key, out var receivedQty) && receivedQty == pod.Quantity;
-                });
-
-                if (!allReceived)
-                    continue; 
-
-
-                var supplier = po.Quotations != null
-                    ? supplierList.FirstOrDefault(s => s.Id == po.Quotations.SupplierID)
-                    : null;
-
-
-                var paymentUser = userList.FirstOrDefault(u => u.Id == po.PaymentBy);
-
-                result.Add(new POViewDTO
-                {
-                    POID = po.POID,
-                    OrderDate = po.OrderDate,
-                    QID = po.QID,
-                    Total = po.Total,
-                    Status = po.Status,
-                    Deposit = po.Deposit,
-                    Debt = po.Debt,
-                    PaymentDate = po.PaymentDate,
-                    UserName = po.User?.FullName ?? "Unknown",
-                    PaymentBy = paymentUser?.FullName ?? "Unknown",
-                    supplierName = supplier?.Name ?? "Unknown",
-                    Details = po.PurchasingOrderDetails
-                });
+                    Data = new(),
+                    StatusCode = 200,
+                    Message = "Không có đơn mua hàng nào."
+                };
             }
 
-            return new ServiceResult<IEnumerable<POViewDTO>>
+            var result = ClassifyPOs(poList);
+
+            return new ServiceResult<Dictionary<string, IEnumerable<POQuantityStatus>>>
             {
                 Data = result,
                 StatusCode = 200,
-                Message = "Thành công"
+                Message = "Phân loại đơn mua hàng thành công"
             };
         }
 
-
-        public async Task<ServiceResult<Dictionary<string, IEnumerable<POViewDTO>>>> GetPOByReceivingStatusAsync()
+        private Dictionary<string, IEnumerable<POQuantityStatus>> ClassifyPOs(List<PurchasingOrder> poList)
         {
-            // 1️⃣ Lấy danh sách PO cơ bản
-            var poList = await _unitOfWork.PurchasingOrder.Query()
-                .AsNoTracking()
-                .Select(p => new
-                {
-                    p.POID,
-                    p.OrderDate,
-                    p.QID,
-                    p.Total,
-                    p.Status,
-                    p.Deposit,
-                    p.Debt,
-                    p.PaymentDate,
-                    p.PaymentBy,
-                    p.UserId,
-                    p.Quotations.SupplierID
-                })
-                .ToListAsync();
-
-            // 2️⃣ Lấy tất cả details, GRN, GRN detail riêng
-            var poIds = poList.Select(p => p.POID).ToList();
-
-            var poDetails = await _unitOfWork.PurchasingOrderDetail.Query()
-                .Where(d => poIds.Contains(d.POID))
-                .AsNoTracking()
-                .ToListAsync();
-
-            var grnDetails = await _unitOfWork.GoodReceiptNoteDetail.Query()
-                .Include(gd => gd.GoodReceiptNote)
-                .Where(gd => poIds.Contains(gd.GoodReceiptNote.POID))
-                .AsNoTracking()
-                .ToListAsync();
-
-            var users = await _unitOfWork.Users.Query()
-                .Select(u => new { u.Id, u.FullName })
-                .ToListAsync();
-
-            var suppliers = await _unitOfWork.Supplier.Query()
-                .Select(s => new { s.Id, s.Name })
-                .ToListAsync();
-
-            // 3️⃣ Gom nhóm GRN theo PO
-            var grnGrouped = grnDetails
-                .GroupBy(gd => gd.GoodReceiptNote.POID)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            // 4️⃣ Phân loại
-            var fullyReceived = new List<POViewDTO>();
-            var partiallyReceived = new List<POViewDTO>();
-            var notReceived = new List<POViewDTO>();
+            var fullyReceived = new List<POQuantityStatus>();
+            var partiallyReceived = new List<POQuantityStatus>();
+            var notReceived = new List<POQuantityStatus>();
 
             foreach (var po in poList)
             {
-                var details = poDetails.Where(d => d.POID == po.POID).ToList();
-                var grnForPo = grnGrouped.GetValueOrDefault(po.POID, new List<GoodReceiptNoteDetail>());
+                var details = po.PurchasingOrderDetails ?? new List<PurchasingOrderDetail>();
+                var grnDetails = po.GoodReceiptNotes?
+                    .SelectMany(g => g.GoodReceiptNoteDetails ?? new List<GoodReceiptNoteDetail>())
+                    .ToList() ?? new List<GoodReceiptNoteDetail>();
 
-                var receivedMap = grnForPo
+
+                var receivedMap = grnDetails
                     .GroupBy(g => (g.ProductID, g.UnitPrice))
                     .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
 
@@ -757,25 +670,7 @@ namespace PMS.API.Services.POService
                     }
                 }
 
-                var userName = users.FirstOrDefault(u => u.Id == po.UserId)?.FullName ?? "Unknown";
-                var paymentUser = users.FirstOrDefault(u => u.Id == po.PaymentBy)?.FullName ?? "Unknown";
-                var supplierName = suppliers.FirstOrDefault(s => s.Id == po.SupplierID)?.Name ?? "Unknown";
-
-                var dto = new POViewDTO
-                {
-                    POID = po.POID,
-                    OrderDate = po.OrderDate,
-                    QID = po.QID,
-                    Total = po.Total,
-                    Status = po.Status,
-                    Deposit = po.Deposit,
-                    Debt = po.Debt,
-                    PaymentDate = po.PaymentDate,
-                    UserName = userName,
-                    PaymentBy = paymentUser,
-                    supplierName = supplierName,
-                    Details = details
-                };
+                var dto = new POQuantityStatus { POID = po.POID };
 
                 if (!anyReceived)
                     notReceived.Add(dto);
@@ -785,18 +680,11 @@ namespace PMS.API.Services.POService
                     partiallyReceived.Add(dto);
             }
 
-            var result = new Dictionary<string, IEnumerable<POViewDTO>>
+            return new Dictionary<string, IEnumerable<POQuantityStatus>>
             {
                 ["FullyReceived"] = fullyReceived,
                 ["PartiallyReceived"] = partiallyReceived,
                 ["NotReceived"] = notReceived
-            };
-
-            return new ServiceResult<Dictionary<string, IEnumerable<POViewDTO>>>
-            {
-                Data = result,
-                StatusCode = 200,
-                Message = "Phân loại đơn mua hàng thành công"
             };
         }
 

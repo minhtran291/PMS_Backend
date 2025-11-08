@@ -125,27 +125,9 @@ namespace PMS.API.Controllers
         }
 
 
-        /// <summary>
-        /// https://localhost:7213/api/PO/fullyRecive
-        /// Lấy danh sách các Purchase Order đã nhập kho đủ hàng.
-        /// </summary>
-        [HttpGet("fullyRecive")]
-        public async Task<IActionResult> GetFullyReceivedPOsAsync()
-        {
-            var result = await _poService.GetAllPOWithGRNArchiveAsync();
-
-            if (result == null)
-                return NotFound(new { Message = "Không tìm thấy dữ liệu." });
-
-            if (result.StatusCode != 200)
-                return StatusCode(result.StatusCode, new { result.Message });
-
-            return HandleServiceResult(result);
-        }
-
 
         /// <summary>
-        /// https://localhost:7213/api/PO/fullstatus/by-receiving-status
+        /// https://localhost:7213/api/PO/by-receiving-status
         /// Lấy tất cả PO được phân loại theo trạng thái nhập kho (đủ, một phần, chưa nhập)
         /// </summary>
         [HttpGet("by-receiving-status")]
@@ -167,7 +149,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// 
+        /// https://localhost:7213/api/PO/partially-received
         /// Lấy danh sách PO mới nhập một phần hàng
         /// </summary>
         [HttpGet("partially-received")]
@@ -178,6 +160,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
+        /// https://localhost:7213/api/PO/not-received
         /// Lấy danh sách PO chưa nhập hàng nào
         /// </summary>
         [HttpGet("not-received")]

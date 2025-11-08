@@ -26,9 +26,8 @@ namespace PMS.Application.Services.PO
 
         Task<byte[]> GeneratePOPaymentPdfAsync(int poid);
 
-        Task<ServiceResult<IEnumerable<POViewDTO>>> GetAllPOWithGRNArchiveAsync();
 
-        Task<ServiceResult<Dictionary<string, IEnumerable<POViewDTO>>>> GetPOByReceivingStatusAsync();
+        Task<ServiceResult<Dictionary<string, IEnumerable<POQuantityStatus>>>> GetPOByReceivingStatusAsync();
 
     }
 }
