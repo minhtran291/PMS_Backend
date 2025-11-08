@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.API.Services.PRFQService;
+using PMS.Application.DTOs.PO;
 using PMS.Application.DTOs.PRFQ;
 using PMS.Application.DTOs.RequestSalesQuotation;
 using PMS.Core.Domain.Constant;
@@ -247,6 +248,30 @@ namespace PMS.API.Controllers
             {             
                 return StatusCode(500, new { Message = "Đã xảy ra lỗi trong quá trình chỉnh sửa PRFQ." });
             }
+        }
+
+
+        /// <summary>
+        /// Tạo Purchase Order từ Quotation đã có sẵn trong hệ thống.
+        /// https://localhost:7213/api/PRFQ/create-from-quotation
+        /// </summary>
+        /// <param name="input">Dữ liệu đầu vào: QID, danh sách sản phẩm và số lượng</param>
+        /// <returns>Trả về POID và thông tin trạng thái</returns>
+        [HttpPost("create-from-quotation")]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        public async Task<IActionResult> CreatePurchaseOrderByQuotation([FromBody] PurchaseOrderByQuotaionInputDto input)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { message = "Không thể xác thực người dùng." });
+
+            var result = await _iPRFQService.CreatePurchaseOrderByQIDAsync(userId, input);
+
+
+            return HandleServiceResult(result);
         }
     }
 }

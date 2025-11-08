@@ -1109,9 +1109,10 @@ namespace PMS.API.Services.PRFQService
 
                 var po = await CreatePurchaseOrderAsync(userId, quotation.QID, input, worksheet, excelData.IsNewQuotation);
 
-
-                await SendEmailAndNotificationAsync(po, supplier, senderUser, worksheet, purchasingOrderStatus, userId);
-
+                if (purchasingOrderStatus == PurchasingOrderStatus.sent)
+                {
+                    await SendEmailAndNotificationAsync(po, supplier, senderUser, worksheet, purchasingOrderStatus, userId);
+                }
                 await _unitOfWork.CommitTransactionAsync();
                 try { File.Delete(excelPath); } catch { }
 
@@ -1313,17 +1314,132 @@ namespace PMS.API.Services.PRFQService
                     poExcelBytes,
                     $"PO_{po.POID}.xlsx"
                 );
-            }
 
-            await _notificationService.SendNotificationToRolesAsync(
+                await _notificationService.SendNotificationToRolesAsync(
                 userId,
                 ["ACCOUNTANT"],
                 "Yêu cầu nhập hàng",
                 $"Nhân viên {senderUser.UserName} đã gửi mail đặt hàng đến NCC: {supplier.Name}",
-                Core.Domain.Enums.NotificationType.Reminder
-            );
-
+                Core.Domain.Enums.NotificationType.Reminder);
+            }            
         }
 
+        private async Task SendEmailAndNotificationAsync2(PurchasingOrder po, Supplier supplier, User senderUser, PurchasingOrderStatus status, string userId)
+
+        {
+            var poExcelBytes = await GeneratePOExcelAsync(userId, po);
+            if (status == PurchasingOrderStatus.sent)
+            {                
+                await _emailService.SendEmailWithAttachmentAsync(
+                    supplier.Email,
+                    "Đơn hàng",
+                    GeneratePOEmailBody(po),
+                    poExcelBytes,
+                    $"PO_{po.POID}.xlsx"
+                );
+
+                await _notificationService.SendNotificationToRolesAsync(
+                userId,
+                ["ACCOUNTANT"],
+                "Yêu cầu nhập hàng",
+                $"Nhân viên {senderUser.UserName} đã gửi mail đặt hàng đến NCC: {supplier.Name}",
+                Core.Domain.Enums.NotificationType.Reminder);
+            }
+        }
+
+
+        public async Task<ServiceResult<int>> CreatePurchaseOrderByQIDAsync(string userId,
+        PurchaseOrderByQuotaionInputDto input)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+
+                var quotation = await _unitOfWork.Quotation.Query()
+                    .Include(q => q.QuotationDetails)
+                    .FirstOrDefaultAsync(q => q.QID == input.QID);
+
+                if (quotation == null)
+                    return new ServiceResult<int> { StatusCode = 404, Message = "Không tìm thấy báo giá.", Data = 0, Success = false };
+
+                if (DateTime.Now > quotation.QuotationExpiredDate)
+                    return new ServiceResult<int> { StatusCode = 400, Message = "Báo giá đã hết hạn.",Data=0,Success=false };
+
+                var supplier = await _unitOfWork.Supplier.Query()
+                    .FirstOrDefaultAsync(s => s.Id == quotation.SupplierID);
+
+                if (supplier == null)
+                    return new ServiceResult<int> { StatusCode = 400, Message = "Không tìm thấy nhà cung cấp.", Data = 0, Success = false };
+
+                var senderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+
+
+                var po = new PurchasingOrder
+                {
+                    OrderDate = DateTime.Now,
+                    QID = quotation.QID,
+                    UserId = userId,
+                    Total = 0,
+                    Status = input.Status,
+                    
+                };
+
+                await _unitOfWork.PurchasingOrder.AddAsync(po);
+                await _unitOfWork.CommitAsync();
+
+
+                var quotationDetails = quotation.QuotationDetails.ToDictionary(qd => qd.ProductID);
+
+                var poDetails = new List<PurchasingOrderDetail>();
+                foreach (var item in input.Details)
+                {
+                    if (!quotationDetails.TryGetValue(item.ProductID, out var qd))
+                        throw new Exception($"Sản phẩm {item.ProductID} không tồn tại trong báo giá {quotation.QID}");
+
+                    decimal total = item.Quantity * qd.UnitPrice * 1.1m;
+
+                    poDetails.Add(new PurchasingOrderDetail
+                    {
+                        POID = po.POID,
+                        ProductID = qd.ProductID,
+                        ProductName = qd.ProductName,
+                        Description = qd.ProductDescription,
+                        DVT = qd.ProductUnit,
+                        Quantity = item.Quantity,
+                        UnitPrice = qd.UnitPrice,
+                        UnitPriceTotal = total,
+                        ExpiredDate = qd.ProductDate
+                    });
+
+                    po.Total += total;
+                }
+
+                if (poDetails.Count == 0)
+                    throw new Exception("Không có sản phẩm nào hợp lệ trong đơn hàng.");
+
+                _unitOfWork.PurchasingOrderDetail.AddRange(poDetails);
+                await _unitOfWork.CommitAsync();
+
+                if (input.Status == PurchasingOrderStatus.sent)
+                {
+                    await SendEmailAndNotificationAsync2(po, supplier, senderUser, input.Status, userId);
+                }
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ServiceResult<int>
+                {
+                    StatusCode = 200,
+                    Data = po.POID,
+                    Message = "Tạo đơn hàng thành công.",
+                    Success = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CreatePurchaseOrderByQIDAsync failed");
+                await _unitOfWork.RollbackTransactionAsync();
+                return new ServiceResult<int> { StatusCode = 400, Message = "Thất bại khi tạo đơn hàng." };
+            }
+        }
     }
 }

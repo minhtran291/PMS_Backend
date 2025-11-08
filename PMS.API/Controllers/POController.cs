@@ -169,5 +169,19 @@ namespace PMS.API.Controllers
             var result = await _poService.GetPOByReceivingStatusAsync();
             return Ok(result.Data["NotReceived"]);
         }
+
+
+        /// <summary>
+        /// Xóa PO có trạng thái "draft"
+        /// https://localhost:7213/api/PO/deletePOWithDraftStatus/{poid}
+        /// </summary>
+        /// <param name="poid">ID của PO cần xóa</param>
+        /// <returns>Trả về kết quả xóa</returns>
+        [HttpDelete("deletePOWithDraftStatus/{poid}")]
+        public async Task<IActionResult> DeletePOWithDraftStatus(int poid)
+        {
+            var result = await _poService.DeletePOWithDraftStatus(poid);
+            return HandleServiceResult(result);
+        }
     }
 }

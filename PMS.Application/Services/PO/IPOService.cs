@@ -29,5 +29,7 @@ namespace PMS.Application.Services.PO
 
         Task<ServiceResult<Dictionary<string, IEnumerable<POQuantityStatus>>>> GetPOByReceivingStatusAsync();
 
+        Task<ServiceResult<bool>> DeletePOWithDraftStatus(int poid);
+
     }
 }

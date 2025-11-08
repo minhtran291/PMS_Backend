@@ -42,7 +42,7 @@ namespace PMS.API.Services.POService
 
                 if (quotation != null)
                 {
-                   
+
                     sup = await _unitOfWork.Supplier.Query()
                         .FirstOrDefaultAsync(s => s.Id == quotation.SupplierID);
                 }
@@ -311,7 +311,7 @@ namespace PMS.API.Services.POService
             }
         }
 
-        public async Task<ServiceResult<bool>> ChangeStatusAsync(string userId,int poid, PurchasingOrderStatus newStatus)
+        public async Task<ServiceResult<bool>> ChangeStatusAsync(string userId, int poid, PurchasingOrderStatus newStatus)
         {
             var senderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
             try
@@ -609,7 +609,7 @@ namespace PMS.API.Services.POService
 
         public async Task<ServiceResult<Dictionary<string, IEnumerable<POQuantityStatus>>>> GetPOByReceivingStatusAsync()
         {
-            
+
             var poList = await _unitOfWork.PurchasingOrder.Query()
                 .AsNoTracking()
                 .Include(po => po.PurchasingOrderDetails)
@@ -687,6 +687,56 @@ namespace PMS.API.Services.POService
                 ["NotReceived"] = notReceived
             };
         }
+
+
+        public async Task<ServiceResult<bool>> DeletePOWithDraftStatus(int poid)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                var po = await _unitOfWork.PurchasingOrder.Query()
+                    .Include(p => p.PurchasingOrderDetails)
+                    .FirstOrDefaultAsync(p => p.POID == poid && p.Status == PurchasingOrderStatus.draft);
+
+                if (po == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Data = false,
+                        Message = $"Không tìm thấy PO với id: {poid}",
+                        Success = false,
+                    };
+                }
+
+                _unitOfWork.PurchasingOrderDetail.RemoveRange(po.PurchasingOrderDetails);
+                _unitOfWork.PurchasingOrder.Remove(po);
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ServiceResult<bool>
+                {
+                    Data = true,
+                    Message = $"Xóa thành công đơn hàng với id: {poid}",
+                    StatusCode = 200,
+                    Success = true,
+                };
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 400,
+                    Message = $"Lỗi hệ thống khi xóa đơn hàng: {ex.Message}"
+                };
+            }
+        }
+
+
+
 
     }
 }
