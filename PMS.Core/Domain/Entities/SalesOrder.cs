@@ -10,7 +10,8 @@ namespace PMS.Core.Domain.Entities
 {
     public class SalesOrder
     {
-        public int OrderId { get; set; }
+        public int SalesOrderId { get; set; }
+        public string SalesOrderCode { get; set; }
         public int SalesQuotationId { get; set; }
         public required string CreateBy { get; set; }
         public DateTime CreateAt { get; set; }
@@ -20,6 +21,7 @@ namespace PMS.Core.Domain.Entities
 
         public virtual ICollection<SalesOrderDetails> SalesOrderDetails { get; set; } = [];
         //public virtual ICollection<CustomerDept> CustomerDepts { get; set; } = new List<CustomerDept>();
+        public virtual SalesQuotation SalesQuotation { get; set; } = null!;
         public virtual User Customer { get; set; } = null!;
     }
 }

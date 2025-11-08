@@ -12,6 +12,6 @@ namespace PMS.Application.DTOs.SalesOrder
         public int QID { get; set; }
         public decimal OrderTotalPrice { get; set; }
         public DateTime CreatedAt { get; set; }
-        public FEFOPlanResponseDTO PlanUsed { get; set; } = null!;
+        
     }
 }
