@@ -10,6 +10,6 @@ namespace PMS.Application.DTOs.SalesOrder
     {
         public int SalesQuotationId { get; set; }
         public string CreatedBy { get; set; } = null!;
-        public List<CreateOrderFromQuotationItemDTO> Items { get; set; } = [];
+        public List<SalesOrderItemDTO> Items { get; set; } = [];
     }
 }

@@ -11,11 +11,9 @@ namespace PMS.Application.DTOs.SalesOrder
 {
     public class SalesOrderRequestDTO
     {
-        [Required(ErrorMessage = "Mã đơn hàng mua là bắt buộc!")]
         public string SalesOrderCode { get; set; }
         [Required(ErrorMessage = "SalesQuotationID là bắt buộc!")]
         public int SalesQuotationId { get; set; }
-        [Required(ErrorMessage = "Người tạo đơn hàng phải được ghi vào hệ thống!")]
         public required string CreateBy { get; set; }
         public DateTime CreateAt { get; set; } = DateTime.Now;
         [Required(ErrorMessage = "Trạng thái là bắt buộc")]

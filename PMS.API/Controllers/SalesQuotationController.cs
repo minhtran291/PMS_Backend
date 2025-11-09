@@ -5,6 +5,7 @@ using PMS.Application.DTOs.SalesQuotation;
 using PMS.Application.Services.SalesQuotation;
 using PMS.Core.Domain.Constant;
 using StackExchange.Redis;
+using System.Data;
 using System.Security.Claims;
 
 namespace PMS.API.Controllers
@@ -140,8 +141,8 @@ namespace PMS.API.Controllers
                 message = result.Message
             });
         }
-
-        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
+        //Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)
+        [HttpGet]
         [Route("view-sales-quotation-details")]
         public async Task<IActionResult> ViewSalesQuotationDetails(int sqId)
         {

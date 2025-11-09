@@ -29,7 +29,7 @@ namespace PMS.Application.Services.SalesOrder
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
 
-        public async Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId)
+        public async Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, SalesOrderStatus status)
         {
             try
             {
@@ -46,17 +46,18 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                if (order.Status != SalesOrderStatus.Send)
+                if (order.Status != SalesOrderStatus.Approved && order.Status != SalesOrderStatus.Deposited)
                 {
                     return new ServiceResult<bool>
                     {
                         StatusCode = 400,
-                        Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã được gửi đi.",
+                        Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã được chấp thuận hoặc đã cọc.",
                         Data = false
                     };
                 }
 
-                order.Status = SalesOrderStatus.Paid;
+                order.Status = status;
+                order.IsDeposited = true;
                 //order.DepositAmount = order.TotalPrice;
 
                 _unitOfWork.SalesOrder.Update(order);
@@ -81,70 +82,70 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(CreateOrderFromQuotationRequestDTO req)
+        public async Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(SalesOrderRequestDTO req)
         {
             try
             {
-                if (req == null || string.IsNullOrWhiteSpace(req.CreatedBy) || req.Items == null || req.Items.Count == 0)
-                {
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "Payload không hợp lệ (thiếu CreatedBy hoặc danh sách Items).",
-                        Data = null
+                if (req == null)
+                    return new ServiceResult<object> { 
+                        StatusCode = 400, 
+                        Message = "Payload trống.", 
+                        Data = null 
                     };
-                }
+
+                if (string.IsNullOrWhiteSpace(req.CreateBy))
+                    return new ServiceResult<object> { 
+                        StatusCode = 400, 
+                        Message = "CreateBy là bắt buộc.", 
+                        Data = null 
+                    };
+
+                if (req.Details == null || req.Details.Count == 0)
+                    return new ServiceResult<object> { 
+                        StatusCode = 400, 
+                        Message = "Danh sách Details trống.", 
+                        Data = null 
+                    
+                    };
 
                 var sq = await _unitOfWork.SalesQuotation.Query()
-                    .Include(q => q.SalesQuotaionDetails)
-                        .ThenInclude(d => d.Product)
-                    .Include(q => q.SalesQuotaionDetails)
-                        .ThenInclude(d => d.LotProduct)
+                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.Product)
+                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.LotProduct)
                     .FirstOrDefaultAsync(q => q.Id == req.SalesQuotationId);
 
                 if (sq == null)
-                {
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 404,
-                        Message = "Không tìm thấy SalesQuotation.",
-                        Data = null
+                    return new ServiceResult<object> { 
+                        StatusCode = 404, 
+                        Message = "Không tìm thấy SalesQuotation.", 
+                        Data = null 
                     };
-                }
 
                 if (sq.ExpiredDate < DateTime.Now.Date)
-                {
-                    return new ServiceResult<object>
-                    {
-                        StatusCode = 400,
-                        Message = "SalesQuotation đã hết hạn. Không thể tạo đơn nháp.",
-                        Data = null
+                    return new ServiceResult<object> { 
+                        StatusCode = 400, 
+                        Message = "SalesQuotation đã hết hạn. Không thể tạo đơn nháp.", 
+                        Data = null 
                     };
-                }
 
-                var sqDetailByProduct = sq.SalesQuotaionDetails
-                    .ToDictionary(d => d.ProductId, d => d);
+                var sqDetailByKey = sq.SalesQuotaionDetails
+                    .ToDictionary(d => (d.ProductId, d.LotId), d => d);
 
-                foreach (var it in req.Items)
+                foreach (var it in req.Details)
                 {
-                    if (!sqDetailByProduct.ContainsKey(it.ProductId))
-                    {
-                        return new ServiceResult<object>
-                        {
-                            StatusCode = 400,
-                            Message = $"ProductId {it.ProductId} không thuộc SalesQuotation.",
-                            Data = null
-                        };
-                    }
                     if (it.Quantity < 0)
-                    {
-                        return new ServiceResult<object>
-                        {
-                            StatusCode = 400,
-                            Message = $"Quantity cho ProductId {it.ProductId} không hợp lệ.",
-                            Data = null
+                        return new ServiceResult<object> { 
+                            StatusCode = 400, 
+                            Message = $"Quantity âm ở ProductId={it.ProductId}.", 
+                            Data = null 
                         };
-                    }
+
+                    var key = (it.ProductId, it.LotId);
+                    if (!sqDetailByKey.ContainsKey(key))
+                        return new ServiceResult<object> { 
+                            StatusCode = 400, 
+                            Message = $"Dòng không thuộc báo giá: ProductId={it.ProductId}, LotId={it.LotId}.", 
+                            Data = null 
+                        };
                 }
 
                 await _unitOfWork.BeginTransactionAsync();
@@ -153,32 +154,32 @@ namespace PMS.Application.Services.SalesOrder
                 {
                     SalesQuotationId = sq.Id,
                     SalesOrderCode = GenerateSalesOrderCode(),
-                    CreateBy = req.CreatedBy,
-                    CreateAt = DateTime.Now,
-                    Status = SalesOrderStatus.Draft,
+                    CreateBy = req.CreateBy.Trim(),
+                    CreateAt = DateTime.Now,  
+                    Status = SalesOrderStatus.Draft, 
                     IsDeposited = false,
                     TotalPrice = 0m
                 };
 
                 await _unitOfWork.SalesOrder.AddAsync(order);
-                await _unitOfWork.CommitAsync(); 
+                await _unitOfWork.CommitAsync();
 
                 var detailEntities = new List<SalesOrderDetails>();
-                foreach (var it in req.Items)
+                foreach (var it in req.Details)
                 {
-                    var sqd = sqDetailByProduct[it.ProductId];
-                    var unitPrice = it.UnitPrice
-                        ?? (sqd.LotProduct != null ? sqd.LotProduct.SalePrice : 0m);
+                    var sqd = sqDetailByKey[(it.ProductId, it.LotId)];
+                    
+                    var serverUnitPrice = sqd.LotProduct != null ? sqd.LotProduct.SalePrice : it.UnitPrice;
 
-                    // Calculating SubTotal
-                    var sub = (it.Quantity > 0) ? unitPrice * it.Quantity : 0m;
+                    var sub = (it.Quantity > 0) ? serverUnitPrice * it.Quantity : 0m;
 
                     detailEntities.Add(new SalesOrderDetails
                     {
                         SalesOrderId = order.SalesOrderId,
                         ProductId = it.ProductId,
+                        LotId = it.LotId,
                         Quantity = it.Quantity,
-                        UnitPrice = unitPrice,
+                        UnitPrice = serverUnitPrice,
                         SubTotalPrice = sub
                     });
                 }
@@ -186,26 +187,27 @@ namespace PMS.Application.Services.SalesOrder
                 if (detailEntities.Count > 0)
                     await _unitOfWork.SalesOrderDetails.AddRangeAsync(detailEntities);
 
-                // Calculating TotalPrice header
                 order.TotalPrice = detailEntities.Sum(d => d.SubTotalPrice);
 
                 _unitOfWork.SalesOrder.Update(order);
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                // Response Data for FE
                 var data = new
                 {
                     order.SalesOrderId,
+                    order.SalesOrderCode,
                     order.SalesQuotationId,
                     order.CreateBy,
                     order.CreateAt,
                     order.Status,
+                    order.IsDeposited,
                     order.TotalPrice,
                     Details = detailEntities.Select(d => new
                     {
                         d.ProductId,
-                        ProductName = sqDetailByProduct[d.ProductId].Product.ProductName,
+                        d.LotId,
+                        ProductName = sqDetailByKey[(d.ProductId, d.LotId)].Product.ProductName,
                         d.Quantity,
                         d.UnitPrice,
                         d.SubTotalPrice
@@ -231,8 +233,6 @@ namespace PMS.Application.Services.SalesOrder
                 };
             }
         }
-
-
 
         public async Task<ServiceResult<bool>> DeleteDraftAsync(int salesOrderId)
         {
@@ -404,37 +404,50 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<IEnumerable<object>>> ListCustomerSalesOrdersAsync(string userId)
+        public async Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListCustomerSalesOrdersAsync(string userId)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return new ServiceResult<IEnumerable<SalesOrderItemDTO>>
+                    {
+                        StatusCode = 400,
+                        Message = "Thiếu userId.",
+                        Data = null
+                    };
+                }
+
                 var orders = await _unitOfWork.SalesOrder.Query()
+                    .AsNoTracking()
                     .Where(o => o.CreateBy == userId)
                     .OrderByDescending(o => o.CreateAt)
-                    .Select(o => new
+                    .Select(o => new SalesOrderItemDTO
                     {
-                        o.SalesOrderId,
-                        o.Status,
-                        o.TotalPrice,
-                        //o.DepositAmount,
-                        o.CreateAt
+                        SalesOrderId = o.SalesOrderId,
+                        SalesOrderCode = o.SalesOrderCode,
+                        Status = o.Status,
+                        StatusName = o.Status.ToString(),
+                        IsDeposited = o.IsDeposited,
+                        TotalPrice = o.TotalPrice,
+                        CreateAt = o.CreateAt
                     })
                     .ToListAsync();
 
-                return new ServiceResult<IEnumerable<object>>
+                return new ServiceResult<IEnumerable<SalesOrderItemDTO>>
                 {
                     StatusCode = 200,
-                    Message = "Lấy danh sách đơn hàng thành công",
+                    Message = "Lấy danh sách đơn hàng thành công.",
                     Data = orders
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi ListOrdersAsync");
-                return new ServiceResult<IEnumerable<object>>
+                _logger.LogError(ex, "Lỗi ListCustomerSalesOrdersAsync({UserId})", userId);
+                return new ServiceResult<IEnumerable<SalesOrderItemDTO>>
                 {
                     StatusCode = 500,
-                    Message = "Có lỗi khi lấy danh sách đơn hàng",
+                    Message = "Có lỗi khi lấy danh sách đơn hàng.",
                     Data = null
                 };
             }
@@ -750,39 +763,39 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<IEnumerable<object>>> ListSalesOrdersAsync()
+        public async Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListSalesOrdersAsync()
         {
             try
             {
                 var orders = await _unitOfWork.SalesOrder.Query()
-                    .Where(o => o.Status != SalesOrderStatus.Draft)
+                    .AsNoTracking()
                     .OrderByDescending(o => o.CreateAt)
-                    .Select(o => new
+                    .Select(o => new SalesOrderItemDTO
                     {
-                        o.SalesOrderId,
-                        o.SalesOrderCode,
-                        o.SalesQuotationId,
-                        o.Status,
-                        o.TotalPrice,
-                        //o.DepositAmount,
-                        o.CreateAt
+                        SalesOrderId = o.SalesOrderId,
+                        SalesOrderCode = o.SalesOrderCode,
+                        Status = o.Status,
+                        StatusName = o.Status.ToString(),
+                        IsDeposited = o.IsDeposited,
+                        TotalPrice = o.TotalPrice,
+                        CreateAt = o.CreateAt
                     })
                     .ToListAsync();
 
-                return new ServiceResult<IEnumerable<object>>
+                return new ServiceResult<IEnumerable<SalesOrderItemDTO>>
                 {
                     StatusCode = 200,
-                    Message = "Lấy danh sách đơn hàng thành công",
+                    Message = "Lấy danh sách đơn hàng thành công.",
                     Data = orders
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi ListOrdersAsync");
-                return new ServiceResult<IEnumerable<object>>
+                _logger.LogError(ex, "Lỗi ListSalesOrdersAsync");
+                return new ServiceResult<IEnumerable<SalesOrderItemDTO>>
                 {
                     StatusCode = 500,
-                    Message = "Có lỗi khi lấy danh sách đơn hàng",
+                    Message = "Có lỗi khi lấy danh sách đơn hàng.",
                     Data = null
                 };
             }
