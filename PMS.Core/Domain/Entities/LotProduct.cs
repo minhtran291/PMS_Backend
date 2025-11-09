@@ -30,7 +30,7 @@ namespace PMS.Core.Domain.Entities
         public int ProductID { get; set; }
 
         [ForeignKey("WarehouseLocation")]
-        public  int WarehouselocationID { get; set; }
+        public int WarehouselocationID { get; set; }
 
         //public string? note {  get; set; }
         public DateTime LastCheckedDate {  get; set; }
