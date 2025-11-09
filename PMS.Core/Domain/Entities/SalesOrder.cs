@@ -18,7 +18,7 @@ namespace PMS.Core.Domain.Entities
         public SalesOrderStatus Status { get; set; }
         public decimal TotalPrice { get; set; }
         public bool IsDeposited { get; set; }
-
+        //public decimal DepositAmount { get; set; }
         public virtual ICollection<SalesOrderDetails> SalesOrderDetails { get; set; } = [];
         //public virtual ICollection<CustomerDept> CustomerDepts { get; set; } = new List<CustomerDept>();
         public virtual SalesQuotation SalesQuotation { get; set; } = null!;

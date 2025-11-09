@@ -108,6 +108,7 @@ namespace PMS.API.Controllers
             });
         }
 
+
         /// <summary>
         /// POST: https://localhost:7213/api/SalesOrder/confirm-payment
         /// (Xác nhận THỦ CÔNG) đổi trạng thái Pending -> Deposited/Paid (Deposited = 4,Paid = 5,).

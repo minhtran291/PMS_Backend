@@ -307,8 +307,11 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                if (order.Status != SalesOrderStatus.Send)
-                    return new ServiceResult<VnPayInitResponseDTO> { StatusCode = 400, Message = "Chỉ khởi tạo thanh toán cho đơn ở trạng thái đã gửi." };
+                if (order.Status != SalesOrderStatus.Approved)
+                    return new ServiceResult<VnPayInitResponseDTO> { 
+                        StatusCode = 400, 
+                        Message = "Chỉ khởi tạo thanh toán cho đơn ở trạng thái đã được chấp thuận." 
+                    };
 
 
                 decimal amount = paymentType.ToLower() == "deposit"
@@ -689,7 +692,7 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        //Generate SalesOrderId
+        //Generate SalesOrderCode
         private static string GenerateSalesOrderCode()
             => $"SO{DateTime.Now:yyyyMMddHHmmssfff}";
 
