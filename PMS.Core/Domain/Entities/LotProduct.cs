@@ -23,21 +23,22 @@ namespace PMS.Core.Domain.Entities
         public DateTime ExpiredDate { get; set; }
 
         public int LotQuantity { get; set; }
-        public int Diff {  get; set; }
+        public int Diff { get; set; }
         [ForeignKey("Supplier")]
         public int SupplierID { get; set; }
         [ForeignKey("Product")]
         public int ProductID { get; set; }
 
         [ForeignKey("WarehouseLocation")]
-        public  int WarehouselocationID { get; set; }
+        public int WarehouselocationID { get; set; }
 
-        public string? note {  get; set; }
-        public DateTime lastedUpdate {  get; set; }
-        public string? inventoryBy {  get; set; }
+        public string? note { get; set; }
+        public DateTime lastedUpdate { get; set; }
+        public string? inventoryBy { get; set; }
         public virtual Product Product { get; set; } = null!;
         public virtual Supplier Supplier { get; set; } = null!;
         public virtual ICollection<SalesQuotaionDetails> SalesQuotaionDetails { get; set; } = [];
         public virtual WarehouseLocation WarehouseLocation { get; set; } = null!;
+        public virtual ICollection<SalesOrderDetails> SalesOrderDetails { get; set; } = [];
     }
 }
