@@ -1,4 +1,5 @@
 ﻿using PMS.Application.DTOs.PO;
+using PMS.Application.DTOs.Product;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Core.Domain.Constant;
@@ -14,10 +15,15 @@ namespace PMS.Application.Services.Warehouse
         Task<ServiceResult<object>> DeleteWarehouseAsync(int warehouseId);
         Task<ServiceResult<List<LotProductDTO>>> GetAllLotByWHLID(int whlcid);
         Task<ServiceResult<LotProductDTO>> UpdateSalePriceAsync(int whlcid, int lotid, decimal newSalePrice);
-        Task<ServiceResult<List<LotProductDTO>>> UpdatePhysicalInventoryAsync(string userId, int whlcid, List<PhysicalInventoryUpdateDTO> updates);
 
-        Task<ServiceResult<IEnumerable<LotProductDTO>>> ReportPhysicalInventoryByMonth(int month, int year);
-        Task<byte[]> GeneratePhysicalInventoryReportExcelAsync(int month, int year, string userId);
+        Task<ServiceResult<int>> CreateInventorySessionAsync(string userId, int whlcid);
 
+        Task<ServiceResult<bool>> UpdateInventoryBatchAsync(string userId, UpdateInventoryBatchDto input);
+
+        Task<ServiceResult<IEnumerable<InventoryCompareDTO>>> GetInventoryComparisonAsync(int sessionId);
+
+        Task<ServiceResult<int>> CompleteInventorySessionAsync(int sessionId, string userId);
+        Task<ServiceResult<IEnumerable<InventoryHistoryDTO>>> GetHistoriesBySessionIdAsync(int sessionId);
+        Task<ServiceResult<byte[]>> ExportInventorySessionToExcelAsync(string userId, int sessionId);
     }
 }
