@@ -876,6 +876,11 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(p => p.SalesOrderDetails)
                     .HasForeignKey(d => d.ProductId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(d => d.LotProduct)
+                    .WithMany(lp => lp.SalesOrderDetails)
+                    .HasForeignKey(d => d.LotId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<CustomerDept>(entity =>

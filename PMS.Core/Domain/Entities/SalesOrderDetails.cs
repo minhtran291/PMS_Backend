@@ -10,6 +10,7 @@ namespace PMS.Core.Domain.Entities
     public class SalesOrderDetails
     {
         public int SalesOrderId { get; set; }
+        public int LotId { get; set; }
         public int ProductId { get; set; } 
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
@@ -17,5 +18,6 @@ namespace PMS.Core.Domain.Entities
 
         public virtual SalesOrder SalesOrder { get; set; } = null!;
         public virtual Product Product { get; set; } = null!;
+        public virtual LotProduct LotProduct { get; set; } = null!;
     }
 }
