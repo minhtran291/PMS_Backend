@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Ocsp;
 using PMS.Application.DTOs.SalesOrder;
 using PMS.Application.DTOs.VnPay;
 using PMS.Application.Services.Base;
@@ -18,7 +19,7 @@ namespace PMS.Application.Services.SalesOrder
         IMapper mapper,
         ILogger<SalesOrderService> logger,
         INotificationService notificationService,
-        IVnPayService vnPayService) : Service(unitOfWork, mapper) //ISalesOrderService
+        IVnPayService vnPayService) : Service(unitOfWork, mapper), ISalesOrderService
     {
         private readonly ILogger<SalesOrderService> _logger = logger;
         private readonly INotificationService _noti = notificationService;
@@ -27,130 +28,203 @@ namespace PMS.Application.Services.SalesOrder
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
 
-        //public async Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId)
-        //{
-        //    try
-        //    {
-        //        var order = await _unitOfWork.SalesOrder.Query()
-        //            .FirstOrDefaultAsync(o => o.OrderId == salesOrderId);
-
-        //        if (order == null)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy đơn hàng",
-        //                Data = false
-        //            };
-        //        }
-
-        //        if (order.Status != SalesOrderStatus.Send)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã được gửi đi.",
-        //                Data = false
-        //            };
-        //        }
-
-        //        order.Status = SalesOrderStatus.Paid;
-        //        order.DepositAmount = order.OrderTotalPrice;
-
-        //        _unitOfWork.SalesOrder.Update(order);
-        //        await _unitOfWork.CommitAsync();
-
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Xác nhận thanh toán thành công.",
-        //            Data = true
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi ConfirmPaymentAsync");
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Lỗi xác nhận thanh toán",
-        //            Data = false
-        //        };
-        //    }
-        //}
-
-        public async Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(int salesQuotationId, string createdBy)
+        public async Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId)
         {
             try
             {
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+
+                if (order == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy đơn hàng",
+                        Data = false
+                    };
+                }
+
+                if (order.Status != SalesOrderStatus.Send)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã được gửi đi.",
+                        Data = false
+                    };
+                }
+
+                order.Status = SalesOrderStatus.Paid;
+                //order.DepositAmount = order.TotalPrice;
+
+                _unitOfWork.SalesOrder.Update(order);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Xác nhận thanh toán thành công.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ConfirmPaymentAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi xác nhận thanh toán",
+                    Data = false
+                };
+            }
+        }
+
+        public async Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(CreateOrderFromQuotationRequestDTO req)
+        {
+            try
+            {
+                if (req == null || string.IsNullOrWhiteSpace(req.CreatedBy) || req.Items == null || req.Items.Count == 0)
+                {
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Payload không hợp lệ (thiếu CreatedBy hoặc danh sách Items).",
+                        Data = null
+                    };
+                }
+
                 var sq = await _unitOfWork.SalesQuotation.Query()
-                    .Include(x => x.SalesQuotaionDetails)
+                    .Include(q => q.SalesQuotaionDetails)
                         .ThenInclude(d => d.Product)
-                    .FirstOrDefaultAsync(x => x.Id == salesQuotationId);
+                    .Include(q => q.SalesQuotaionDetails)
+                        .ThenInclude(d => d.LotProduct)
+                    .FirstOrDefaultAsync(q => q.Id == req.SalesQuotationId);
 
                 if (sq == null)
                 {
                     return new ServiceResult<object>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy SalesQuotation",
+                        Message = "Không tìm thấy SalesQuotation.",
                         Data = null
                     };
                 }
 
-                var so = new Core.Domain.Entities.SalesOrder
+                if (sq.ExpiredDate < DateTime.Now.Date)
+                {
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesQuotation đã hết hạn. Không thể tạo đơn nháp.",
+                        Data = null
+                    };
+                }
+
+                var sqDetailByProduct = sq.SalesQuotaionDetails
+                    .ToDictionary(d => d.ProductId, d => d);
+
+                foreach (var it in req.Items)
+                {
+                    if (!sqDetailByProduct.ContainsKey(it.ProductId))
+                    {
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"ProductId {it.ProductId} không thuộc SalesQuotation.",
+                            Data = null
+                        };
+                    }
+                    if (it.Quantity < 0)
+                    {
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"Quantity cho ProductId {it.ProductId} không hợp lệ.",
+                            Data = null
+                        };
+                    }
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                var order = new Core.Domain.Entities.SalesOrder
                 {
                     SalesQuotationId = sq.Id,
-                    CreateBy = createdBy,
+                    CreateBy = req.CreatedBy,
                     CreateAt = DateTime.Now,
-                    Status = SalesOrderStatus.Draft
+                    Status = SalesOrderStatus.Draft,
+                    IsDeposited = false,
+                    TotalPrice = 0m
                 };
 
-                await _unitOfWork.SalesOrder.AddAsync(so);
-                await _unitOfWork.CommitAsync();
+                await _unitOfWork.SalesOrder.AddAsync(order);
+                await _unitOfWork.CommitAsync(); 
 
-                foreach (var qd in sq.SalesQuotaionDetails)
+                var detailEntities = new List<SalesOrderDetails>();
+                foreach (var it in req.Items)
                 {
-                    var sod = new SalesOrderDetails
-                    {
-                        SalesOrderId = so.SalesOrderId,
-                        ProductId = qd.ProductId,
-                        Quantity = 0
-                    };
-                    await _unitOfWork.SalesOrderDetails.AddAsync(sod);
-                }
-                await _unitOfWork.CommitAsync();
+                    var sqd = sqDetailByProduct[it.ProductId];
+                    var unitPrice = it.UnitPrice
+                        ?? (sqd.LotProduct != null ? sqd.LotProduct.SalePrice : 0m);
 
+                    // Calculating SubTotal
+                    var sub = (it.Quantity > 0) ? unitPrice * it.Quantity : 0m;
+
+                    detailEntities.Add(new SalesOrderDetails
+                    {
+                        SalesOrderId = order.SalesOrderId,
+                        ProductId = it.ProductId,
+                        Quantity = it.Quantity,
+                        UnitPrice = unitPrice,
+                        SubTotalPrice = sub
+                    });
+                }
+
+                if (detailEntities.Count > 0)
+                    await _unitOfWork.SalesOrderDetails.AddRangeAsync(detailEntities);
+
+                // Calculating TotalPrice header
+                order.TotalPrice = detailEntities.Sum(d => d.SubTotalPrice);
+
+                _unitOfWork.SalesOrder.Update(order);
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                // Response Data for FE
                 var data = new
                 {
-                    so.SalesOrderId,
-                    so.SalesQuotationId,
-                    so.CreateBy,
-                    so.CreateAt,
-                    so.Status,
-                    Details = sq.SalesQuotaionDetails.Select(d => new
+                    order.SalesOrderId,
+                    order.SalesQuotationId,
+                    order.CreateBy,
+                    order.CreateAt,
+                    order.Status,
+                    order.TotalPrice,
+                    Details = detailEntities.Select(d => new
                     {
                         d.ProductId,
-                        ProductName = d.Product.ProductName,
-                        Quantity = 0,
-                        UnitPrice = d.SalesPrice
+                        ProductName = sqDetailByProduct[d.ProductId].Product.ProductName,
+                        d.Quantity,
+                        d.UnitPrice,
+                        d.SubTotalPrice
                     }).ToList()
                 };
 
                 return new ServiceResult<object>
                 {
                     StatusCode = 201,
-                    Message = "Tạo SalesOrder Draft thành công",
+                    Message = "Tạo SalesOrder Draft từ SalesQuotation thành công.",
                     Data = data
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi CreateDraftFromSalesQuotationAsync");
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Lỗi CreateDraftFromSalesQuotationAsync({SalesQuotationId})", req?.SalesQuotationId);
                 return new ServiceResult<object>
                 {
                     StatusCode = 500,
-                    Message = "Có lỗi xảy ra khi tạo bản nháp đơn hàng",
+                    Message = "Có lỗi xảy ra khi tạo bản nháp đơn hàng.",
                     Data = null
                 };
             }
@@ -269,7 +343,7 @@ namespace PMS.Application.Services.SalesOrder
         //    }
         //}
 
-        public async Task<ServiceResult<object>> GetOrderDetailsAsync(int orderId)
+        public async Task<ServiceResult<object>> GetOrderDetailsAsync(int SalesOrderId)
         {
             try
             {
@@ -278,7 +352,7 @@ namespace PMS.Application.Services.SalesOrder
                         .ThenInclude(l => l.Product)
                     .Include(q => q.SalesQuotation)
                         .ThenInclude(d => d.SalesQuotaionDetails)
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == SalesOrderId);
 
                 if (order == null)
                 {
@@ -328,7 +402,7 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<IEnumerable<object>>> ListOrdersAsync(string userId)
+        public async Task<ServiceResult<IEnumerable<object>>> ListCustomerSalesOrdersAsync(string userId)
         {
             try
             {
@@ -508,93 +582,81 @@ namespace PMS.Application.Services.SalesOrder
         }
 
         //// customer update sales order when status is draft
-        //public async Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(int orderId, List<DraftSalesOrderDTO> items)
-        //{
-        //    try
-        //    {
-        //        var so = await _unitOfWork.SalesOrder.Query()
-        //            .Include(o => o.SalesOrderDetails)
-        //            .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
+        public async Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(int SalesOrderId, List<SalesOrderDetailsUpdateDTO> items)
+        {
+            try
+            {
+                if (items == null || items.Count == 0)
+                    return new ServiceResult<bool> { StatusCode = 400, Message = "Danh sách cập nhật rỗng.", Data = false };
 
-        //        if (so == null)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy SalesOrder",
-        //                Data = false
-        //            };
-        //        }
+                var so = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesOrderDetails)
+                        .ThenInclude(d => d.Product)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == SalesOrderId);
 
-        //        if (so.Status != SalesOrderStatus.Draft)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Chỉ được cập nhật số lượng khi đơn ở trạng thái Draft",
-        //                Data = false
-        //            };
-        //        }
+                if (so == null)
+                    return new ServiceResult<bool> { StatusCode = 404, Message = "Không tìm thấy SalesOrder.", Data = false };
 
-        //        if (items == null || items.Count == 0)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Danh sách cập nhật rỗng",
-        //                Data = false
-        //            };
-        //        }
+                if (so.Status != SalesOrderStatus.Draft)
+                    return new ServiceResult<bool> { StatusCode = 400, Message = "Chỉ được cập nhật khi đơn ở trạng thái Draft.", Data = false };
 
-        //        var mapQty = items.ToDictionary(x => x.ProductId, x => x.Quantity);
+                var qtyMap = items.ToDictionary(x => x.ProductId, x => x.Quantity);
 
-        //        foreach (var d in so.SalesOrderDetails)
-        //        {
-        //            if (d.ProductId != null && mapQty.TryGetValue(d.ProductId, out var newQty))
-        //            {
-        //                d.Quantity = newQty < 0 ? 0 : newQty;
-        //                decimal remain = d.Quantity;
-        //                decimal accPrice = d.UnitPrice;
+                await _unitOfWork.BeginTransactionAsync();
 
-        //                var lots = await _unitOfWork.LotProduct.Query()
-        //                    .Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
-        //                    .OrderBy(l => l.ExpiredDate)
-        //                    .Select(l => new { l.LotQuantity, l.SalePrice })
-        //                    .ToListAsync();
+                foreach (var d in so.SalesOrderDetails)
+                {
+                    if (!qtyMap.TryGetValue(d.ProductId, out var newQty)) continue;
+                    if (newQty < 0) newQty = 0;
 
-        //                foreach (var lot in lots)
-        //                {
-        //                    if (remain <= 0) break;
-        //                    var pick = Math.Min(remain, lot.LotQuantity);
-        //                    accPrice += pick * lot.SalePrice;
-        //                    remain -= pick;
-        //                }
+                    d.Quantity = newQty;
 
-        //                d.UnitPrice = (d.Quantity > 0)
-        //                    ? (accPrice / Math.Max(d.Quantity, 1))
-        //                    : 0m;
-        //            }
-        //        }
+                    decimal picked = 0m, costSum = 0m;
 
-        //        so.TotalPrice = so.SalesOrderDetails.Sum(x => x.UnitPrice * x.Quantity);
+                    if (newQty > 0)
+                    {
+                        var lots = await _unitOfWork.LotProduct.Query()
+                            .Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
+                            .OrderBy(l => l.ExpiredDate)
+                            .Select(l => new { l.LotQuantity, l.SalePrice })
+                            .ToListAsync();
 
-        //        _unitOfWork.SalesOrder.Update(so);
-        //        await _unitOfWork.CommitAsync();
+                        var remain = (decimal)newQty;
+                        foreach (var lot in lots)
+                        {
+                            if (remain <= 0) break;
+                            var take = Math.Min(remain, (decimal)lot.LotQuantity);
+                            picked += take;
+                            costSum += take * lot.SalePrice;
+                            remain -= take;
+                        }
+                    }
+
+                    d.UnitPrice = picked > 0 ? Math.Round(costSum / picked, 2, MidpointRounding.AwayFromZero) : 0m;
+                    d.SubTotalPrice = Math.Round(d.UnitPrice * d.Quantity, 2, MidpointRounding.AwayFromZero);
+                }
+
+                so.TotalPrice = Math.Round(so.SalesOrderDetails.Sum(x => x.SubTotalPrice), 2, MidpointRounding.AwayFromZero);
+
+                _unitOfWork.SalesOrder.Update(so);
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
-                    Message = "Cập nhật số lượng bản nháp thành công",
+                    Message = "Cập nhật số lượng bản nháp thành công.",
                     Data = true
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync");
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync({SalesOrderId})", SalesOrderId);
                 return new ServiceResult<bool>
                 {
                     StatusCode = 500,
-                    Message = "Có lỗi khi cập nhật số lượng bản nháp",
+                    Message = "Có lỗi khi cập nhật bản nháp.",
                     Data = false
                 };
             }
@@ -604,5 +666,74 @@ namespace PMS.Application.Services.SalesOrder
         private static string GenerateSalesOrderId()
             => $"SO{DateTime.Now:yyyyMMddHHmmssfff}";
 
+        public async Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int SalesQuotationId)
+        {
+            try
+            {
+                var dto = await _unitOfWork.SalesQuotation.Query()
+                    .Where(q => q.Id == SalesQuotationId)
+                    .Select(q => new SalesQuotationResponseDTO
+                    {
+                        Id = q.Id,
+                        QuotationCode = q.QuotationCode,
+                        QuotationDate = q.QuotationDate,
+                        ExpiredDate = q.ExpiredDate,
+                        Status = q.Status,
+                        DepositPercent = q.DepositPercent,
+                        DepositDueDays = q.DepositDueDays,
+                        RsqId = q.RsqId,
+                        SsId = q.SsId,
+                        SqnId = q.SqnId,
+                        Notes = q.Notes,
+
+                        Details = q.SalesQuotaionDetails
+                            .Select(d => new SalesQuotationDetailsResponseDTO
+                            {
+                                SalesQuotationDetailsId = d.Id,
+                                ProductId = d.ProductId,
+                                ProductName = d.Product.ProductName,
+                                ProductUnit = d.Product.Unit,
+                                ProductDescription = d.Product.ProductDescription,
+
+                                LotId = d.LotId,
+                                UnitPrice = d.LotProduct != null ? (decimal?)d.LotProduct.SalePrice : null,
+                                LotInputDate = d.LotProduct != null ? (DateTime?)d.LotProduct.InputDate : null,
+                                LotExpiredDate = d.LotProduct != null ? (DateTime?)d.LotProduct.ExpiredDate : null,
+
+                                TaxId = d.TaxId,
+                                Note = d.Note
+                            })
+                            .ToList()
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (dto == null)
+                {
+                    return new ServiceResult<SalesQuotationResponseDTO>
+                    {
+                        StatusCode = 404,
+                        Message = $"Không tìm thấy SalesQuotation Id = {SalesQuotationId}",
+                        Data = null
+                    };
+                }
+
+                return new ServiceResult<SalesQuotationResponseDTO>
+                {
+                    StatusCode = 200,
+                    Message = "OK",
+                    Data = dto
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi GetQuotationInfo({SalesQuotationId})", SalesQuotationId);
+                return new ServiceResult<SalesQuotationResponseDTO>
+                {
+                    StatusCode = 500,
+                    Message = "Đã xảy ra lỗi khi lấy thông tin báo giá.",
+                    Data = null
+                };
+            }
+        }
     }
 }

@@ -15,25 +15,23 @@ namespace PMS.Application.Services.SalesOrder
         //Sales Order Draft
         Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int SalesQuotationId);
         Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(int salesQuotationId, string createdBy);
-        Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(string orderId, List<DraftSalesOrderDTO> items);
+        Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(int SalesOrderId, List<SalesOrderDetailsUpdateDTO> items);
         Task<ServiceResult<bool>> DeleteDraftAsync(string orderId);
 
         //Send Order and check current product quantity
-        //Task<ServiceResult<object>> SendOrderAsync(string orderId);
+        Task<ServiceResult<object>> SendOrderAsync(string orderId);
 
         //Customer mark is receipted of goods
-        //Task<ServiceResult<bool>> MarkCompleteAsync(string orderId);
-
-        //Customer input quantity
-        //Task<ServiceResult<FEFOPlanResponseDTO>> BuildFefoPlanAsync(FEFOPlanRequestDTO request);
+        Task<ServiceResult<bool>> MarkCompleteAsync(string orderId);
 
         //Create payment
-        //Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync(string orderId, string paymentType);
+        Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync(string orderId, string paymentType);
 
         //Sale Staff confirm payment manual
-        //Task<ServiceResult<bool>> ConfirmPaymentAsync(string salesOrderId);
+        Task<ServiceResult<bool>> ConfirmPaymentAsync(string salesOrderId);
+
         //View Sales Orders
-        //Task<ServiceResult<object>> GetOrderDetailsAsync(string orderId);
-        //Task<ServiceResult<IEnumerable<object>>> ListOrdersAsync(string userId);
+        Task<ServiceResult<object>> GetOrderDetailsAsync(string SalesOrderId);
+        Task<ServiceResult<IEnumerable<object>>> ListOrdersAsync(string userId);
     }
 }
