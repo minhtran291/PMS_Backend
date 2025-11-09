@@ -18,7 +18,7 @@ namespace PMS.Application.Services.SalesOrder
         IMapper mapper,
         ILogger<SalesOrderService> logger,
         INotificationService notificationService,
-        IVnPayService vnPayService) : Service(unitOfWork, mapper), ISalesOrderService
+        IVnPayService vnPayService) : Service(unitOfWork, mapper) //ISalesOrderService
     {
         private readonly ILogger<SalesOrderService> _logger = logger;
         private readonly INotificationService _noti = notificationService;
@@ -26,105 +26,6 @@ namespace PMS.Application.Services.SalesOrder
         private readonly IMapper _mapper = mapper;
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
-        //public async Task<ServiceResult<FEFOPlanResponseDTO>> BuildFefoPlanAsync(FEFOPlanRequestDTO request)
-        //{
-        //    try
-        //    {
-        //        var quotation = await _unitOfWork.Quotation.Query()
-        //            .Include(q => q.QuotationDetails)
-        //            .FirstOrDefaultAsync(q => q.QID == request.QID);
-
-        //        if (quotation == null)
-        //        {
-        //            return new ServiceResult<FEFOPlanResponseDTO>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy báo giá",
-        //                Data = null
-        //            };
-        //        }
-
-        //        var plan = new FEFOPlanResponseDTO { QID = quotation.QID };
-        //        var lowStockList = new List<string>();
-
-        //        foreach (var item in request.Items)
-        //        {
-        //            var lots = await _unitOfWork.LotProduct.Query()
-        //                .Include(l => l.Supplier)
-        //                .Include(l => l.Product)
-        //                .Where(l => l.ProductID == item.ProductId && l.ExpiredDate > DateTime.Now)
-        //                .OrderBy(l => l.ExpiredDate)
-        //                .ToListAsync();
-
-        //            decimal remaining = item.Quantity;
-        //            var productPlan = new FEFOProductPlanDTO
-        //            {
-        //                ProductId = item.ProductId,
-        //                ProductName = lots.FirstOrDefault()?.Product.ProductName ?? "N/A",
-        //                RequestedQuantity = item.Quantity
-        //            };
-
-        //            foreach (var lot in lots)
-        //            {
-        //                if (remaining <= 0) break;
-        //                var available = lot.LotQuantity;
-        //                var pickQty = Math.Min(available, remaining);
-        //                remaining -= pickQty;
-
-        //                productPlan.Picks.Add(new LotPickDTO
-        //                {
-        //                    Lot = new FEFOLotDTO
-        //                    {
-        //                        LotId = lot.LotID,
-        //                        ProductId = lot.ProductID,
-        //                        ProductName = lot.Product.ProductName,
-        //                        InputDate = lot.InputDate,
-        //                        ExpiredDate = lot.ExpiredDate,
-        //                        AvailableQuantity = lot.LotQuantity,
-        //                        UnitPrice = lot.SalePrice,
-        //                        SupplierId = lot.SupplierID,
-        //                        SupplierName = lot.Supplier.Name
-        //                    },
-        //                    PickQuantity = pickQty
-        //                });
-        //            }
-
-        //            if (remaining > 0)
-        //                lowStockList.Add($"{productPlan.ProductName} (thiếu {remaining})");
-
-        //            plan.Products.Add(productPlan);
-        //        }
-
-        //        if (lowStockList.Any())
-        //        {
-        //            var msg = string.Join("; ", lowStockList);
-        //            await _noti.SendNotificationToRolesAsync(
-        //                "system",
-        //                ["PURCHASES_STAFF"],
-        //                "Thiếu hàng trong kho",
-        //                $"FEFO phát hiện sản phẩm thiếu: {msg}",
-        //                Core.Domain.Enums.NotificationType.Warning
-        //            );
-        //        }
-
-        //        return new ServiceResult<FEFOPlanResponseDTO>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Tính FEFO thành công",
-        //            Data = plan
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi khi tính FEFO");
-        //        return new ServiceResult<FEFOPlanResponseDTO>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Lỗi trong quá trình xử lý FEFO",
-        //            Data = null
-        //        };
-        //    }
-        //}
 
         //public async Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId)
         //{
@@ -178,145 +79,142 @@ namespace PMS.Application.Services.SalesOrder
         //    }
         //}
 
-        //public async Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(int salesQuotationId, string createdBy)
-        //{
-        //    try
-        //    {
-        //        var sq = await _unitOfWork.SalesQuotation.Query()
-        //            .Include(x => x.SalesQuotaionDetails)
-        //                .ThenInclude(d => d.Product)
-        //            .FirstOrDefaultAsync(x => x.Id == salesQuotationId);
+        public async Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(int salesQuotationId, string createdBy)
+        {
+            try
+            {
+                var sq = await _unitOfWork.SalesQuotation.Query()
+                    .Include(x => x.SalesQuotaionDetails)
+                        .ThenInclude(d => d.Product)
+                    .FirstOrDefaultAsync(x => x.Id == salesQuotationId);
 
-        //        if (sq == null)
-        //        {
-        //            return new ServiceResult<object>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy SalesQuotation",
-        //                Data = null
-        //            };
-        //        }
+                if (sq == null)
+                {
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesQuotation",
+                        Data = null
+                    };
+                }
 
-        //        var so = new Core.Domain.Entities.SalesOrder
-        //        {
-        //            SalesQuotationId = sq.Id,
-        //            CreateBy = createdBy,
-        //            CreateAt = DateTime.Now,
-        //            Status = SalesOrderStatus.Draft,
-        //            DepositAmount = 0,
-        //            OrderTotalPrice = 0
-        //        };
+                var so = new Core.Domain.Entities.SalesOrder
+                {
+                    SalesQuotationId = sq.Id,
+                    CreateBy = createdBy,
+                    CreateAt = DateTime.Now,
+                    Status = SalesOrderStatus.Draft
+                };
 
-        //        await _unitOfWork.SalesOrder.AddAsync(so);
-        //        await _unitOfWork.CommitAsync();
+                await _unitOfWork.SalesOrder.AddAsync(so);
+                await _unitOfWork.CommitAsync();
 
-        //        foreach (var qd in sq.SalesQuotaionDetails)
-        //        {
-        //            var sod = new SalesOrderDetails
-        //            {
-        //                SalesOrderId = so.OrderId,
-        //                LotId = null,                
-        //                ProductId = qd.ProductId,     
-        //                Quantity = 0,            
-        //                UnitPrice = 0     
-        //            };
-        //            await _unitOfWork.SalesOrderDetails.AddAsync(sod);
-        //        }
-        //        await _unitOfWork.CommitAsync();
+                foreach (var qd in sq.SalesQuotaionDetails)
+                {
+                    var sod = new SalesOrderDetails
+                    {
+                        SalesOrderId = so.SalesOrderId,
+                        ProductId = qd.ProductId,
+                        Quantity = 0
+                    };
+                    await _unitOfWork.SalesOrderDetails.AddAsync(sod);
+                }
+                await _unitOfWork.CommitAsync();
 
-        //        var data = new
-        //        {
-        //            so.OrderId,
-        //            so.SalesQuotationId,
-        //            so.CreateBy,
-        //            so.CreateAt,
-        //            so.Status,
-        //            so.OrderTotalPrice,
-        //            Details = sq.SalesQuotaionDetails.Select(d => new
-        //            {
-        //                d.ProductId,
-        //                ProductName = d.Product.ProductName,
-        //                Quantity = 0,
-        //                UnitPrice = 0m
-        //            }).ToList()
-        //        };
+                var data = new
+                {
+                    so.SalesOrderId,
+                    so.SalesQuotationId,
+                    so.CreateBy,
+                    so.CreateAt,
+                    so.Status,
+                    Details = sq.SalesQuotaionDetails.Select(d => new
+                    {
+                        d.ProductId,
+                        ProductName = d.Product.ProductName,
+                        Quantity = 0,
+                        UnitPrice = d.SalesPrice
+                    }).ToList()
+                };
 
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 201,
-        //            Message = "Tạo SalesOrder Draft thành công",
-        //            Data = data
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi CreateDraftFromSalesQuotationAsync");
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi xảy ra khi tạo bản nháp đơn hàng",
-        //            Data = null
-        //        };
-        //    }
-        //}
+                return new ServiceResult<object>
+                {
+                    StatusCode = 201,
+                    Message = "Tạo SalesOrder Draft thành công",
+                    Data = data
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi CreateDraftFromSalesQuotationAsync");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi xảy ra khi tạo bản nháp đơn hàng",
+                    Data = null
+                };
+            }
+        }
 
-        //public async Task<ServiceResult<bool>> DeleteDraftAsync(string orderId)
-        //{
-        //    try
-        //    {
-        //        var so = await _unitOfWork.SalesOrder.Query()
-        //            .Include(o => o.SalesOrderDetails)
-        //            .FirstOrDefaultAsync(o => o.OrderId == orderId);
 
-        //        if (so == null)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy SalesOrder",
-        //                Data = false
-        //            };
-        //        }
 
-        //        if (so.Status != SalesOrderStatus.Draft)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Chỉ được xoá đơn ở trạng thái Draft",
-        //                Data = false
-        //            };
-        //        }
+        public async Task<ServiceResult<bool>> DeleteDraftAsync(int orderId)
+        {
+            try
+            {
+                var so = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesOrderDetails)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
 
-        //        await _unitOfWork.BeginTransactionAsync();
+                if (so == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesOrder",
+                        Data = false
+                    };
+                }
 
-        //        if (so.SalesOrderDetails != null && so.SalesOrderDetails.Count > 0)
-        //            _unitOfWork.SalesOrderDetails.RemoveRange(so.SalesOrderDetails);
+                if (so.Status != SalesOrderStatus.Draft)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được xoá đơn ở trạng thái Draft",
+                        Data = false
+                    };
+                }
 
-        //        _unitOfWork.SalesOrder.Remove(so);
+                await _unitOfWork.BeginTransactionAsync();
 
-        //        await _unitOfWork.CommitAsync();
-        //        await _unitOfWork.CommitTransactionAsync();
+                if (so.SalesOrderDetails != null && so.SalesOrderDetails.Count > 0)
+                    _unitOfWork.SalesOrderDetails.RemoveRange(so.SalesOrderDetails);
 
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Xoá bản nháp đơn hàng thành công",
-        //            Data = true
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await _unitOfWork.RollbackTransactionAsync();
-        //        _logger.LogError(ex, "Lỗi DeleteDraftAsync");
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi khi xoá bản nháp đơn hàng",
-        //            Data = false
-        //        };
-        //    }
-        //}
+                _unitOfWork.SalesOrder.Remove(so);
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Xoá bản nháp đơn hàng thành công",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Lỗi DeleteDraftAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi xoá bản nháp đơn hàng",
+                    Data = false
+                };
+            }
+        }
 
         //public async Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync(string orderId, string paymentType)
         //{
@@ -371,246 +269,243 @@ namespace PMS.Application.Services.SalesOrder
         //    }
         //}
 
-        //public async Task<ServiceResult<object>> GetOrderDetailsAsync(string orderId)
-        //{
-        //    try
-        //    {
-        //        var order = await _unitOfWork.SalesOrder.Query()
-        //            .Include(o => o.SalesOrderDetails)
-        //                .ThenInclude(d => d.Lot)
-        //                    .ThenInclude(l => l.Product)
-        //            .Include(o => o.SalesOrderDetails)
-        //                .ThenInclude(d => d.Lot)
-        //                    .ThenInclude(l => l.Supplier)
-        //            .FirstOrDefaultAsync(o => o.OrderId == orderId);
+        public async Task<ServiceResult<object>> GetOrderDetailsAsync(int orderId)
+        {
+            try
+            {
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesOrderDetails)
+                        .ThenInclude(l => l.Product)
+                    .Include(q => q.SalesQuotation)
+                        .ThenInclude(d => d.SalesQuotaionDetails)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
 
-        //        if (order == null)
-        //        {
-        //            return new ServiceResult<object>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy đơn hàng",
-        //                Data = null
-        //            };
-        //        }
+                if (order == null)
+                {
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy đơn hàng",
+                        Data = null
+                    };
+                }
 
-        //        var data = new
-        //        {
-        //            order.OrderId,
-        //            order.SalesQuotationId,
-        //            order.CreateBy,
-        //            order.CreateAt,
-        //            order.Status,
-        //            order.OrderTotalPrice,
-        //            order.DepositAmount,
-        //            Details = order.SalesOrderDetails.Select(d => new
-        //            {
-        //                d.LotId,
-        //                d.Quantity,
-        //                d.UnitPrice,
-        //                ProductName = d.Lot.Product.ProductName,
-        //                SupplierName = d.Lot.Supplier.Name,
-        //                ExpiredDate = d.Lot.ExpiredDate
-        //            })
-        //        };
+                var data = new
+                {
+                    order. SalesOrderId,
+                    order.SalesQuotationId,
+                    order.CreateBy,
+                    order.CreateAt,
+                    order.Status,
+                    order.TotalPrice,
+                    //order.DepositAmount,
+                    Details = order.SalesOrderDetails.Select(d => new
+                    {
+                        
+                        d.Quantity,
+                        d.UnitPrice,
+                        ProductName = d.Product.ProductName,
+                        ExpiredDate = d.SalesOrder.SalesQuotation.ExpiredDate
+                    })
+                };
 
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Lấy chi tiết đơn hàng thành công",
-        //            Data = data
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi khi lấy chi tiết đơn hàng");
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi xảy ra khi lấy chi tiết đơn hàng",
-        //            Data = null
-        //        };
-        //    }
-        //}
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Lấy chi tiết đơn hàng thành công",
+                    Data = data
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi lấy chi tiết đơn hàng");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi xảy ra khi lấy chi tiết đơn hàng",
+                    Data = null
+                };
+            }
+        }
 
-        //public async Task<ServiceResult<IEnumerable<object>>> ListOrdersAsync(string userId)
-        //{
-        //    try
-        //    {
-        //        var orders = await _unitOfWork.SalesOrder.Query()
-        //            .Where(o => o.CreateBy == userId)
-        //            .OrderByDescending(o => o.CreateAt)
-        //            .Select(o => new
-        //            {
-        //                o.OrderId,
-        //                o.Status,
-        //                o.OrderTotalPrice,
-        //                o.DepositAmount,
-        //                o.CreateAt
-        //            })
-        //            .ToListAsync();
+        public async Task<ServiceResult<IEnumerable<object>>> ListOrdersAsync(string userId)
+        {
+            try
+            {
+                var orders = await _unitOfWork.SalesOrder.Query()
+                    .Where(o => o.CreateBy == userId)
+                    .OrderByDescending(o => o.CreateAt)
+                    .Select(o => new
+                    {
+                        o.SalesOrderId,
+                        o.Status,
+                        o.TotalPrice,
+                        //o.DepositAmount,
+                        o.CreateAt
+                    })
+                    .ToListAsync();
 
-        //        return new ServiceResult<IEnumerable<object>>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Lấy danh sách đơn hàng thành công",
-        //            Data = orders
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi ListOrdersAsync");
-        //        return new ServiceResult<IEnumerable<object>>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi khi lấy danh sách đơn hàng",
-        //            Data = null
-        //        };
-        //    }
-        //}
+                return new ServiceResult<IEnumerable<object>>
+                {
+                    StatusCode = 200,
+                    Message = "Lấy danh sách đơn hàng thành công",
+                    Data = orders
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ListOrdersAsync");
+                return new ServiceResult<IEnumerable<object>>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi lấy danh sách đơn hàng",
+                    Data = null
+                };
+            }
+        }
 
         ////Customer mark order is complete
-        //public async Task<ServiceResult<bool>> MarkCompleteAsync(string orderId)
-        //{
-        //    try
-        //    {
-        //        var so = await _unitOfWork.SalesOrder.Query()
-        //            .FirstOrDefaultAsync(o => o.OrderId == orderId);
+        public async Task<ServiceResult<bool>> MarkCompleteAsync(int orderId)
+        {
+            try
+            {
+                var so = await _unitOfWork.SalesOrder.Query()
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
 
-        //        if (so == null)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy SalesOrder",
-        //                Data = false
-        //            };
-        //        }
+                if (so == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesOrder",
+                        Data = false
+                    };
+                }
 
-        //        if (so.Status != SalesOrderStatus.Paid && so.Status != SalesOrderStatus.Deposited)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Chỉ được hoàn tất đơn khi đã thanh toán (Paid/Deposited)",
-        //                Data = false
-        //            };
-        //        }
+                if (so.Status != SalesOrderStatus.Paid && so.Status != SalesOrderStatus.Deposited)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được hoàn tất đơn khi đã thanh toán (Paid/Deposited)",
+                        Data = false
+                    };
+                }
 
-        //        so.Status = SalesOrderStatus.Complete;
-        //        _unitOfWork.SalesOrder.Update(so);
-        //        await _unitOfWork.CommitAsync();
+                so.Status = SalesOrderStatus.Complete;
+                _unitOfWork.SalesOrder.Update(so);
+                await _unitOfWork.CommitAsync();
 
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Đơn hàng đã được đánh dấu hoàn tất",
-        //            Data = true
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi MarkCompleteAsync");
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi khi hoàn tất đơn hàng",
-        //            Data = false
-        //        };
-        //    }
-        //}
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Đơn hàng đã được đánh dấu hoàn tất",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi MarkCompleteAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi hoàn tất đơn hàng",
+                    Data = false
+                };
+            }
+        }
 
         ////Customer send the sales order draft
-        //public async  Task<ServiceResult<object>> SendOrderAsync(string orderId)
-        //{
-        //    try
-        //    {
-        //        var so = await _unitOfWork.SalesOrder.Query()
-        //            .Include(o => o.SalesOrderDetails)
-        //                .ThenInclude(d => d.Product)
-        //            .FirstOrDefaultAsync(o => o.OrderId == orderId);
+        public async Task<ServiceResult<object>> SendOrderAsync(int orderId)
+        {
+            try
+            {
+                var so = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesOrderDetails)
+                        .ThenInclude(d => d.Product)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
 
-        //        if (so == null)
-        //        {
-        //            return new ServiceResult<object>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy SalesOrder",
-        //                Data = null
-        //            };
-        //        }
+                if (so == null)
+                {
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesOrder",
+                        Data = null
+                    };
+                }
 
-        //        if (so.Status != SalesOrderStatus.Draft)
-        //        {
-        //            return new ServiceResult<object>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Chỉ được gửi đơn ở trạng thái Draft",
-        //                Data = null
-        //            };
-        //        }
+                if (so.Status != SalesOrderStatus.Draft)
+                {
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được gửi đơn ở trạng thái Draft",
+                        Data = null
+                    };
+                }
 
-        //        var warnings = new List<string>();
-        //        foreach (var d in so.SalesOrderDetails)
-        //        {
-        //            if (d.ProductId == null) continue;
+                var warnings = new List<string>();
+                foreach (var d in so.SalesOrderDetails)
+                {
+                    if (d.ProductId == null) continue;
 
-        //            var totalAvailable = await _unitOfWork.LotProduct.Query()
-        //                .Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
-        //                .SumAsync(l => (int?)l.LotQuantity) ?? 0;
+                    var totalAvailable = await _unitOfWork.LotProduct.Query()
+                        .Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
+                        .SumAsync(l => (int?)l.LotQuantity) ?? 0;
 
-        //            if (d.Quantity > totalAvailable)
-        //            {
-        //                var prodName = d.Product?.ProductName ?? $"Product {d.ProductId}";
-        //                var missing = d.Quantity - totalAvailable;
-        //                warnings.Add($"{prodName}: thiếu {missing}");
-        //            }
-        //        }
+                    if (d.Quantity > totalAvailable)
+                    {
+                        var prodName = d.Product?.ProductName ?? $"Product {d.ProductId}";
+                        var missing = d.Quantity - totalAvailable;
+                        warnings.Add($"{prodName}: thiếu {missing}");
+                    }
+                }
 
-        //        if (warnings.Count > 0)
-        //        {
-        //            var msg = string.Join("; ", warnings);
-        //            await _noti.SendNotificationToRolesAsync(
-        //                "system",
-        //                new List<string> { "PURCHASES_STAFF" },
-        //                "Thiếu hàng khi khách gửi SalesOrder",
-        //                $"Các mặt hàng thiếu/sắp hết: {msg}",
-        //                NotificationType.Warning
-        //            );
-        //        }
+                if (warnings.Count > 0)
+                {
+                    var msg = string.Join("; ", warnings);
+                    await _noti.SendNotificationToRolesAsync(
+                        "system",
+                        new List<string> { "PURCHASES_STAFF" },
+                        "Thiếu hàng khi khách gửi SalesOrder",
+                        $"Các mặt hàng thiếu/sắp hết: {msg}",
+                        NotificationType.Warning
+                    );
+                }
 
-        //        so.Status = SalesOrderStatus.Send;
-        //        _unitOfWork.SalesOrder.Update(so);
-        //        await _unitOfWork.CommitAsync();
+                so.Status = SalesOrderStatus.Send;
+                _unitOfWork.SalesOrder.Update(so);
+                await _unitOfWork.CommitAsync();
 
-        //        var data = new
-        //        {
-        //            so.OrderId,
-        //            so.Status,
-        //            so.OrderTotalPrice,
-        //            Warnings = warnings
-        //        };
+                var data = new
+                {
+                    so.SalesOrderId,
+                    so.Status,
+                    so.TotalPrice,
+                    Warnings = warnings
+                };
 
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 200,
-        //            Message = warnings.Count == 0
-        //                ? "Gửi đơn thành công"
-        //                : "Gửi đơn thành công, có mặt hàng thiếu/sắp hết",
-        //            Data = data
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi SendOrderAsync");
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi khi gửi đơn",
-        //            Data = null
-        //        };
-        //    }
-        //}
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = warnings.Count == 0
+                        ? "Gửi đơn thành công"
+                        : "Gửi đơn thành công, có mặt hàng thiếu/sắp hết",
+                    Data = data
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi SendOrderAsync");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi gửi đơn",
+                    Data = null
+                };
+            }
+        }
 
         //// customer update sales order when status is draft
         //public async Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(int orderId, List<DraftSalesOrderDTO> items)
@@ -619,7 +514,7 @@ namespace PMS.Application.Services.SalesOrder
         //    {
         //        var so = await _unitOfWork.SalesOrder.Query()
         //            .Include(o => o.SalesOrderDetails)
-        //            .FirstOrDefaultAsync(o => o.OrderId == orderId);
+        //            .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
 
         //        if (so == null)
         //        {
@@ -659,7 +554,7 @@ namespace PMS.Application.Services.SalesOrder
         //            {
         //                d.Quantity = newQty < 0 ? 0 : newQty;
         //                decimal remain = d.Quantity;
-        //                decimal accPrice = 0m;
+        //                decimal accPrice = d.UnitPrice;
 
         //                var lots = await _unitOfWork.LotProduct.Query()
         //                    .Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
@@ -681,28 +576,33 @@ namespace PMS.Application.Services.SalesOrder
         //            }
         //        }
 
-        //        so.OrderTotalPrice = so.SalesOrderDetails.Sum(x => x.UnitPrice * x.Quantity);
+        //        so.TotalPrice = so.SalesOrderDetails.Sum(x => x.UnitPrice * x.Quantity);
 
         //        _unitOfWork.SalesOrder.Update(so);
         //        await _unitOfWork.CommitAsync();
 
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Cập nhật số lượng bản nháp thành công",
-        //            Data = true
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync");
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi khi cập nhật số lượng bản nháp",
-        //            Data = false
-        //        };
-        //    }
-        //}
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật số lượng bản nháp thành công",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi cập nhật số lượng bản nháp",
+                    Data = false
+                };
+            }
+        }
+
+        //Generate SalesOrderId
+        private static string GenerateSalesOrderId()
+            => $"SO{DateTime.Now:yyyyMMddHHmmssfff}";
+
     }
 }

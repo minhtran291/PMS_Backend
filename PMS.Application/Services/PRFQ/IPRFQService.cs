@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using PMS.Application.DTOs.PO;
 using PMS.Application.DTOs.PRFQ;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Enums;
@@ -25,5 +26,8 @@ namespace PMS.API.Services.PRFQService
         Task<ServiceResult<bool>> UpdatePRFQStatusAsync(int prfqId, PRFQStatus newStatus);
 
         Task<ServiceResult<int>> ContinueEditPRFQ(int prfqId, ContinuePRFQDTO dto);
+
+        Task<ServiceResult<int>> CreatePurchaseOrderByQIDAsync(string userId,
+        PurchaseOrderByQuotaionInputDto input);
     }
 }

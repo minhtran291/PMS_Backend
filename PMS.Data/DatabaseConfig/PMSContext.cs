@@ -802,16 +802,24 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<SalesOrder>(entity =>
             {
-                entity.HasKey(so => so.OrderId);
+                entity.HasKey(so => so.SalesOrderId);
 
-                entity.Property(so => so.OrderId)
+                entity.Property(so => so.SalesOrderId)
                     .ValueGeneratedOnAdd();
+
+                entity.Property(so => so.SalesOrderCode)
+                    .HasMaxLength(70)
+                    .IsRequired();
 
                 entity.Property(so => so.SalesQuotationId)
                     .IsRequired();
 
                 entity.Property(so => so.CreateBy)
                     .HasMaxLength(450)
+                    .IsRequired();
+
+                entity.Property(so => so.TotalPrice)
+                    .HasPrecision(18, 2)
                     .IsRequired();
 
                 entity.Property(so => so.Status)
@@ -824,6 +832,13 @@ namespace PMS.Data.DatabaseConfig
                     .WithOne(d => d.SalesOrder)
                     .HasForeignKey(d => d.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                // 1 - n  (SalesQuotation -> SalesOrder)
+                entity.HasOne(so => so.SalesQuotation)
+                      .WithMany(sq => sq.SalesOrders)
+                      .HasForeignKey(so => so.SalesQuotationId)
+                      .IsRequired()
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 //1 - n (1 SalesOrder to n CustomerDepts)
                 //entity.HasMany(so => so.CustomerDepts)
@@ -842,6 +857,14 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasKey(sod => new { sod.SalesOrderId, sod.ProductId });
 
                 entity.Property(sod => sod.Quantity)
+                    .IsRequired();
+
+                entity.Property(sod => sod.UnitPrice)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(sod => sod.SubTotalPrice)
+                    .HasPrecision(18, 2)
                     .IsRequired();
 
                 entity.HasOne(d => d.SalesOrder)
