@@ -2,6 +2,8 @@
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
+using PMS.Data.Repositories.InventoryHistory;
+using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
@@ -14,12 +16,12 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesOrderDetailsRepository;
+using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.SalesQuotation;
 using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotationNote;
-using PMS.Data.Repositories.SalesOrderDetailsRepository;
-using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.TaxPolicy;
@@ -72,6 +74,10 @@ namespace PMS.Data.UnitOfWork
         ISalesOrderDetailsRepository SalesOrderDetails { get; }
         //CustomerDept
         ICustomerDeptRepository CustomerDept { get; }
+        //InventoryHistory
+        IInventoryHistoryRepository InventoryHistory { get; }
+        //InventorySession
+        IInventorySessionRepository InventorySession { get; }
 
         Task<int> CommitAsync();
         Task BeginTransactionAsync();

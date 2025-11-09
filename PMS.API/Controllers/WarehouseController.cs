@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.PO;
+using PMS.Application.DTOs.Product;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Application.Services.Warehouse;
@@ -140,70 +141,104 @@ namespace PMS.API.Controllers
         }
 
 
-        /// <summary>
-        /// Cập nhật kiểm kê vật lý (Physical Inventory) của tất cả lô hàng trong vị trí kho
-        /// https://localhost:7213/api/Warehouse/physicalInventory/{whlcid}
-        /// </summary>
-        /// <param name="whlcid">ID vị trí kho</param>
-        /// <param name="updates">Danh sách cập nhật số lượng thực tế</param>
-        /// <returns>Danh sách lô hàng đã được cập nhật</returns>
-        [HttpPut("physicalInventory/{whlcid}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)] 
-        public async Task<IActionResult> UpdatePhysicalInventory(
-            int whlcid,
-            [FromBody] List<PhysicalInventoryUpdateDTO> updates)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
 
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/create-session/{whlcid}
+        /// 1️⃣ Tạo phiên kiểm kê mới (tạo InventorySession + InventoryHistory cho từng Lot)
+        /// </summary>
+        [HttpPost("create-session/{whlcid}")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        public async Task<IActionResult> CreateInventorySession(int whlcid)
+        {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { Message = "Không thể xác thực người dùng." });
-
-            if (updates == null || updates.Count == 0)
-            {
-                return BadRequest(new
-                {
-                    Message = "Danh sách cập nhật không được rỗng."
-                });
-            }
-
-            var result = await _warehouseService.UpdatePhysicalInventoryAsync(userId,whlcid, updates);
+            var result = await _warehouseService.CreateInventorySessionAsync(userId, whlcid);
             return HandleServiceResult(result);
         }
 
-
         /// <summary>
-        /// Báo cáo kiểm kê vật lý theo tháng và năm
-        /// https://localhost:7213/api/Warehouse/reportphysicalInventory?month=11&&year=2025
+        /// https://localhost:7213/api/Warehouse/update-count
+        /// Cập nhật số lượng thực tế của Lot trong phiên kiểm kê
         /// </summary>
-        [HttpGet("reportphysicalInventory")]
-        public async Task<IActionResult> ReportPhysicalInventoryByMonth(
-            [FromQuery] int month,
-            [FromQuery] int year)
+        [HttpPut("update-count")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        public async Task<IActionResult> UpdateInventoryBatch([FromBody] UpdateInventoryBatchDto input)
         {
-            var result = await _warehouseService.ReportPhysicalInventoryByMonth(month, year);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+            var result = await _warehouseService.UpdateInventoryBatchAsync(userId,input);
             return HandleServiceResult(result);
         }
 
-
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/comparison/{sessionId}
+        /// Lấy danh sách so sánh chênh lệch giữa thực tế và hệ thống của phiên kiểm kê
+        /// </summary>
+        [HttpGet("comparison/{sessionId}")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        public async Task<IActionResult> GetInventoryComparison(int sessionId)
+        {
+            var result = await _warehouseService.GetInventoryComparisonAsync(sessionId);
+            return HandleServiceResult(result);
+        }
 
         /// <summary>
-        /// https://localhost:7213/api/Warehouse/reportphysicalInventory/excel/{11}/{2025}
+        /// https://localhost:7213/api/Warehouse/complete-session/{sessionId}
+        /// 4️⃣ Hoàn tất phiên kiểm kê (cập nhật tồn kho thực tế)
         /// </summary>
-        /// <param name="month"></param>
-        /// <param name="year"></param>
+        [HttpPost("complete-session/{sessionId}")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        public async Task<IActionResult> CompleteInventorySession(int sessionId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+            var result = await _warehouseService.CompleteInventorySessionAsync(sessionId, userId);
+            return HandleServiceResult(result);
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/session/{sessionId}/histories
+        /// </summary>
+        /// <param name="sessionId"></param>
         /// <returns></returns>
-        [HttpGet("reportphysicalInventory/excel/{month}/{year}")]
-        [Authorize(Roles = UserRoles.MANAGER)]
-        public async Task<IActionResult> GeneratePhysicalInventoryExcel(int month, int year)
+        [HttpGet("session/{sessionId}/histories")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        public async Task<IActionResult> GetHistoriesBySessionId(int sessionId)
+        {
+            var result = await _warehouseService.GetHistoriesBySessionIdAsync(sessionId);
+            return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
+        /// Xuất Excel toàn bộ InventoryHistories của một phiên kiểm kê
+        /// https://localhost:7213/api/Warehouse/session/{sessionId}/export
+        /// </summary>
+        /// <param name="sessionId">ID phiên kiểm kê</param>
+        [HttpGet("session/{sessionId}/export")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        public async Task<IActionResult> ExportInventorySessionToExcel(int sessionId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { Message = "Không thể xác thực người dùng." });
-            var fileBytes = await _warehouseService.GeneratePhysicalInventoryReportExcelAsync(month, year, userId);
-            string fileName = $"BaoCaoKiemKe_{month:D2}_{year}.xlsx";
-            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+
+            var result = await _warehouseService.ExportInventorySessionToExcelAsync(userId, sessionId);
+
+            if (!result.Success)
+                return HandleServiceResult(result);
+
+            var fileName = $"InventorySession_{sessionId}_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+
+            return File(
+                result.Data,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName
+            );
         }
+
     }
 }

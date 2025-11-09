@@ -7,12 +7,14 @@ using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using PMS.Application.DTOs.PO;
+using PMS.Application.DTOs.Product;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
+using PMS.Core.Domain.Enums;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.Application.Services.Warehouse
@@ -253,10 +255,6 @@ namespace PMS.Application.Services.Warehouse
                         InputPrice = p.InputPrice,
                         SalePrice = p.SalePrice,
                         LotQuantity = p.LotQuantity,
-                        DiffQuantity = p.Diff,
-                        InventoryBy = p.inventoryBy,
-                        LastedUpdate = p.lastedUpdate,
-                        note = p.note,
                     });
                 }
                 return new ServiceResult<List<LotProductDTO>>
@@ -354,289 +352,301 @@ namespace PMS.Application.Services.Warehouse
             }
         }
 
-        public async Task<ServiceResult<List<LotProductDTO>>> UpdatePhysicalInventoryAsync(string userId, int whlcid, List<PhysicalInventoryUpdateDTO> updates)
+        public async Task<ServiceResult<byte[]>> ExportInventorySessionToExcelAsync(string userId, int sessionId)
         {
-            await _unitOfWork.BeginTransactionAsync();
-            try
-            {
-                var lots = await _unitOfWork.LotProduct.Query()
-                    .Where(lp => lp.WarehouselocationID == whlcid)
-                    .ToListAsync();
-
-                if (!lots.Any())
-                {
-                    return new ServiceResult<List<LotProductDTO>>
-                    {
-                        Data = null,
-                        Message = $"Không tìm thấy lô hàng nào trong vị trí kho {whlcid}",
-                        StatusCode = 404,
-                        Success = false
-                    };
-                }
-
-                var updatedLots = new List<LotProductDTO>();
-
-
-                foreach (var update in updates)
-                {
-                    var lot = lots.FirstOrDefault(l => l.LotID == update.LotID);
-                    if (lot != null)
-                    {
-                        var diff = lot.LotQuantity - update.RealQuantity;
-                        var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
-                        lot.LotQuantity = update.RealQuantity;
-                        lot.lastedUpdate = DateTime.Now;
-                        lot.inventoryBy = user?.FullName ?? "Không xác định";
-                        lot.Diff = diff;
-                        lot.note = update.note;
-                        _unitOfWork.LotProduct.Update(lot);
-
-
-                        var product = await _unitOfWork.Product.Query()
-                            .FirstOrDefaultAsync(p => p.ProductID == lot.ProductID);
-                        var supplier = await _unitOfWork.Supplier.Query()
-                            .FirstOrDefaultAsync(s => s.Id == lot.SupplierID);
-
-                        updatedLots.Add(new LotProductDTO
-                        {
-                            LotID = lot.LotID,
-                            InputDate = lot.InputDate,
-                            ExpiredDate = lot.ExpiredDate,
-                            InputPrice = lot.InputPrice,
-                            SalePrice = lot.SalePrice,
-                            LotQuantity = lot.LotQuantity,
-                            ProductName = product?.ProductName ?? "Không xác định",
-                            SupplierName = supplier?.Name ?? "Không xác định",
-                            DiffQuantity = diff,
-                            InventoryBy = user?.FullName ?? "Không xác định",
-                            LastedUpdate = lot.lastedUpdate,
-                            note = lot.note
-                        });
-                    }
-                }
-
-                await _unitOfWork.CommitAsync();
-
-                //
-                var affectedProductIds = lots
-                    .Select(l => l.ProductID)
-                    .Distinct()
-                    .ToList();
-
-                foreach (var pid in affectedProductIds)
-                {
-
-                    var totalQuantity = await _unitOfWork.LotProduct.Query()
-                        .Where(lp => lp.ProductID == pid)
-                        .SumAsync(lp => lp.LotQuantity);
-
-                    var product = await _unitOfWork.Product.Query()
-                        .FirstOrDefaultAsync(p => p.ProductID == pid);
-
-                    if (product != null)
-                    {
-                        product.TotalCurrentQuantity = totalQuantity;
-                        _unitOfWork.Product.Update(product);
-                    }
-                }
-
-                await _unitOfWork.CommitAsync();
-                await _unitOfWork.CommitTransactionAsync();
-
-                return new ServiceResult<List<LotProductDTO>>
-                {
-                    Data = updatedLots,
-                    Message = $"Đã cập nhật kiểm kê vật lý và đồng bộ tồn kho sản phẩm cho vị trí kho {whlcid}",
-                    StatusCode = 200,
-                    Success = true
-                };
-            }
-            catch (Exception ex)
-            {
-                await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Lỗi khi cập nhật kiểm kê vật lý cho kho {whlcid}", whlcid);
-
-                return new ServiceResult<List<LotProductDTO>>
-                {
-                    Data = null,
-                    Message = "Đã xảy ra lỗi khi kiểm kê vật lý",
-                    StatusCode = 400,
-                    Success = false
-                };
-            }
-        }
-
-        public async Task<ServiceResult<IEnumerable<LotProductDTO>>> ReportPhysicalInventoryByMonth(int month, int year)
-        {
-            if (month < 1 || month > 12 || year < 2000)
-            {
-                return new ServiceResult<IEnumerable<LotProductDTO>>
-                {
-                    Data = null,
-                    Message = "Tháng hoặc năm không hợp lệ.",
-                    StatusCode = 400,
-                    Success = false
-                };
-            }
-
-
-            //startDate = new DateTime(2025, 11, 1)
-            // Kết quả: 2025 - 11 - 01
-
-            //startDate.AddMonths(1)
-            // Tăng lên 1 tháng: 2025 - 12 - 01
-
-            //.AddDays(-1)
-            // Lùi lại 1 ngày: 2025 - 11 - 30 
-            // chính là ngày cuối cùng của tháng 11 năm 2025.
-
-
-
-            var startDate = new DateTime(year, month, 1);
-            var endDate = startDate.AddMonths(1).AddDays(-1);
-
-            var lotProducts = await _unitOfWork.LotProduct.Query()
-                .Include(l => l.Product)
-                .Include(l => l.WarehouseLocation)
-                .Where(l => l.lastedUpdate != null
-                            && l.lastedUpdate >= startDate
-                            && l.lastedUpdate <= endDate)
-                .ToListAsync();
-
-            if (lotProducts == null || !lotProducts.Any())
-            {
-                return new ServiceResult<IEnumerable<LotProductDTO>>
-                {
-                    Data = null,
-                    Message = "Không có lô nào được kiểm kê trong tháng này.",
-                    StatusCode = 404,
-                    Success = false
-                };
-            }
-
-
-            var lotProductDtos = _mapper.Map<IEnumerable<LotProductDTO>>(lotProducts);
-
-            return new ServiceResult<IEnumerable<LotProductDTO>>
-            {
-                Data = lotProductDtos,
-                Message = $"Báo cáo kiểm kê vật lý tháng {month}/{year} thành công.",
-                StatusCode = 200,
-                Success = true
-            };
-        }
-
-        public async Task<byte[]> GeneratePhysicalInventoryReportExcelAsync(int month, int year, string userId)
-        {
-            if (month < 1 || month > 12 || year < 2000)
-                throw new Exception("Tháng hoặc năm không hợp lệ.");
-
-            var startDate = new DateTime(year, month, 1);
-            var endDate = startDate.AddMonths(1).AddDays(-1);
+            var historiesResult = await GetHistoriesBySessionIdAsync(sessionId);
+            if (!historiesResult.Success || !historiesResult.Data.Any())
+                return ServiceResult<byte[]>.Fail("Không có dữ liệu kiểm kê để xuất file.");
 
             var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
-            var lots = await _unitOfWork.LotProduct.Query()
-                .Include(lp => lp.Product)
-                .Include(lp => lp.Supplier)
-                .Where(lp => lp.lastedUpdate >= startDate && lp.lastedUpdate <= endDate)
-                .ToListAsync();
-
-            if (!lots.Any())
-                throw new Exception($"Không có dữ liệu kiểm kê vật lý trong tháng {month}/{year}.");
 
             using var package = new ExcelPackage();
-            var worksheet = package.Workbook.Worksheets.Add($"KK_{month:D2}_{year}");
+            var ws = package.Workbook.Worksheets.Add("InventoryHistories");
+
+  
+            ws.Cells["A1:H1"].Merge = true;
+            ws.Cells["A1"].Value = "CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY";
+            ws.Cells["A1"].Style.Font.Bold = true;
+            ws.Cells["A1"].Style.Font.Size = 14;
+            ws.Cells["A1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
 
-            worksheet.Cells["A1"].Value = "CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY";
-            worksheet.Cells["A1:J1"].Merge = true;
-            worksheet.Cells["A1"].Style.Font.Bold = true;
-            worksheet.Cells["A1"].Style.Font.Size = 14;
-            worksheet.Cells["A1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            ws.Cells["A2:H2"].Merge = true;
+            ws.Cells["A2"].Value = "BIÊN BẢN KIỂM KÊ SẢN PHẨM, HÀNG HÓA";
+            ws.Cells["A2"].Style.Font.Bold = true;
+            ws.Cells["A2"].Style.Font.Size = 13;
+            ws.Cells["A2"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-            worksheet.Cells["A2"].Value = "BIÊN BẢN KIỂM KÊ VẬT TƯ, CÔNG CỤ, SẢN PHẨM, HÀNG HÓA";
-            worksheet.Cells["A2:J2"].Merge = true;
-            worksheet.Cells["A2"].Style.Font.Bold = true;
-            worksheet.Cells["A2"].Style.Font.Size = 13;
-            worksheet.Cells["A2"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-            worksheet.Cells["A3"].Value = $"Tháng/Năm: {month}/{year}";
-            worksheet.Cells["A4"].Value = $"Người kiểm tra: {user.FullName}";
-            worksheet.Cells["A5"].Value = $"Số lượng lô hàng kiểm kê: {lots.Count}";
-            worksheet.Cells["A6"].Value = "Thông tư: 133/2016/TT-BTC Ngày 26/3/2016 của BTC";
+            ws.Cells["A3:D3"].Merge = true;
+            ws.Cells["A3"].Value = $"Người kiểm tra: {user?.FullName ?? "Không xác định"}";
 
-            int startRow = 8;
-            string[] headers = {
-            "STT", "Tên sản phẩm", "Nhà cung cấp", "Số lượng",
-            "Chênh lệch", "Giá nhập", "Giá bán", "Phụ trách", "Hạn sản phẩm", "Ngày kiểm kê", "Ghi chú"
-    };
+            ws.Cells["E3:H3"].Merge = true;
+            ws.Cells["E3"].Value = $"Ngày kiểm tra: {DateTime.Now:dd/MM/yyyy}";
 
-            for (int i = 0; i < headers.Length; i++)
-            {
-                worksheet.Cells[startRow, i + 1].Value = headers[i];
-            }
+            ws.Cells["A3:H3"].Style.Font.Italic = true;
 
-            using (var range = worksheet.Cells[startRow, 1, startRow, headers.Length])
+
+            int headerRow = 5;
+            ws.Cells[headerRow, 1].Value = "LotID";
+            ws.Cells[headerRow, 2].Value = "ProductName";
+            ws.Cells[headerRow, 3].Value = "SystemQuantity";
+            ws.Cells[headerRow, 4].Value = "ActualQuantity";
+            ws.Cells[headerRow, 5].Value = "Diff";
+            ws.Cells[headerRow, 6].Value = "Note";
+            ws.Cells[headerRow, 7].Value = "InventoryBy";
+            ws.Cells[headerRow, 8].Value = "LastUpdated";
+
+
+            using (var range = ws.Cells[headerRow, 1, headerRow, 8])
             {
                 range.Style.Font.Bold = true;
                 range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(40, 167, 69));
-                range.Style.Font.Color.SetColor(Color.White);
+                range.Style.Fill.BackgroundColor.SetColor(Color.LightGray);
                 range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                 range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
                 range.Style.Border.BorderAround(ExcelBorderStyle.Thin);
             }
 
 
-            int currentRow = startRow + 1;
-            int index = 1;
-            foreach (var lot in lots)
+            int row = headerRow + 1;
+            foreach (var h in historiesResult.Data)
             {
-                worksheet.Cells[currentRow, 1].Value = index++;
-                worksheet.Cells[currentRow, 2].Value = lot.Product?.ProductName ?? "—";
-                worksheet.Cells[currentRow, 3].Value = lot.Supplier?.Name ?? "—";
-                worksheet.Cells[currentRow, 4].Value = lot.LotQuantity;
-                worksheet.Cells[currentRow, 5].Value = lot.Diff;
-                worksheet.Cells[currentRow, 6].Value = lot.InputPrice;
-                worksheet.Cells[currentRow, 7].Value = lot.SalePrice;
-                worksheet.Cells[currentRow, 8].Value = lot.inventoryBy ?? "—";
-                worksheet.Cells[currentRow, 9].Value = lot.ExpiredDate.ToString("dd/MM/yyyy");
-                worksheet.Cells[currentRow, 10].Value = lot.lastedUpdate.ToString("dd/MM/yyyy HH:mm");
-                worksheet.Cells[currentRow, 11].Value = lot.note ?? "-";
+                var checker = await _unitOfWork.Users.UserManager.FindByIdAsync(h.InventoryBy);
+                ws.Cells[row, 1].Value = h.LotID;
+                ws.Cells[row, 2].Value = h.ProductName;
+                ws.Cells[row, 3].Value = h.SystemQuantity;
+                ws.Cells[row, 4].Value = h.ActualQuantity;
+                ws.Cells[row, 5].Value = h.Diff;
+                ws.Cells[row, 6].Value = h.Note;
+                ws.Cells[row, 7].Value = checker?.FullName ?? "Không xác định";
+                ws.Cells[row, 8].Value = h.LastUpdated.ToString("dd/MM/yyyy HH:mm");
 
-
-                worksheet.Cells[currentRow, 4].Style.Numberformat.Format = "#,##0";
-                worksheet.Cells[currentRow, 5].Style.Numberformat.Format = "#,##0";
-                worksheet.Cells[currentRow, 6].Style.Numberformat.Format = "#,##0.00";
-                worksheet.Cells[currentRow, 7].Style.Numberformat.Format = "#,##0.00";
-
-                currentRow++;
+                row++;
             }
 
 
-            worksheet.Cells[currentRow + 2, 1].Value = $"Người lập báo cáo: {user.FullName}";
-            worksheet.Cells[currentRow + 2, 1, currentRow + 2, 5].Merge = true;
-            worksheet.Cells[currentRow + 2, 1].Style.Font.Italic = true;
-
-            worksheet.Cells[currentRow + 3, 1].Value = $"Ngày xuất báo cáo: {DateTime.Now:dd/MM/yyyy HH:mm}";
-            worksheet.Cells[currentRow + 3, 1, currentRow + 3, 5].Merge = true;
-            worksheet.Cells[currentRow + 3, 1].Style.Font.Italic = true;
+            ws.Cells[ws.Dimension.Address].AutoFitColumns();
 
 
-            worksheet.Cells[1, 1, currentRow + 3, headers.Length].AutoFitColumns();
+            int footerRow = row + 2;
+            ws.Cells[footerRow, 1, footerRow, 8].Merge = true;
+            ws.Cells[footerRow, 1].Value = "Ghi chú: Biên bản lập theo Thông tư 133/2016/TT-BTC ngày 26/3/2016 của Bộ Tài chính.";
+            ws.Cells[footerRow, 1].Style.Font.Italic = true;
+            ws.Cells[footerRow, 1].Style.Font.Size = 10;
+            ws.Cells[footerRow, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
 
+            var excelBytes = package.GetAsByteArray();
+            return ServiceResult<byte[]>.SuccessResult(excelBytes);
+        }
 
-            using (var range = worksheet.Cells[startRow, 1, currentRow - 1, headers.Length])
+        public async Task<ServiceResult<int>> CreateInventorySessionAsync(string userId, int whlcid)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
             {
-                range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-                range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-                range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-                range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
-            }
 
-            return package.GetAsByteArray();
+                var lots = await _unitOfWork.LotProduct.Query()
+                    .Include(l => l.Product)
+                    .Where(l=>l.WarehouselocationID==whlcid)
+                    .ToListAsync();
+
+                if (!lots.Any())
+                    return ServiceResult<int>.Fail("Không có lô sản phẩm nào để kiểm kê.");
+
+
+                var session = new InventorySession
+                {
+                    StartDate = DateTime.Now,
+                    CreatedBy = userId,
+                    Status = InventorySessionStatus.Draft,
+                };
+                await _unitOfWork.InventorySession.AddAsync(session);
+                await _unitOfWork.CommitAsync(); 
+
+
+                var histories = lots.Select(l => new InventoryHistory
+                {
+                    InventorySessionID = session.InventorySessionID,
+                    LotID = l.LotID,
+                    SystemQuantity = l.LotQuantity,
+                    ActualQuantity = 0, 
+                    LastUpdated = DateTime.Now,
+                    InventoryBy = userId,
+                    Note = null
+                }).ToList();
+
+                await _unitOfWork.InventoryHistory.AddRangeAsync(histories);
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+
+                return ServiceResult<int>.SuccessResult(session.InventorySessionID, "Tạo phiên kiểm kê thành công!");
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<int>.Fail($"Lỗi khi tạo phiên kiểm kê: {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult<bool>> UpdateInventoryBatchAsync(string userId,UpdateInventoryBatchDto input)
+        {
+            if (input.LotCounts == null || !input.LotCounts.Any())
+                return ServiceResult<bool>.Fail("Không có dữ liệu lô để cập nhật.");
+
+
+            var historyIds = input.LotCounts.Select(l => l.HistoryId).ToList();
+            var histories = await _unitOfWork.InventoryHistory.Query()
+                .Include(h => h.InventorySession)
+                .Where(h => historyIds.Contains(h.InventoryHistoryID))
+                .ToListAsync();
+
+            if (!histories.Any())
+                return ServiceResult<bool>.Fail("Không tìm thấy bất kỳ lịch sử kiểm kê nào.");
+
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                foreach (var lot in input.LotCounts)
+                {
+                    var history = histories.FirstOrDefault(h => h.InventoryHistoryID == lot.HistoryId);
+                    if (history == null) continue;
+
+                    if (history.InventorySession.Status == InventorySessionStatus.Completed)
+                        return ServiceResult<bool>.Fail($"Phiên kiểm kê đã hoàn tất, không thể chỉnh sửa HistoryID {lot.HistoryId}.");
+
+                    history.ActualQuantity = lot.ActualQuantity;
+                    history.LastUpdated = DateTime.Now;
+                    history.InventoryBy = userId;
+                    history.Note = lot.Note;
+                }
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return ServiceResult<bool>.SuccessResult(true, "Cập nhật số lượng thực tế nhiều lô thành công.");
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<bool>.Fail($"Lỗi khi cập nhật số lượng nhiều lô: {ex.Message}");
+            }
         }
 
 
+
+        public async Task<ServiceResult<IEnumerable<InventoryCompareDTO>>> GetInventoryComparisonAsync(int sessionId)
+        {
+            var histories = await _unitOfWork.InventoryHistory.Query()
+                .Include(h => h.LotProduct)
+                    .ThenInclude(l => l.Product)
+                .Where(h => h.InventorySessionID == sessionId)
+                .ToListAsync();
+
+            if (!histories.Any())
+                return ServiceResult<IEnumerable<InventoryCompareDTO>>.Fail("Không có dữ liệu kiểm kê.");
+
+            var result = histories.Select(h => new InventoryCompareDTO
+            {
+                LotID = h.LotID,
+                ProductName = h.LotProduct.Product.ProductName,
+                SystemQuantity = h.SystemQuantity,
+                ActualQuantity = h.ActualQuantity,
+                Diff = h.ActualQuantity - h.SystemQuantity,
+                Note = h.Note
+            });
+
+            return ServiceResult<IEnumerable<InventoryCompareDTO>>.SuccessResult(result);
+        }
+
+
+        public async Task<ServiceResult<int>> CompleteInventorySessionAsync(int sessionId, string userId)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                // 1️⃣ Lấy phiên kiểm kê
+                var session = await _unitOfWork.InventorySession.Query()
+                    .Include(s => s.InventoryHistories)
+                        .ThenInclude(h => h.LotProduct)
+                    .ThenInclude(lp => lp.Product)
+                    .FirstOrDefaultAsync(s => s.InventorySessionID == sessionId);
+
+                if (session == null)
+                    return ServiceResult<int>.Fail("Không tìm thấy phiên kiểm kê.");
+
+                if (!session.InventoryHistories.Any())
+                    return ServiceResult<int>.Fail("Phiên kiểm kê chưa có dữ liệu.");
+
+                // 2️⃣ Cập nhật LotProduct.LotQuantity = ActualQuantity
+                foreach (var history in session.InventoryHistories)
+                {
+                    var lot = history.LotProduct;
+                    if (lot == null) continue;
+
+                    lot.LotQuantity = history.ActualQuantity;
+                    lot.LastCheckedDate = DateTime.Now;
+                }
+
+                // 3️⃣ Cập nhật tổng tồn của từng Product
+                var productGroups = session.InventoryHistories
+                    .Where(h => h.LotProduct != null)
+                    .GroupBy(h => h.LotProduct.Product);
+
+                foreach (var group in productGroups)
+                {
+                    var product = group.Key;
+                    product.TotalCurrentQuantity = group
+                        .Sum(h => h.ActualQuantity);
+                }
+
+                // 4️⃣ Cập nhật trạng thái phiên kiểm kê
+                session.Status = InventorySessionStatus.Completed;
+                session.EndDate = DateTime.Now;
+
+                // 5️⃣ Lưu DB
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return ServiceResult<int>.SuccessResult(1, "Hoàn tất kiểm kê thành công!");
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<int>.Fail($"Lỗi khi hoàn tất kiểm kê: {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<InventoryHistoryDTO>>> GetHistoriesBySessionIdAsync(int sessionId)
+        {
+            var histories = await _unitOfWork.InventoryHistory.Query()
+        .Include(h => h.LotProduct)
+            .ThenInclude(lp => lp.Product)
+        .Where(h => h.InventorySessionID == sessionId)
+        .ToListAsync();
+
+            if (!histories.Any())
+                return ServiceResult<IEnumerable<InventoryHistoryDTO>>.Fail("Không tìm thấy lịch sử kiểm kê nào cho phiên này.");
+
+            var result = histories.Select(h => new InventoryHistoryDTO
+            {
+                InventoryHistoryID = h.InventoryHistoryID,
+                LotID = h.LotID,
+                ProductName = h.LotProduct?.Product?.ProductName ?? "",
+                SystemQuantity = h.SystemQuantity,
+                ActualQuantity = h.ActualQuantity,
+                Note = h.Note,
+                InventoryBy = h.InventoryBy,
+                LastUpdated = h.LastUpdated
+            });
+
+            return ServiceResult<IEnumerable<InventoryHistoryDTO>>.SuccessResult(result);
+        }
     }
+
 }
+
