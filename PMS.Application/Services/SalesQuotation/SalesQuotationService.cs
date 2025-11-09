@@ -78,27 +78,35 @@ namespace PMS.Application.Services.SalesQuotation
                     }
                     else
                     {
-                        var latestLot = await _unitOfWork.LotProduct.Query()
-                            .Include(lp => lp.Product)
-                            .AsNoTracking()
-                            .Where(lp => lp.ProductID == detail.ProductId)
-                            .OrderByDescending(lp => lp.InputDate)
-                            .FirstOrDefaultAsync();
+                        //var latestLot = await _unitOfWork.LotProduct.Query()
+                        //    .Include(lp => lp.Product)
+                        //    .AsNoTracking()
+                        //    .Where(lp => lp.ProductID == detail.ProductId)
+                        //    .OrderByDescending(lp => lp.InputDate)
+                        //    .FirstOrDefaultAsync();
 
-                        if (latestLot != null)
+                        //if (latestLot != null)
+                        //{
+                        //    lotDtos.Add(_mapper.Map<LotDTO>(latestLot));
+                        //}
+                        //else
+                        //{
+                        //    lotDtos.Add(new LotDTO
+                        //    {
+                        //        ProductID = detail.ProductId,
+                        //        ProductName = detail.Product.ProductName,
+                        //        Unit = detail.Product.Unit,
+                        //        Note = "Chưa có lô hàng nào"
+                        //    });
+                        //}
+
+                        lotDtos.Add(new LotDTO
                         {
-                            lotDtos.Add(_mapper.Map<LotDTO>(latestLot));
-                        }
-                        else
-                        {
-                            lotDtos.Add(new LotDTO
-                            {
-                                ProductID = detail.ProductId,
-                                ProductName = detail.Product.ProductName,
-                                Unit = detail.Product.Unit,
-                                Note = "Chưa có lô hàng nào"
-                            });
-                        }
+                            ProductID = detail.ProductId,
+                            ProductName = detail.Product.ProductName,
+                            Unit = detail.Product.Unit,
+                            Note = "Không tìm thấy lô nào còn hàng hợp lệ"
+                        });
                     }
                 }
 
