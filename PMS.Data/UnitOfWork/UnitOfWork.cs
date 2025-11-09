@@ -10,6 +10,8 @@ using PMS.Data.Repositories.CustomerDeptRepository;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
+using PMS.Data.Repositories.InventoryHistory;
+using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
 using PMS.Data.Repositories.ProductCategoryRepository;
@@ -22,12 +24,12 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesOrderDetailsRepository;
+using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.SalesQuotation;
 using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotationNote;
-using PMS.Data.Repositories.SalesOrderDetailsRepository;
-using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.StaffProfile;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.TaxPolicy;
@@ -66,7 +68,9 @@ namespace PMS.Data.UnitOfWork
         ISalesQuotationNoteRepository salesQuotationNote,
         ISalesOrderRepository salesOrder,
         ISalesOrderDetailsRepository salesOrderDetails,
-        ICustomerDeptRepository customerDept) : IUnitOfWork
+        ICustomerDeptRepository customerDept, 
+        IInventoryHistoryRepository inventoryHistory
+        ,IInventorySessionRepository inventorySession) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -110,6 +114,13 @@ namespace PMS.Data.UnitOfWork
         public ISalesOrderDetailsRepository SalesOrderDetails { get; private set; } = salesOrderDetails;
         //CustomerDept
         public ICustomerDeptRepository CustomerDept { get; private set; } = customerDept;
+
+        //InventoryHistory
+        public IInventoryHistoryRepository InventoryHistory { get; private set; } = inventoryHistory;
+
+        //InventorySession
+        public IInventorySessionRepository InventorySession { get; private set; } = inventorySession;
+
         public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();
