@@ -1,13 +1,14 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection.Emit;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Identity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PMS.Data.DatabaseConfig
 {
@@ -290,11 +291,6 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(lp => lp.SalePrice)
                     .HasColumnType("decimal(18,2)");
 
-                entity.Property(lp => lp.lastedUpdate).HasColumnType("date");
-                entity.Property(lp => lp.inventoryBy);
-                entity.Property(lp => lp.note).HasMaxLength(500);
-                entity.Property(lp => lp.Diff);
-
                 entity.HasOne(lp => lp.Product)
                     .WithMany(p => p.LotProducts)
                     .HasForeignKey(lp => lp.ProductID)
@@ -310,6 +306,61 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(lp => lp.WarehouselocationID)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+
+            builder.Entity<InventorySession>(entity =>
+            {
+                entity.ToTable("InventorySessions");
+
+                entity.HasKey(i => i.InventorySessionID);
+
+                entity.Property(i => i.Status)
+                      .HasMaxLength(50);
+
+
+                entity.Property(i => i.CreatedBy)
+                      .HasMaxLength(100);
+
+                entity.Property(i => i.StartDate)
+                      .HasColumnType("datetime");
+
+                entity.Property(i => i.EndDate)
+                      .HasColumnType("datetime");
+            });
+
+            builder.Entity<InventoryHistory>(entity =>
+            {
+                entity.ToTable("InventoryHistories");
+
+                entity.HasKey(h => h.InventoryHistoryID);
+
+                entity.Property(h => h.SystemQuantity)
+                      .HasDefaultValue(0);
+
+                entity.Property(h => h.ActualQuantity)
+                      .HasDefaultValue(0);
+
+                entity.Property(h => h.LastUpdated)
+                      .HasColumnType("datetime");
+
+                entity.Property(h => h.Note)
+                      .HasMaxLength(500);
+
+                entity.Property(h => h.InventoryBy)
+                      .HasMaxLength(100);
+
+                // Quan hệ: InventoryHistory -> InventorySession (nhiều-1)
+                entity.HasOne(h => h.InventorySession)
+                      .WithMany(s => s.InventoryHistories)
+                      .HasForeignKey(h => h.InventorySessionID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Quan hệ: InventoryHistory -> LotProduct (nhiều-1)
+                entity.HasOne(h => h.LotProduct)
+                      .WithMany(l => l.I)
+                      .HasForeignKey(h => h.LotID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
 
             builder.Entity<Category>(entity =>
             {
