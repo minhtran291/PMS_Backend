@@ -12,26 +12,34 @@ namespace PMS.Application.Services.SalesOrder
 {
     public interface ISalesOrderService
     {
-        //Sales Order Draft
-        Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int SalesQuotationId);
-        Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(int salesQuotationId, string createdBy);
-        Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(int SalesOrderId, List<SalesOrderDetailsUpdateDTO> items);
-        Task<ServiceResult<bool>> DeleteDraftAsync(string orderId);
+        //Sales Order Draft (Customer)
+        Task<ServiceResult<IEnumerable<object>>> ListCustomerSalesOrdersAsync(string userId);
+        Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int salesQuotationId);
+        Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync
+            (CreateOrderFromQuotationRequestDTO req);
+        Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync
+            (int salesOrderId, List<SalesOrderDetailsUpdateDTO> items);
+        Task<ServiceResult<bool>> DeleteDraftAsync(int orderId);
 
         //Send Order and check current product quantity
-        Task<ServiceResult<object>> SendOrderAsync(string orderId);
+        Task<ServiceResult<object>> SendOrderAsync(int salesOrderId);
 
         //Customer mark is receipted of goods
-        Task<ServiceResult<bool>> MarkCompleteAsync(string orderId);
+        Task<ServiceResult<bool>> MarkCompleteAsync(int salesOrderId);
 
         //Create payment
-        Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync(string orderId, string paymentType);
+        Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync
+            (int salesOrderId, string paymentType);
 
-        //Sale Staff confirm payment manual
-        Task<ServiceResult<bool>> ConfirmPaymentAsync(string salesOrderId);
 
         //View Sales Orders
-        Task<ServiceResult<object>> GetOrderDetailsAsync(string SalesOrderId);
-        Task<ServiceResult<IEnumerable<object>>> ListOrdersAsync(string userId);
+        Task<ServiceResult<object>> GetOrderDetailsAsync(int salesOrderId);
+
+
+        //Sales Staff
+        Task<ServiceResult<IEnumerable<object>>> ListSalesOrdersAsync();
+        Task<ServiceResult<bool>> ApproveSalesOrderAsync(int salesOrderId);
+        Task<ServiceResult<bool>> RejectSalesOrderAsync(int salesOrderId);
+        Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId); // When Sales Order is approveed and cannot payment auto then manualy
     }
 }

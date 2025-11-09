@@ -11,8 +11,10 @@ namespace PMS.Application.DTOs.SalesOrder
     {
         [Required(ErrorMessage = "ProductId là bắt buộc!")]
         public int ProductId { get; set; }
+        [Required(ErrorMessage = "LotId là bắt buộc!")]
+        public int LotId { get; set; }
         [Required(ErrorMessage = "Số lượng là bắt buộc!")]
-        [Range(1, int.MaxValue, ErrorMessage = "Số lượng tối thiểu phải lớn hơn hoặc bằng 1")]
+        [Range(0, int.MaxValue, ErrorMessage = "Số lượng không được là số âm!")]
         public int Quantity { get; set; }
         [Required(ErrorMessage = "Đơn giá là bắt buộc!")]
         [Range(0, double.MaxValue, ErrorMessage = "Giá tiền không được là số âm!")]

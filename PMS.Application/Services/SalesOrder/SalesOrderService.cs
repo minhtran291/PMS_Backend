@@ -10,6 +10,7 @@ using PMS.Application.Services.VNpay;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
+using PMS.Core.Domain.Identity;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.Application.Services.SalesOrder
@@ -151,6 +152,7 @@ namespace PMS.Application.Services.SalesOrder
                 var order = new Core.Domain.Entities.SalesOrder
                 {
                     SalesQuotationId = sq.Id,
+                    SalesOrderCode = GenerateSalesOrderCode(),
                     CreateBy = req.CreatedBy,
                     CreateAt = DateTime.Now,
                     Status = SalesOrderStatus.Draft,
@@ -232,13 +234,13 @@ namespace PMS.Application.Services.SalesOrder
 
 
 
-        public async Task<ServiceResult<bool>> DeleteDraftAsync(int orderId)
+        public async Task<ServiceResult<bool>> DeleteDraftAsync(int salesOrderId)
         {
             try
             {
                 var so = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (so == null)
                 {
@@ -290,60 +292,60 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        //public async Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync(string orderId, string paymentType)
-        //{
-        //    try
-        //    {
-        //        var order = await _unitOfWork.SalesOrder.Query().FirstOrDefaultAsync(o => o.OrderId == orderId);
-        //        if (order == null)
-        //        {
-        //            return new ServiceResult<VnPayInitResponseDTO>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy đơn hàng",
-        //                Data = null
-        //            };
-        //        }
+        public async Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync(int salesOrderId, string paymentType)
+        {
+            try
+            {
+                var order = await _unitOfWork.SalesOrder.Query().FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+                if (order == null)
+                {
+                    return new ServiceResult<VnPayInitResponseDTO>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy đơn hàng",
+                        Data = null
+                    };
+                }
 
-        //        if (order.Status != SalesOrderStatus.Send)
-        //            return new ServiceResult<VnPayInitResponseDTO> { StatusCode = 400, Message = "Chỉ khởi tạo thanh toán cho đơn ở trạng thái đã gửi." };
+                if (order.Status != SalesOrderStatus.Send)
+                    return new ServiceResult<VnPayInitResponseDTO> { StatusCode = 400, Message = "Chỉ khởi tạo thanh toán cho đơn ở trạng thái đã gửi." };
 
 
-        //        decimal amount = paymentType.ToLower() == "deposit"
-        //            ? (order.OrderTotalPrice / 10)   // Deposit 10%
-        //            : order.OrderTotalPrice;
+                decimal amount = paymentType.ToLower() == "deposit"
+                    ? (order.TotalPrice * order.SalesQuotation.DepositPercent)  
+                    : order.TotalPrice;
 
-        //        var info = paymentType == "deposit" ? "Thanh toán tiền cọc" : "Thanh toán toàn bộ đơn hàng";
+                var info = paymentType == "deposit" ? "Thanh toán tiền cọc" : "Thanh toán toàn bộ đơn hàng";
 
-        //        var paymentUrl = _vnPay.CreatePaymentUrl(orderId, (long)amount, info);
-        //        var qrData = _vnPay.GenerateQrDataUrl(paymentUrl);
+                var paymentUrl = _vnPay.CreatePaymentUrl(salesOrderId.ToString(), (long)amount, info);
+                var qrData = _vnPay.GenerateQrDataUrl(paymentUrl);
 
-        //        return new ServiceResult<VnPayInitResponseDTO>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Khởi tạo thanh toán VNPay thành công",
-        //            Data = new VnPayInitResponseDTO
-        //            {
-        //                PaymentUrl = paymentUrl,
-        //                QrDataUrl = qrData,
-        //                Amount = amount,
-        //                PaymentType = paymentType
-        //            }
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi khi khởi tạo thanh toán VNPay");
-        //        return new ServiceResult<VnPayInitResponseDTO>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Lỗi trong quá trình tạo thanh toán VNPay",
-        //            Data = null
-        //        };
-        //    }
-        //}
+                return new ServiceResult<VnPayInitResponseDTO>
+                {
+                    StatusCode = 200,
+                    Message = "Khởi tạo thanh toán VNPay thành công",
+                    Data = new VnPayInitResponseDTO
+                    {
+                        PaymentUrl = paymentUrl,
+                        QrDataUrl = qrData,
+                        Amount = amount,
+                        PaymentType = paymentType
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi khi khởi tạo thanh toán VNPay");
+                return new ServiceResult<VnPayInitResponseDTO>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi trong quá trình tạo thanh toán VNPay",
+                    Data = null
+                };
+            }
+        }
 
-        public async Task<ServiceResult<object>> GetOrderDetailsAsync(int SalesOrderId)
+        public async Task<ServiceResult<object>> GetOrderDetailsAsync(int salesOrderId)
         {
             try
             {
@@ -352,7 +354,7 @@ namespace PMS.Application.Services.SalesOrder
                         .ThenInclude(l => l.Product)
                     .Include(q => q.SalesQuotation)
                         .ThenInclude(d => d.SalesQuotaionDetails)
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == SalesOrderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (order == null)
                 {
@@ -439,12 +441,12 @@ namespace PMS.Application.Services.SalesOrder
         }
 
         ////Customer mark order is complete
-        public async Task<ServiceResult<bool>> MarkCompleteAsync(int orderId)
+        public async Task<ServiceResult<bool>> MarkCompleteAsync(int salesOrderId)
         {
             try
             {
                 var so = await _unitOfWork.SalesOrder.Query()
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (so == null)
                 {
@@ -490,14 +492,14 @@ namespace PMS.Application.Services.SalesOrder
         }
 
         ////Customer send the sales order draft
-        public async Task<ServiceResult<object>> SendOrderAsync(int orderId)
+        public async Task<ServiceResult<object>> SendOrderAsync(int salesOrderId)
         {
             try
             {
                 var so = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
                         .ThenInclude(d => d.Product)
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (so == null)
                 {
@@ -581,24 +583,36 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        //// customer update sales order when status is draft
-        public async Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(int SalesOrderId, List<SalesOrderDetailsUpdateDTO> items)
+        // customer update sales order when status is draft
+        public async Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(int salesOrderId, List<SalesOrderDetailsUpdateDTO> items)
         {
             try
             {
                 if (items == null || items.Count == 0)
-                    return new ServiceResult<bool> { StatusCode = 400, Message = "Danh sách cập nhật rỗng.", Data = false };
+                    return new ServiceResult<bool> { 
+                        StatusCode = 400, 
+                        Message = "Danh sách cập nhật rỗng.", 
+                        Data = false 
+                    };
 
                 var so = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
                         .ThenInclude(d => d.Product)
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == SalesOrderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (so == null)
-                    return new ServiceResult<bool> { StatusCode = 404, Message = "Không tìm thấy SalesOrder.", Data = false };
+                    return new ServiceResult<bool> { 
+                        StatusCode = 404, 
+                        Message = "Không tìm thấy SalesOrder.", 
+                        Data = false 
+                    };
 
                 if (so.Status != SalesOrderStatus.Draft)
-                    return new ServiceResult<bool> { StatusCode = 400, Message = "Chỉ được cập nhật khi đơn ở trạng thái Draft.", Data = false };
+                    return new ServiceResult<bool> { 
+                        StatusCode = 400, 
+                        Message = "Chỉ được cập nhật khi đơn ở trạng thái Draft.", 
+                        Data = false 
+                    };
 
                 var qtyMap = items.ToDictionary(x => x.ProductId, x => x.Quantity);
 
@@ -652,7 +666,7 @@ namespace PMS.Application.Services.SalesOrder
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync({SalesOrderId})", SalesOrderId);
+                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync({SalesOrderId})", salesOrderId);
                 return new ServiceResult<bool>
                 {
                     StatusCode = 500,
@@ -663,15 +677,15 @@ namespace PMS.Application.Services.SalesOrder
         }
 
         //Generate SalesOrderId
-        private static string GenerateSalesOrderId()
+        private static string GenerateSalesOrderCode()
             => $"SO{DateTime.Now:yyyyMMddHHmmssfff}";
 
-        public async Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int SalesQuotationId)
+        public async Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int salesQuotationId)
         {
             try
             {
                 var dto = await _unitOfWork.SalesQuotation.Query()
-                    .Where(q => q.Id == SalesQuotationId)
+                    .Where(q => q.Id == salesQuotationId)
                     .Select(q => new SalesQuotationResponseDTO
                     {
                         Id = q.Id,
@@ -712,7 +726,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<SalesQuotationResponseDTO>
                     {
                         StatusCode = 404,
-                        Message = $"Không tìm thấy SalesQuotation Id = {SalesQuotationId}",
+                        Message = $"Không tìm thấy SalesQuotation Id = {salesQuotationId}",
                         Data = null
                     };
                 }
@@ -726,12 +740,150 @@ namespace PMS.Application.Services.SalesOrder
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi GetQuotationInfo({SalesQuotationId})", SalesQuotationId);
+                _logger.LogError(ex, "Lỗi GetQuotationInfo({SalesQuotationId})", salesQuotationId);
                 return new ServiceResult<SalesQuotationResponseDTO>
                 {
                     StatusCode = 500,
                     Message = "Đã xảy ra lỗi khi lấy thông tin báo giá.",
                     Data = null
+                };
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<object>>> ListSalesOrdersAsync()
+        {
+            try
+            {
+                var orders = await _unitOfWork.SalesOrder.Query()
+                    .Where(o => o.Status != SalesOrderStatus.Draft)
+                    .OrderByDescending(o => o.CreateAt)
+                    .Select(o => new
+                    {
+                        o.SalesOrderId,
+                        o.SalesOrderCode,
+                        o.SalesQuotationId,
+                        o.Status,
+                        o.TotalPrice,
+                        //o.DepositAmount,
+                        o.CreateAt
+                    })
+                    .ToListAsync();
+
+                return new ServiceResult<IEnumerable<object>>
+                {
+                    StatusCode = 200,
+                    Message = "Lấy danh sách đơn hàng thành công",
+                    Data = orders
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ListOrdersAsync");
+                return new ServiceResult<IEnumerable<object>>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi lấy danh sách đơn hàng",
+                    Data = null
+                };
+            }
+        }
+
+        public async Task<ServiceResult<bool>> ApproveSalesOrderAsync(int salesOrderId)
+        {
+            try
+            {
+                var so = await _unitOfWork.SalesOrder.Query()
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+
+                if (so == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesOrder",
+                        Data = false
+                    };
+                }
+
+                if (so.Status != SalesOrderStatus.Send)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được chấp nhận hoặc từ chối đơn hàng có trạng thái đã gửi!",
+                        Data = false
+                    };
+                }
+
+                so.Status = SalesOrderStatus.Approved;
+                _unitOfWork.SalesOrder.Update(so);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Đơn hàng đã được chấp nhận!",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ApproveSalesOrderAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi hoàn tất đơn hàng",
+                    Data = false
+                };
+            }
+        }
+
+        public async Task<ServiceResult<bool>> RejectSalesOrderAsync(int salesOrderId)
+        {
+            try
+            {
+                var so = await _unitOfWork.SalesOrder.Query()
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+
+                if (so == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesOrder",
+                        Data = false
+                    };
+                }
+
+                if (so.Status != SalesOrderStatus.Send)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được chấp nhận hoặc từ chối đơn hàng có trạng thái đã gửi!",
+                        Data = false
+                    };
+                }
+
+                so.Status = SalesOrderStatus.Rejected;
+                _unitOfWork.SalesOrder.Update(so);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Đơn hàng đã được chấp nhận!",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ApproveSalesOrderAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi hoàn tất đơn hàng",
+                    Data = false
                 };
             }
         }

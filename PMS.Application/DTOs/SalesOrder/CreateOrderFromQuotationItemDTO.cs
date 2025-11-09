@@ -9,6 +9,7 @@ namespace PMS.Application.DTOs.SalesOrder
     public class CreateOrderFromQuotationItemDTO
     {
         public int ProductId { get; set; }
+        public int LotId { get; set; }
         public int Quantity { get; set; }  
         public decimal? UnitPrice { get; set; }
     }
