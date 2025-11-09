@@ -356,7 +356,7 @@ namespace PMS.Data.DatabaseConfig
 
                 // Quan hệ: InventoryHistory -> LotProduct (nhiều-1)
                 entity.HasOne(h => h.LotProduct)
-                      .WithMany(l => l.I)
+                      .WithMany(l => l.InventoryHistories)
                       .HasForeignKey(h => h.LotID)
                       .OnDelete(DeleteBehavior.Restrict);
             });

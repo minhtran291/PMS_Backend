@@ -38,5 +38,6 @@ namespace PMS.Core.Domain.Entities
         public virtual Product Product { get; set; } = null!;
         public virtual Supplier Supplier { get; set; } = null!;
         public virtual WarehouseLocation WarehouseLocation { get; set; } = null!;
+        public virtual ICollection<InventoryHistory> InventoryHistories { get; set; } = [];
     }
 }
