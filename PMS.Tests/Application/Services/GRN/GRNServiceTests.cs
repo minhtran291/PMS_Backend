@@ -142,7 +142,7 @@ namespace PMS.Tests.Application.Services.GRN
 
             var details = new List<GoodReceiptNoteDetail>
         {
-            new GoodReceiptNoteDetail { GRNDID = 1, GRNID = grnId, ProductID = 101, Quantity = 5, UnitPrice = 10, Product = new Product { ProductID = 101, ProductName = "SP A", MaxQuantity=2000, MinQuantity=10, Status=true, TotalCurrentQuantity=30, Unit="Hộp" } }
+            new GoodReceiptNoteDetail { GRNDID = 1, GRNID = grnId, ProductID = 101, Quantity = 5, UnitPrice = 10, Product = new PMS.Core.Domain.Entities.Product { ProductID = 101, ProductName = "SP A", MaxQuantity=2000, MinQuantity=10, Status=true, TotalCurrentQuantity=30, Unit="Hộp" } }
         };
 
             UnitOfWorkMock.Setup(u => u.GoodReceiptNote.Query())
@@ -245,6 +245,114 @@ namespace PMS.Tests.Application.Services.GRN
             Assert.AreEqual(404, result.StatusCode);
             Assert.AreEqual("Không tồn tại nhà cung cấp.", result.Message);
         }
-       
+
+
+        [Test]
+        public async Task CreateGoodReceiptNoteFromPOAsync_ValidPO_ShouldReturnSuccess()
+        {
+
+            string userId = "user123";
+            int poId = 1;
+            int warehouseId = 10;
+
+
+            var poDetails = new List<PurchasingOrderDetail>
+    {
+        new PurchasingOrderDetail
+        {
+            ProductName = "ProdA",
+            UnitPrice = 100,
+            Quantity = 5,
+            ExpiredDate = DateTime.Now.AddMonths(12)
+        },
+        new PurchasingOrderDetail
+        {
+            ProductName = "ProdB",
+            UnitPrice = 200,
+            Quantity = 3,
+            ExpiredDate = DateTime.Now.AddMonths(6)
+        }
+    };
+
+
+            var po = new PurchasingOrder
+            {
+                POID = poId,
+                Total = 1100,
+                PurchasingOrderDetails = poDetails,
+                Quotations = new Quotation
+                {
+                    SupplierID = 1,
+                    QID = 1,
+                    QuotationExpiredDate = DateTime.Now.AddMonths(6),
+                    SendDate = DateTime.Now
+                },
+                OrderDate = DateTime.Now,
+                QID = 1
+            };
+
+
+            var supplier = new Supplier
+            {
+                Id = 1,
+                Name = "Supplier A"
+            };
+
+
+            var products = new List<PMS.Core.Domain.Entities.Product>
+    {
+        new PMS.Core.Domain.Entities.Product { ProductID = 10, ProductName = "ProdA", MaxQuantity = 2000, MinQuantity = 10, Status = true, TotalCurrentQuantity = 10, Unit = "Hộp" },
+        new PMS.Core.Domain.Entities.Product { ProductID = 20, ProductName = "ProdB", MaxQuantity = 2000, MinQuantity = 10, Status = true, TotalCurrentQuantity = 30, Unit = "Hộp" }
+    }.AsQueryable();
+
+
+            var lotProducts = new List<LotProduct>().AsQueryable();
+
+
+            var poDbSet = MockHelper.GetMockDbSet(new List<PurchasingOrder> { po }.AsQueryable());
+            var supplierDbSet = MockHelper.GetMockDbSet(new List<Supplier> { supplier }.AsQueryable());
+            var productDbSet = MockHelper.GetMockDbSet(products);
+            var lotProductDbSet = MockHelper.GetMockDbSet(lotProducts);
+
+
+            UnitOfWorkMock.Setup(u => u.PurchasingOrder.Query()).Returns(poDbSet.Object);
+            UnitOfWorkMock.Setup(u => u.Supplier.Query()).Returns(supplierDbSet.Object);
+            UnitOfWorkMock.Setup(u => u.Product.Query()).Returns(productDbSet.Object);
+            UnitOfWorkMock.Setup(u => u.LotProduct.Query()).Returns(lotProductDbSet.Object);
+
+            UnitOfWorkMock.Setup(u => u.GoodReceiptNote.AddAsync(It.IsAny<GoodReceiptNote>()))
+                .Callback<GoodReceiptNote>(grn => grn.GRNID = 99)
+                .Returns(Task.CompletedTask);
+
+            UnitOfWorkMock.Setup(u => u.GoodReceiptNoteDetail.AddRange(It.IsAny<List<GoodReceiptNoteDetail>>()));
+            UnitOfWorkMock.Setup(u => u.LotProduct.AddRange(It.IsAny<IEnumerable<LotProduct>>()));
+            UnitOfWorkMock.Setup(u => u.LotProduct.UpdateRange(It.IsAny<IEnumerable<LotProduct>>()));
+            UnitOfWorkMock.Setup(u => u.Product.Update(It.IsAny<PMS.Core.Domain.Entities.Product>()));
+
+            UnitOfWorkMock.Setup(u => u.BeginTransactionAsync()).Returns(Task.CompletedTask);
+            UnitOfWorkMock.Setup(u => u.CommitAsync()).ReturnsAsync(1);
+            UnitOfWorkMock.Setup(u => u.CommitTransactionAsync()).Returns(Task.CompletedTask);
+            UnitOfWorkMock.Setup(u => u.RollbackTransactionAsync()).Returns(Task.CompletedTask);
+
+
+            var result = await _grnService.CreateGoodReceiptNoteFromPOAsync(userId, poId, warehouseId);
+
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.StatusCode, Is.EqualTo(200));
+            Assert.That(result.Data, Is.EqualTo(99));
+            Assert.That(result.Message, Does.Contain("Thành công"));
+
+
+            UnitOfWorkMock.Verify(u => u.BeginTransactionAsync(), Times.Once);
+            UnitOfWorkMock.Verify(u => u.CommitTransactionAsync(), Times.Once);
+            UnitOfWorkMock.Verify(u => u.CommitAsync(), Times.AtLeast(1));
+
+
+            UnitOfWorkMock.Verify(u => u.GoodReceiptNote.AddAsync(It.IsAny<GoodReceiptNote>()), Times.Once);
+            UnitOfWorkMock.Verify(u => u.GoodReceiptNoteDetail.AddRange(It.IsAny<List<GoodReceiptNoteDetail>>()), Times.Once);
+            UnitOfWorkMock.Verify(u => u.LotProduct.AddRange(It.IsAny<IEnumerable<LotProduct>>()), Times.Once);
+
+        }
     }
 }
