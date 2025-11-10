@@ -10,7 +10,7 @@ namespace PMS.Core.Domain.Enums
     {
         Draft = 0,
         Sent = 1,
-        Complete = 2,
+        Exported = 2,
         Late = 3,
     }
 }
