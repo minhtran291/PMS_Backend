@@ -52,7 +52,7 @@ namespace PMS.Data.DatabaseConfig
         //SalesOrder
         public virtual DbSet<SalesOrder> SalesOrders { get; set; }
         public virtual DbSet<SalesOrderDetails> SalesOrderDetails { get; set; }
-        public virtual DbSet<CustomerDept> CustomerDepts { get; set; }
+        public virtual DbSet<CustomerDebt> CustomerDebts { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -869,6 +869,14 @@ namespace PMS.Data.DatabaseConfig
                     .HasMaxLength(450)
                     .IsRequired();
 
+                entity.Property(so => so.CreateAt)
+                    .HasColumnType("date")
+                    .IsRequired();
+
+                entity.Property(so => so.PaidAmount)
+                    .HasPrecision(18,2)
+                    .IsRequired();
+
                 entity.Property(so => so.TotalPrice)
                     .HasPrecision(18, 2)
                     .IsRequired();
@@ -892,11 +900,12 @@ namespace PMS.Data.DatabaseConfig
                       .OnDelete(DeleteBehavior.Restrict);
 
                 //1 - n (1 SalesOrder to n CustomerDepts)
-                //entity.HasMany(so => so.CustomerDepts)
-                //    .WithOne(cd => cd.SalesOrder)
-                //    .HasForeignKey(cd => cd.SalesOrderId)
-                //    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasMany(so => so.CustomerDebts)
+                    .WithOne(cd => cd.SalesOrder)
+                    .HasForeignKey(cd => cd.SalesOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
+                //1-n (1 Customer have n SalesOrder)
                 entity.HasOne(so => so.Customer)
                     .WithMany(u => u.SalesOrders)
                     .HasForeignKey(so => so.CreateBy)
@@ -934,25 +943,25 @@ namespace PMS.Data.DatabaseConfig
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
-            builder.Entity<CustomerDept>(entity =>
+            builder.Entity<CustomerDebt>(entity =>
             {
                 entity.HasKey(cd => cd.Id);
 
-                //    entity.Property(cd => cd.SalesOrderId)       
-                //          .IsRequired();  
+                entity.Property(cd => cd.SalesOrderId)
+                      .IsRequired();
 
-                //    entity.Property(cd => cd.CustomerId)
-                //          .IsRequired();     
+                entity.Property(cd => cd.CustomerId)
+                      .IsRequired();
 
-                //    entity.Property(cd => cd.DeptAmount)
-                //          .HasColumnType("decimal(18,2)")                            
-                //          .IsRequired();
+                entity.Property(cd => cd.DebtAmount)
+                      .HasColumnType("decimal(18,2)")
+                      .IsRequired();
 
-                //    n CustomerDept thuoc ve 1 SalesOrder
-                //    entity.HasOne(cd => cd.SalesOrder)
-                //        .WithMany(o => o.CustomerDepts)
-                //        .HasForeignKey(cd => cd.SalesOrderId)
-                //        .OnDelete(DeleteBehavior.Cascade);
+                //n CustomerDept thuoc ve 1 SalesOrder
+                entity.HasOne(cd => cd.SalesOrder)
+                    .WithMany(o => o.CustomerDebts)
+                    .HasForeignKey(cd => cd.SalesOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
     }

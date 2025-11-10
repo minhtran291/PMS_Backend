@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Storage;
 using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
-using PMS.Data.Repositories.CustomerDeptRepository;
+using PMS.Data.Repositories.CustomerDebtRepo;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
@@ -68,7 +68,7 @@ namespace PMS.Data.UnitOfWork
         ISalesQuotationNoteRepository salesQuotationNote,
         ISalesOrderRepository salesOrder,
         ISalesOrderDetailsRepository salesOrderDetails,
-        ICustomerDeptRepository customerDept, 
+        ICustomerDebtRepository customerDept, 
         IInventoryHistoryRepository inventoryHistory
         ,IInventorySessionRepository inventorySession) : IUnitOfWork
     {
@@ -113,7 +113,7 @@ namespace PMS.Data.UnitOfWork
         public ISalesOrderRepository SalesOrder { get; private set; } = salesOrder;
         public ISalesOrderDetailsRepository SalesOrderDetails { get; private set; } = salesOrderDetails;
         //CustomerDept
-        public ICustomerDeptRepository CustomerDept { get; private set; } = customerDept;
+        public ICustomerDebtRepository CustomerDept { get; private set; } = customerDept;
 
         //InventoryHistory
         public IInventoryHistoryRepository InventoryHistory { get; private set; } = inventoryHistory;
