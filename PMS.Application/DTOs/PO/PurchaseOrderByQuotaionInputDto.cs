@@ -17,7 +17,7 @@ namespace PMS.Application.DTOs.PO
         public required List<PurchaseOrderDetailByQuotaionInputDto> Details { get; set; } = new();
 
         [Required(ErrorMessage = "Thiếu trạng thái đơn hàng")]
-        public required PurchasingOrderStatus Status { get; set; }
+        public  PurchasingOrderStatus Status { get; set; }
 
     }
 }
