@@ -20,6 +20,5 @@ namespace PMS.Core.DTO.Content
         public int Quantity { get; set; }
         [Required(ErrorMessage = "ExpiredDate is required.")]
         public DateTime ExpiredDate { get; set; }
-        //public virtual GRNManuallyDTO GRNManuallyDTO { get; set; } = null!;
     }
 }

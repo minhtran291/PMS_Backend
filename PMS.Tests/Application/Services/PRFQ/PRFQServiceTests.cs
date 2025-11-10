@@ -324,5 +324,81 @@ namespace PMS.Tests.Services.Purchasing
                 $"PRFQ_{prfqId}.xlsx"
             ), Times.Once);
         }
+
+
+        [Test]
+        public async Task CreatePRFQAsync_ValidData_ShouldReturnSuccess()
+        {
+            var userId = "user123";
+            var supplierId = 1;
+            var productIds = new List<int> { 10, 20 };
+
+            var user = new User { Id = userId, FullName = "TestUser" };
+            var supplier = new Supplier { Id = supplierId, Name = "Supplier A", Status = SupplierStatus.Active, Email = "supplier@mail.com" };
+            var products = new List<Product>
+            {
+                new Product { ProductID = 10, ProductName = "Prod1", Status = true, Unit = "Hộp", MaxQuantity=2000, MinQuantity=100, TotalCurrentQuantity=20 },
+                new Product { ProductID = 20, ProductName = "Prod2", Status = true, Unit = "Hộp", MaxQuantity=2000, MinQuantity=100, TotalCurrentQuantity=20 }
+            };
+
+
+            UserManagerMock.Setup(m => m.FindByIdAsync(userId))
+                .ReturnsAsync(user);
+
+
+            var supplierDbSet = MockHelper.GetMockDbSet(new List<Supplier> { supplier }.AsQueryable());
+            UnitOfWorkMock.Setup(u => u.Supplier.Query()).Returns(supplierDbSet.Object);
+
+
+            var productDbSet = MockHelper.GetMockDbSet(products.AsQueryable());
+            UnitOfWorkMock.Setup(u => u.Product.Query()).Returns(productDbSet.Object);
+
+
+            UnitOfWorkMock.Setup(u => u.PurchasingRequestForQuotation.AddAsync(It.IsAny<PurchasingRequestForQuotation>()))
+                .Callback<PurchasingRequestForQuotation>(p => p.PRFQID = 99)
+                .Returns(Task.CompletedTask);
+            UnitOfWorkMock.Setup(u => u.PurchasingRequestProduct.AddAsync(It.IsAny<PurchasingRequestProduct>()))
+                .Returns(Task.CompletedTask);
+            UnitOfWorkMock.Setup(u => u.CommitAsync()).ReturnsAsync(1);
+
+
+            var fullPrfq = new PurchasingRequestForQuotation
+            {
+                PRFQID = 99,
+                TaxCode = "123456789",
+                MyPhone = "0909123456",
+                MyAddress = "HCM",
+                Supplier = supplier,
+                User = user,
+                PRPS = productIds.Select(pid => new PurchasingRequestProduct
+                {
+                    ProductID = pid,
+                    Product = products.First(p => p.ProductID == pid)
+                }).ToList()
+            };
+            UnitOfWorkMock.Setup(u => u.PurchasingRequestForQuotation.GetByIdAsync(
+                    It.IsAny<int>(),
+                    It.IsAny<Func<IQueryable<PurchasingRequestForQuotation>, IQueryable<PurchasingRequestForQuotation>>>()))
+                .ReturnsAsync(fullPrfq);
+
+
+            EmailServiceMock.Setup(e => e.SendEmailWithAttachmentAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<byte[]>(), It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
+
+
+            var result = await _prfqService.CreatePRFQAsync(
+                userId, supplierId, "123456789", "0909123456", "HCM", productIds, PRFQStatus.Sent);
+
+
+            Assert.That(result.StatusCode, Is.EqualTo(200));
+            Assert.That(result.Data, Is.EqualTo(99));
+            EmailServiceMock.Verify(e => e.SendEmailWithAttachmentAsync(
+                supplier.Email, It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<byte[]>(), It.IsAny<string>()), Times.Once);
+            UnitOfWorkMock.Verify(u => u.CommitAsync(), Times.Exactly(2));
+        }
+
     }
 }

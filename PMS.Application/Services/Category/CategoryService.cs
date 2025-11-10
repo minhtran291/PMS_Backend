@@ -9,7 +9,7 @@ using PMS.Data.UnitOfWork;
 
 namespace PMS.Application.Services.Category
 {
-    public class CategoryService(IUnitOfWork unitOfWork, IMapper mapper, IConfiguration configuration) : Service(unitOfWork, mapper), ICategoryService
+    public class CategoryService(IUnitOfWork unitOfWork, IMapper mapper) : Service(unitOfWork, mapper), ICategoryService
     {
         public async Task<ServiceResult<bool>> ActiveSupplierAsync(int cateId)
         {
