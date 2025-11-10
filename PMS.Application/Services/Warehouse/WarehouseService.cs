@@ -607,7 +607,7 @@ namespace PMS.Application.Services.Warehouse
 
             try
             {
-                // 1️⃣ Lấy phiên kiểm kê
+
                 var session = await _unitOfWork.InventorySession.Query()
                     .Include(s => s.InventoryHistories)
                         .ThenInclude(h => h.LotProduct)
