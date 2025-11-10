@@ -26,6 +26,7 @@ using PMS.Application.Services.VNpay;
 using PMS.Application.Services.Warehouse;
 using PMS.Application.Services.WarehouseLocation;
 using PMS.Core.ConfigOptions;
+using PMS.Application.Services.StockExportOrder;
 
 namespace PMS.Application.DIConfig
 {
@@ -58,6 +59,7 @@ namespace PMS.Application.DIConfig
             //services.AddScoped<ISalesOrderService, SalesOrderService>();
             // VNPay
             services.AddScoped<IVnPayService, VnPayService>();
+            services.AddScoped<IStockExportOderService, StockExportOrderService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
