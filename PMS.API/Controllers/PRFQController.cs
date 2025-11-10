@@ -286,15 +286,9 @@ namespace PMS.API.Controllers
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-
-
-
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { message = "Không thể xác thực người dùng." });
-
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized(new { Message = "Không tìm thấy userId." });
 
             var serviceResult = await _iPRFQService.CountinueEditPurchasingOrderAsync(poid, userId, input);
 

@@ -604,11 +604,10 @@ namespace PMS.Application.Services.Warehouse
         public async Task<ServiceResult<int>> CompleteInventorySessionAsync(int sessionId, string userId)
         {
             await _unitOfWork.BeginTransactionAsync();
-
             try
             {
-
-                var session = await _unitOfWork.InventorySession.Query()
+                var session = await _unitOfWork.InventorySession
+                    .Query()
                     .Include(s => s.InventoryHistories)
                         .ThenInclude(h => h.LotProduct)
                     .ThenInclude(lp => lp.Product)
@@ -617,10 +616,9 @@ namespace PMS.Application.Services.Warehouse
                 if (session == null)
                     return ServiceResult<int>.Fail("Không tìm thấy phiên kiểm kê.");
 
-                if (!session.InventoryHistories.Any())
-                    return ServiceResult<int>.Fail("Phiên kiểm kê chưa có dữ liệu.");
+                if (session.Status == InventorySessionStatus.Completed)
+                    return ServiceResult<int>.Fail("Phiên kiểm kê này đã hoàn tất.");
 
-                // 2️⃣ Cập nhật LotProduct.LotQuantity = ActualQuantity
                 foreach (var history in session.InventoryHistories)
                 {
                     var lot = history.LotProduct;
@@ -628,29 +626,39 @@ namespace PMS.Application.Services.Warehouse
 
                     lot.LotQuantity = history.ActualQuantity;
                     lot.LastCheckedDate = DateTime.Now;
+                    _unitOfWork.LotProduct.Update(lot);
                 }
 
-                // 3️⃣ Cập nhật tổng tồn của từng Product
-                var productGroups = session.InventoryHistories
-                    .Where(h => h.LotProduct != null)
-                    .GroupBy(h => h.LotProduct.Product);
 
-                foreach (var group in productGroups)
+                var affectedProductIds = session.InventoryHistories
+                    .Select(h => h.LotProduct.ProductID)
+                    .Distinct()
+                    .ToList();
+
+                foreach (var productId in affectedProductIds)
                 {
-                    var product = group.Key;
-                    product.TotalCurrentQuantity = group
-                        .Sum(h => h.ActualQuantity);
+                    var product = await _unitOfWork.Product.Query()
+                        .Include(p => p.LotProducts)
+                        .FirstOrDefaultAsync(p => p.ProductID == productId);
+
+                    if (product != null)
+                    {
+
+                        product.TotalCurrentQuantity = product.LotProducts.Sum(lp => lp.LotQuantity);
+                        _unitOfWork.Product.Update(product);
+                    }
                 }
 
-                // 4️⃣ Cập nhật trạng thái phiên kiểm kê
+
                 session.Status = InventorySessionStatus.Completed;
                 session.EndDate = DateTime.Now;
+                session.CreatedBy = userId;
+                _unitOfWork.InventorySession.Update(session);
 
-                // 5️⃣ Lưu DB
+                
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
-
-                return ServiceResult<int>.SuccessResult(1, "Hoàn tất kiểm kê thành công!");
+                return ServiceResult<int>.SuccessResult(session.InventorySessionID, "Hoàn tất phiên kiểm kê thành công.");
             }
             catch (Exception ex)
             {
@@ -658,6 +666,8 @@ namespace PMS.Application.Services.Warehouse
                 return ServiceResult<int>.Fail($"Lỗi khi hoàn tất kiểm kê: {ex.Message}");
             }
         }
+
+
 
         public async Task<ServiceResult<IEnumerable<InventoryHistoryDTO>>> GetHistoriesBySessionIdAsync(int sessionId)
         {
