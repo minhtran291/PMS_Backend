@@ -104,7 +104,7 @@ namespace PMS.Application.Services.VNpay
         //    try
         //    {
         //        var order = await _unitOfWork.SalesOrder.Query()
-        //            .FirstOrDefaultAsync(o => o.OrderId == salesOrderId);
+        //            .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
         //        if (order == null)
         //        {
@@ -126,7 +126,7 @@ namespace PMS.Application.Services.VNpay
         //            };
         //        }
 
-        //        if (amountVnd < order.OrderTotalPrice)
+        //        if (amountVnd < order.TotalPrice)
         //        {
         //            order.Status = SalesOrderStatus.Deposited;
         //            order.DepositAmount = amountVnd;
@@ -134,7 +134,7 @@ namespace PMS.Application.Services.VNpay
         //        else
         //        {
         //            order.Status = SalesOrderStatus.Paid;
-        //            order.DepositAmount = order.OrderTotalPrice;
+        //            order.DepositAmount = order.TotalPrice;
         //        }
 
         //        _unitOfWork.SalesOrder.Update(order);

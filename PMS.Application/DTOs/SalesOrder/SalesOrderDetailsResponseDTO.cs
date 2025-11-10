@@ -6,9 +6,7 @@ using System.Threading.Tasks;
 
 namespace PMS.Application.DTOs.SalesOrder
 {
-    public class DraftSalesOrderDTO
+    public class SalesOrderDetailsResponseDTO
     {
-        public int ProductId { get; set; }
-        public decimal Quantity { get; set; }
     }
 }
