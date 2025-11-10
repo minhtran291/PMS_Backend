@@ -29,5 +29,9 @@ namespace PMS.API.Services.PRFQService
 
         Task<ServiceResult<int>> CreatePurchaseOrderByQIDAsync(string userId,
         PurchaseOrderByQuotaionInputDto input);
+
+        Task<ServiceResult<bool>> CountinueEditPurchasingOrderAsync(int poid, string userid, PurchaseOrderByQuotaionInputDto input);
     }
+
+
 }
