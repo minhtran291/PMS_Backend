@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using PMS.Core.Domain.Enums;
+﻿using PMS.Core.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -9,11 +8,15 @@ using System.Threading.Tasks;
 
 namespace PMS.Application.DTOs.SalesOrder
 {
-    public class SalesOrderRequestDTO
+    public class SalesOrderUpdateDTO
     {
+        [Required(ErrorMessage = "SalesOrderID là bắt buộc!")]
+        public int SalesOrderId { get; set; }
+        [Required(ErrorMessage = "Mã đơn hàng mua là bắt buộc!")]
         public string SalesOrderCode { get; set; }
         [Required(ErrorMessage = "SalesQuotationID là bắt buộc!")]
         public int SalesQuotationId { get; set; }
+        [Required(ErrorMessage = "Người tạo đơn hàng phải được ghi vào hệ thống!")]
         public required string CreateBy { get; set; }
         public DateTime CreateAt { get; set; } = DateTime.Now;
         [Required(ErrorMessage = "Trạng thái là bắt buộc")]
@@ -23,6 +26,6 @@ namespace PMS.Application.DTOs.SalesOrder
         public bool IsDeposited { get; set; } = false;
 
         [Required, MinLength(1)]
-        public List<SalesOrderDetailsRequestDTO> Details { get; set; } = [];
+        public List<SalesOrderDetailsUpdateDTO> Details { get; set; } = [];
     }
 }

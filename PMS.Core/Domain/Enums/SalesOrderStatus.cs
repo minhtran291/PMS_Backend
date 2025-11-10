@@ -10,8 +10,10 @@ namespace PMS.Core.Domain.Enums
     {
         Draft = 0,
         Send = 1,
-        Deposited = 2,
-        Paid = 3,
-        Complete = 4
+        Approved =2,
+        Rejected = 3,
+        Deposited = 4,
+        Paid = 5,
+        Complete = 6
     }
 }

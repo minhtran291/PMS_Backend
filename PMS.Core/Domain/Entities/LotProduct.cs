@@ -41,6 +41,6 @@ namespace PMS.Core.Domain.Entities
         public virtual WarehouseLocation WarehouseLocation { get; set; } = null!;
         public virtual ICollection<SalesOrderDetails> SalesOrderDetails { get; set; } = [];
         public virtual ICollection<InventoryHistory> InventoryHistories { get; set; } = [];
-
+        public virtual ICollection<StockExportOrderDetails> StockExportOrderDetails { get; set; } = [];
     }
 }
