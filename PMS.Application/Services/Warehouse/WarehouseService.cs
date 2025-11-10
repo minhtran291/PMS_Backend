@@ -600,7 +600,6 @@ namespace PMS.Application.Services.Warehouse
             return ServiceResult<IEnumerable<InventoryCompareDTO>>.SuccessResult(result);
         }
 
-
         public async Task<ServiceResult<int>> CompleteInventorySessionAsync(int sessionId, string userId)
         {
             await _unitOfWork.BeginTransactionAsync();
@@ -668,7 +667,6 @@ namespace PMS.Application.Services.Warehouse
         }
 
 
-
         public async Task<ServiceResult<IEnumerable<InventoryHistoryDTO>>> GetHistoriesBySessionIdAsync(int sessionId)
         {
             var histories = await _unitOfWork.InventoryHistory.Query()
@@ -693,6 +691,68 @@ namespace PMS.Application.Services.Warehouse
             });
 
             return ServiceResult<IEnumerable<InventoryHistoryDTO>>.SuccessResult(result);
+        }
+
+
+        public async Task<ServiceResult<List<InventorySessionDTO>>> GetAllInventorySessionsAsync()
+        {
+            try
+            {
+                var sessions = await _unitOfWork.InventorySession.Query()
+                    .OrderByDescending(s => s.StartDate)
+                    .Select(s => new InventorySessionDTO
+                    {
+                        InventorySessionID = s.InventorySessionID,
+                        StartDate = s.StartDate,
+                        EndDate = s.EndDate,
+                        CreatedBy = s.CreatedBy,
+                        Status = s.Status
+                    })
+                    .ToListAsync();
+
+                if (!sessions.Any())
+                    return ServiceResult<List<InventorySessionDTO>>.Fail("Không có phiên kiểm kê nào.");
+
+                return ServiceResult<List<InventorySessionDTO>>.SuccessResult(sessions, "Lấy danh sách phiên kiểm kê thành công.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetAllInventorySessionsAsync failed");
+                return ServiceResult<List<InventorySessionDTO>>.Fail("Lỗi khi lấy danh sách phiên kiểm kê.");
+            }
+        }
+
+
+
+        public async Task<ServiceResult<List<InventorySessionDTO>>> GetAllInventorySessionsByWarehouseLocationAsync(int warehouseLocationId)
+        {
+            try
+            {
+                var sessions = await _unitOfWork.InventorySession.Query()
+                    .Include(s => s.InventoryHistories)
+                        .ThenInclude(h => h.LotProduct)
+                    .Where(s => s.InventoryHistories
+                        .Any(h => h.LotProduct.WarehouselocationID == warehouseLocationId))
+                    .OrderByDescending(s => s.StartDate)
+                    .Select(s => new InventorySessionDTO
+                    {
+                        InventorySessionID = s.InventorySessionID,
+                        StartDate = s.StartDate,
+                        EndDate = s.EndDate,
+                        CreatedBy = s.CreatedBy,
+                        Status = s.Status
+                    })
+                    .ToListAsync();
+
+                if (!sessions.Any())
+                    return ServiceResult<List<InventorySessionDTO>>.Fail("Không tìm thấy phiên kiểm kê nào cho vị trí kho này.");
+
+                return ServiceResult<List<InventorySessionDTO>>.SuccessResult(sessions, "Lấy danh sách phiên kiểm kê thành công!");
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<InventorySessionDTO>>.Fail($"Lỗi khi lấy danh sách phiên kiểm kê: {ex.Message}");
+            }
         }
     }
 

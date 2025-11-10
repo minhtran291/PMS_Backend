@@ -3,6 +3,7 @@ using PMS.Application.DTOs.Product;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Entities;
 
 namespace PMS.Application.Services.Warehouse
 {
@@ -25,5 +26,9 @@ namespace PMS.Application.Services.Warehouse
         Task<ServiceResult<int>> CompleteInventorySessionAsync(int sessionId, string userId);
         Task<ServiceResult<IEnumerable<InventoryHistoryDTO>>> GetHistoriesBySessionIdAsync(int sessionId);
         Task<ServiceResult<byte[]>> ExportInventorySessionToExcelAsync(string userId, int sessionId);
+
+        Task<ServiceResult<List<InventorySessionDTO>>> GetAllInventorySessionsAsync();
+
+        Task<ServiceResult<List<InventorySessionDTO>>> GetAllInventorySessionsByWarehouseLocationAsync(int warehouseLocationId);
     }
 }

@@ -239,5 +239,30 @@ namespace PMS.API.Controllers
             );
         }
 
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/GetAllsession
+        /// Lấy danh sách tất cả các phiên kiểm kê 
+        /// </summary>
+        [HttpGet("GetAllsession")]
+        public async Task<IActionResult> GetAllInventorySessionsAsync()
+        {
+            var result = await _warehouseService.GetAllInventorySessionsAsync();
+            return HandleServiceResult(result);
+        }
+
+
+
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/sessionbywarehouse/{warehouseLocationId}
+        /// </summary>
+        /// <param name="warehouseLocationId"></param>
+        /// <returns></returns>
+        [HttpGet("sessionbywarehouse/{warehouseLocationId}")]
+        public async Task<IActionResult> GetAllSessionsByWarehouse(int warehouseLocationId)
+        {
+            var result = await _warehouseService.GetAllInventorySessionsByWarehouseLocationAsync(warehouseLocationId);
+            return HandleServiceResult(result);
+        }
+
     }
 }
