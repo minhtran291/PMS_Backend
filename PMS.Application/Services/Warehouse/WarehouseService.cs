@@ -355,15 +355,17 @@ namespace PMS.Application.Services.Warehouse
         public async Task<ServiceResult<byte[]>> ExportInventorySessionToExcelAsync(string userId, int sessionId)
         {
             var historiesResult = await GetHistoriesBySessionIdAsync(sessionId);
+
             if (!historiesResult.Success || !historiesResult.Data.Any())
                 return ServiceResult<byte[]>.Fail("Không có dữ liệu kiểm kê để xuất file.");
-
+            var ses = await _unitOfWork.InventorySession.Query().FirstOrDefaultAsync(p => p.InventorySessionID == sessionId);
+            if (ses == null) { return ServiceResult<byte[]>.Fail("Lỗi khi tìm kiếm theo phiên"); }
             var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
 
             using var package = new ExcelPackage();
             var ws = package.Workbook.Worksheets.Add("InventoryHistories");
 
-  
+
             ws.Cells["A1:H1"].Merge = true;
             ws.Cells["A1"].Value = "CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY";
             ws.Cells["A1"].Style.Font.Bold = true;
@@ -378,24 +380,60 @@ namespace PMS.Application.Services.Warehouse
             ws.Cells["A2"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
 
-            ws.Cells["A3:D3"].Merge = true;
-            ws.Cells["A3"].Value = $"Người kiểm tra: {user?.FullName ?? "Không xác định"}";
 
-            ws.Cells["E3:H3"].Merge = true;
-            ws.Cells["E3"].Value = $"Ngày kiểm tra: {DateTime.Now:dd/MM/yyyy}";
+            int infoStartRow = 5;
+
+
+            ws.Cells[infoStartRow, 1, infoStartRow, 4].Merge = true;
+            ws.Cells[infoStartRow, 1].Value = $"Người kiểm tra: {user?.FullName ?? "Không xác định"}";
+            ws.Cells[infoStartRow, 1].Style.Font.Italic = true;
+            ws.Cells[infoStartRow, 1].Style.Font.Size = 11;
+            ws.Cells[infoStartRow, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+
+
+            ws.Cells[infoStartRow + 1, 1, infoStartRow + 1, 4].Merge = true;
+            ws.Cells[infoStartRow + 1, 1].Value = $"Phiên kiểm kê: {ses.InventorySessionID}";
+            ws.Cells[infoStartRow + 1, 1].Style.Font.Italic = true;
+            ws.Cells[infoStartRow + 1, 1].Style.Font.Size = 11;
+            ws.Cells[infoStartRow + 1, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+
+
+            ws.Cells[infoStartRow, 5, infoStartRow, 8].Merge = true;
+            ws.Cells[infoStartRow, 5].Value = $"Ngày kiểm tra: {ses.StartDate:dd/MM/yyyy}";
+            ws.Cells[infoStartRow, 5].Style.Font.Italic = true;
+            ws.Cells[infoStartRow, 5].Style.Font.Size = 11;
+            ws.Cells[infoStartRow, 5].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+
+
+            ws.Cells[infoStartRow + 1, 5, infoStartRow + 1, 8].Merge = true;
+            ws.Cells[infoStartRow + 1, 5].Value = $"Ngày kết thúc: {ses.EndDate:dd/MM/yyyy}";
+            ws.Cells[infoStartRow + 1, 5].Style.Font.Italic = true;
+            ws.Cells[infoStartRow + 1, 5].Style.Font.Size = 11;
+            ws.Cells[infoStartRow + 1, 5].Style.HorizontalAlignment = ExcelHorizontalAlignment.Right;
+
+
+            using (var range = ws.Cells[infoStartRow, 1, infoStartRow + 1, 8])
+            {
+                range.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+                range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+                range.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+                range.Style.Border.Right.Style = ExcelBorderStyle.Thin;
+                range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(Color.FromArgb(240, 240, 240));
+            }
 
             ws.Cells["A3:H3"].Style.Font.Italic = true;
 
 
-            int headerRow = 5;
-            ws.Cells[headerRow, 1].Value = "LotID";
-            ws.Cells[headerRow, 2].Value = "ProductName";
-            ws.Cells[headerRow, 3].Value = "SystemQuantity";
-            ws.Cells[headerRow, 4].Value = "ActualQuantity";
-            ws.Cells[headerRow, 5].Value = "Diff";
-            ws.Cells[headerRow, 6].Value = "Note";
-            ws.Cells[headerRow, 7].Value = "InventoryBy";
-            ws.Cells[headerRow, 8].Value = "LastUpdated";
+            int headerRow = 8;
+            ws.Cells[headerRow, 1].Value = "LÔ SP";
+            ws.Cells[headerRow, 2].Value = "TÊN SP";
+            ws.Cells[headerRow, 3].Value = "SỐ LƯỢNG KÊ BIÊN";
+            ws.Cells[headerRow, 4].Value = "SỐ LƯỢNG THỰC TẾ";
+            ws.Cells[headerRow, 5].Value = "CHÊNH LỆCH";
+            ws.Cells[headerRow, 6].Value = "GHI CHÚ";
+            ws.Cells[headerRow, 7].Value = "PHỤ TRÁCH";
+            ws.Cells[headerRow, 8].Value = "NGÀY KIỂM KÊ";
 
 
             using (var range = ws.Cells[headerRow, 1, headerRow, 8])
@@ -449,7 +487,7 @@ namespace PMS.Application.Services.Warehouse
 
                 var lots = await _unitOfWork.LotProduct.Query()
                     .Include(l => l.Product)
-                    .Where(l=>l.WarehouselocationID==whlcid)
+                    .Where(l => l.WarehouselocationID == whlcid)
                     .ToListAsync();
 
                 if (!lots.Any())
@@ -463,7 +501,7 @@ namespace PMS.Application.Services.Warehouse
                     Status = InventorySessionStatus.Draft,
                 };
                 await _unitOfWork.InventorySession.AddAsync(session);
-                await _unitOfWork.CommitAsync(); 
+                await _unitOfWork.CommitAsync();
 
 
                 var histories = lots.Select(l => new InventoryHistory
@@ -471,7 +509,7 @@ namespace PMS.Application.Services.Warehouse
                     InventorySessionID = session.InventorySessionID,
                     LotID = l.LotID,
                     SystemQuantity = l.LotQuantity,
-                    ActualQuantity = 0, 
+                    ActualQuantity = 0,
                     LastUpdated = DateTime.Now,
                     InventoryBy = userId,
                     Note = null
@@ -491,7 +529,7 @@ namespace PMS.Application.Services.Warehouse
             }
         }
 
-        public async Task<ServiceResult<bool>> UpdateInventoryBatchAsync(string userId,UpdateInventoryBatchDto input)
+        public async Task<ServiceResult<bool>> UpdateInventoryBatchAsync(string userId, UpdateInventoryBatchDto input)
         {
             if (input.LotCounts == null || !input.LotCounts.Any())
                 return ServiceResult<bool>.Fail("Không có dữ liệu lô để cập nhật.");
