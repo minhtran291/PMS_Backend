@@ -12,6 +12,8 @@ namespace PMS.Application.DTOs.PO
         [Required(ErrorMessage = "Thiếu ProductID")]
         public required int ProductID { get; set; }
 
+        public DateTime Date { get; set; }
+
         [Required(ErrorMessage = "Thiếu số lượng")]
         [Range(1, int.MaxValue, ErrorMessage = "Số lượng phải > 0")]
         public required int Quantity { get; set; }

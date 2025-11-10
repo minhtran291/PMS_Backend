@@ -273,5 +273,28 @@ namespace PMS.API.Controllers
 
             return HandleServiceResult(result);
         }
+
+        /// <summary>
+        /// Tiếp tục chỉnh sửa PO draft
+        /// https://localhost:7213/api/PRFQ/continue-edit/{poid}
+        /// </summary>
+        /// <param name="poid">ID của PO cần chỉnh sửa</param>
+        /// <param name="input">Dữ liệu input mới</param>
+        [HttpPut("continue-edit/{poid}")]
+        public async Task<IActionResult> ContinueEditPO([FromRoute] int poid, [FromBody] PurchaseOrderByQuotaionInputDto input)
+
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { message = "Không thể xác thực người dùng." });
+
+            var serviceResult = await _iPRFQService.CountinueEditPurchasingOrderAsync(poid, userId, input);
+
+            
+            return HandleServiceResult(serviceResult);
+        }
+
     }
 }

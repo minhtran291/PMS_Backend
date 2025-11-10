@@ -47,7 +47,6 @@ namespace PMS.API.Services.QuotationService
             }
         }
 
-
         public async Task<ServiceResult<List<QuotationDTO>>> GetAllQuotationsWithActiveDateAsync()
         {
             try

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace PMS.Application.Services.Product
 {
-    public class ProductService(IUnitOfWork unitOfWork, IMapper mapper, IConfiguration configuration) : Service(unitOfWork, mapper), IProductService
+    public class ProductService(IUnitOfWork unitOfWork, IMapper mapper) : Service(unitOfWork, mapper), IProductService
 
     {
         public async Task<ServiceResult<bool>> AddProductAsync(ProductDTO product)

@@ -1,6 +1,7 @@
 ﻿
 using PMS.Application.DTOs.Profile;
 using PMS.Application.DTOs.SalesQuotation;
+using PMS.Application.DTOs.StockExportOrder;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Core.Domain.Entities;
@@ -54,6 +55,18 @@ namespace PMS.Application.Automapper
                 .ForMember(dest => dest.WarehouseLocations, opt => opt.MapFrom(src => src.WarehouseLocations));
 
             CreateMap<SalesQuotationComment, SalesQuotationCommentDTO>();
+
+            CreateMap<StockExportOrder, ListStockExportOrderDTO>()
+                .ForMember(dest => dest.SalesOrderCode, opt => opt.MapFrom(src => src.SalesOrder.SalesOrderCode))
+                .ForMember(dest => dest.CreateBy, opt => opt.MapFrom(src => src.SalesStaff.FullName));
+
+            CreateMap<StockExportOrderDetails, DetailsStockExportOrderDTO>()
+                .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.LotProduct.Product.ProductName))
+                .ForMember(dest => dest.ExpiredDate, opt => opt.MapFrom(src => src.LotProduct.ExpiredDate));
+
+            CreateMap<StockExportOrder, ViewModelDetails>()
+                .IncludeBase<StockExportOrder, ListStockExportOrderDTO>()
+                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.StockExportOrderDetails));
         }
     }
 }
