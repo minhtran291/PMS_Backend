@@ -31,6 +31,8 @@ using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotationNote;
 using PMS.Data.Repositories.StaffProfile;
+using PMS.Data.Repositories.StockExportOrder;
+using PMS.Data.Repositories.StockExportOrderDetails;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.TaxPolicy;
 using PMS.Data.Repositories.User;
@@ -70,7 +72,9 @@ namespace PMS.Data.UnitOfWork
         ISalesOrderDetailsRepository salesOrderDetails,
         ICustomerDeptRepository customerDept, 
         IInventoryHistoryRepository inventoryHistory
-        ,IInventorySessionRepository inventorySession) : IUnitOfWork
+        ,IInventorySessionRepository inventorySession, 
+        IStockExportOrderRepository stockExportOrder, 
+        IStockExportOrderDetailsRepository stockExportOrderDetails) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -120,6 +124,9 @@ namespace PMS.Data.UnitOfWork
 
         //InventorySession
         public IInventorySessionRepository InventorySession { get; private set; } = inventorySession;
+        //StockExportOrder
+        public IStockExportOrderRepository StockExportOrder { get; private set; } = stockExportOrder;
+        public IStockExportOrderDetailsRepository StockExportOrderDetails { get; private set; } = stockExportOrderDetails;
 
         public async Task<int> CommitAsync()
         {
