@@ -1,4 +1,6 @@
-﻿using System;
+﻿using PMS.Application.DTOs.StockExportOrder;
+using PMS.Core.Domain.Constant;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,5 +10,9 @@ namespace PMS.Application.Services.StockExportOrder
 {
     public interface IStockExportOderService
     {
+        Task<ServiceResult<object>> CreateAsync(StockExportOrderDTO dto, string userId);
+        Task<ServiceResult<object>> SendAsync(int seoId, string userId);
+        Task<ServiceResult<object>> ListAsync(string userId);
+        Task<ServiceResult<object>> DetailsAsync(int seoId, string userId);
     }
 }
