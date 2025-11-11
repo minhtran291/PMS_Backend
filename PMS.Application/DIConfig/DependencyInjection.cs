@@ -29,6 +29,7 @@ using PMS.Application.Services.StockExportOrder;
 using PMS.Application.Services.GoodsIssueNote;
 using System.ComponentModel.Design;
 using PMS.API.Helpers.VnPay;
+using PMS.Application.Services.VietQR;
 
 namespace PMS.Application.DIConfig
 {
@@ -61,6 +62,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<ISalesOrderService, SalesOrderService>();
             services.AddScoped<IVnPayGateway, VnPayGateway>();
             services.AddScoped<IVnPayService, VnPayService>();
+            services.AddScoped<IVietQrService, VietQrService>();
             services.AddScoped<IStockExportOderService, StockExportOrderService>();
             services.AddScoped<IGoodsIssueNoteService, GoodsIssueNoteService>();
         }
@@ -70,9 +72,11 @@ namespace PMS.Application.DIConfig
             var emailConfig = configuration.GetSection("Email");
             var jwtConfig = configuration.GetSection("Jwt");
             var VnPayConfig = configuration.GetSection("VnPay");
+            var VietQRConfig = configuration.GetSection("VietQR");
             services.Configure<EmailConfig>(emailConfig);
             services.Configure<JwtConfig>(jwtConfig);
             services.Configure<VNPayConfig>(VnPayConfig);
+            services.Configure<VietQRConfig>(VietQRConfig);
         }
 
         public static void AddExternalServices(this IServiceCollection services)
