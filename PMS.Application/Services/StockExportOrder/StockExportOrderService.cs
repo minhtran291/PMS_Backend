@@ -182,6 +182,8 @@ namespace PMS.Application.Services.StockExportOrder
                 //if (exportQuantityValidation != null)
                 //    return exportQuantityValidation;
 
+                await _unitOfWork.BeginTransactionAsync();
+
                 var newExport = new Core.Domain.Entities.StockExportOrder
                 {
                     SalesOrderId = dto.SalesOrderId,
@@ -197,6 +199,7 @@ namespace PMS.Application.Services.StockExportOrder
 
                 await _unitOfWork.StockExportOrder.AddAsync(newExport);
                 await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
                 return new ServiceResult<object>
                 {
@@ -207,6 +210,8 @@ namespace PMS.Application.Services.StockExportOrder
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Loi");
+
+                await _unitOfWork.RollbackTransactionAsync();
 
                 return new ServiceResult<object>
                 {
@@ -288,7 +293,11 @@ namespace PMS.Application.Services.StockExportOrder
 
                 var isSales = await _unitOfWork.Users.UserManager.IsInRoleAsync(user, UserRoles.SALES_STAFF);
 
-                var query = _unitOfWork.StockExportOrder.Query().AsNoTracking();
+                var query = _unitOfWork.StockExportOrder.Query()
+                    .AsNoTracking()
+                    .Include(s => s.SalesOrder)
+                    .Include(s => s.SalesStaff)
+                    .AsQueryable();
 
                 if (isSales)
                     query = query.Where(seo => seo.CreateBy == userId);
