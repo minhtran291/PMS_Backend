@@ -16,8 +16,8 @@ namespace PMS.Application.Services.SalesOrder
         //Sales Order Draft (Customer)
         Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListCustomerSalesOrdersAsync(string userId);
         Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int salesQuotationId);
-        //Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync
-           // (SalesOrderRequestDTO req);
+        Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync
+           (SalesOrderRequestDTO req);
         Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync
             (int salesOrderId, List<SalesOrderDetailsUpdateDTO> items);
         Task<ServiceResult<bool>> DeleteDraftAsync(int orderId);
