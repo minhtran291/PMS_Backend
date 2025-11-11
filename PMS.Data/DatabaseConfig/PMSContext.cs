@@ -52,10 +52,11 @@ namespace PMS.Data.DatabaseConfig
         //SalesOrder
         public virtual DbSet<SalesOrder> SalesOrders { get; set; }
         public virtual DbSet<SalesOrderDetails> SalesOrderDetails { get; set; }
-        public virtual DbSet<CustomerDept> CustomerDepts { get; set; }
+        public virtual DbSet<CustomerDebt> CustomerDebts { get; set; }
         // StockExportOrder
         public virtual DbSet<StockExportOrder> StockExportOrders { get; set; }
         public virtual DbSet<StockExportOrderDetails> StockExportOrderDetails {  get; set; }
+        
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -144,6 +145,16 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasOne(cp => cp.User)
                     .WithOne(u => u.CustomerProfile)
                     .HasForeignKey<CustomerProfile>(cp => cp.UserId);
+
+                entity.HasAlternateKey(cp => cp.UserId);
+                entity.HasIndex(cp => cp.UserId).IsUnique();
+
+                builder.Entity<CustomerProfile>()
+                    .HasMany(cp => cp.CustomerDebts)
+                    .WithOne()
+                    .HasForeignKey(cd => cd.CustomerId)  
+                    .HasPrincipalKey(cp => cp.UserId) 
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<StaffProfile>(entity =>
@@ -872,6 +883,18 @@ namespace PMS.Data.DatabaseConfig
                     .HasMaxLength(450)
                     .IsRequired();
 
+                entity.Property(so => so.CreateAt)
+                    .HasColumnType("date")
+                    .IsRequired();
+
+                entity.Property(so => so.SalesOrderExpiredDate) 
+                    .HasColumnType("date")
+                    .IsRequired();
+
+                entity.Property(so => so.PaidAmount)
+                    .HasPrecision(18,2)
+                    .IsRequired();
+
                 entity.Property(so => so.TotalPrice)
                     .HasPrecision(18, 2)
                     .IsRequired();
@@ -889,17 +912,18 @@ namespace PMS.Data.DatabaseConfig
 
                 // 1 - n  (SalesQuotation -> SalesOrder)
                 entity.HasOne(so => so.SalesQuotation)
-                      .WithMany(sq => sq.SalesOrders)
-                      .HasForeignKey(so => so.SalesQuotationId)
-                      .IsRequired()
-                      .OnDelete(DeleteBehavior.Restrict);
+                     .WithMany(sq => sq.SalesOrders)
+                     .HasForeignKey(so => so.SalesQuotationId)
+                     .IsRequired()
+                     .OnDelete(DeleteBehavior.Restrict);
 
-                //1 - n (1 SalesOrder to n CustomerDepts)
-                //entity.HasMany(so => so.CustomerDepts)
-                //    .WithOne(cd => cd.SalesOrder)
-                //    .HasForeignKey(cd => cd.SalesOrderId)
-                //    .OnDelete(DeleteBehavior.Cascade);
+                //1 - 1 (1 SalesOrder to 1 CustomerDepts)
+                entity.HasOne(so => so.CustomerDebts)
+                    .WithOne() // CustomerDebt không có navigation ngược
+                    .HasForeignKey<CustomerDebt>(cd => cd.SalesOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
+                //1-n (1 Customer have n SalesOrder)
                 entity.HasOne(so => so.Customer)
                     .WithMany(u => u.SalesOrders)
                     .HasForeignKey(so => so.CreateBy)
@@ -937,25 +961,25 @@ namespace PMS.Data.DatabaseConfig
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
-            builder.Entity<CustomerDept>(entity =>
+            builder.Entity<CustomerDebt>(entity =>
             {
                 entity.HasKey(cd => cd.Id);
 
-                //    entity.Property(cd => cd.SalesOrderId)       
-                //          .IsRequired();  
+                entity.Property(cd => cd.SalesOrderId)
+                      .IsRequired();
 
-                //    entity.Property(cd => cd.CustomerId)
-                //          .IsRequired();     
+                entity.Property(cd => cd.CustomerId)
+                      .IsRequired()
+                      .HasMaxLength(450);
 
-                //    entity.Property(cd => cd.DeptAmount)
-                //          .HasColumnType("decimal(18,2)")                            
-                //          .IsRequired();
+                entity.Property(cd => cd.DebtAmount)
+                      .HasColumnType("decimal(18,2)")
+                      .IsRequired();
 
-                //    n CustomerDept thuoc ve 1 SalesOrder
-                //    entity.HasOne(cd => cd.SalesOrder)
-                //        .WithMany(o => o.CustomerDepts)
-                //        .HasForeignKey(cd => cd.SalesOrderId)
-                //        .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(cd => cd.status) 
+                      .HasConversion<byte>()
+                      .HasColumnType("TINYINT")
+                      .IsRequired();
             });
 
             builder.Entity<StockExportOrder>(entity =>

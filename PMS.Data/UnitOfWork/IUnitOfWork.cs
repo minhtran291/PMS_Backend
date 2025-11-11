@@ -1,4 +1,4 @@
-﻿using PMS.Data.Repositories.CustomerDeptRepository;
+﻿using PMS.Data.Repositories.CustomerDebtRepo;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
@@ -75,7 +75,7 @@ namespace PMS.Data.UnitOfWork
         ISalesOrderRepository SalesOrder { get; }
         ISalesOrderDetailsRepository SalesOrderDetails { get; }
         //CustomerDept
-        ICustomerDeptRepository CustomerDept { get; }
+        ICustomerDebtRepository CustomerDebt { get; }
         //InventoryHistory
         IInventoryHistoryRepository InventoryHistory { get; }
         //InventorySession

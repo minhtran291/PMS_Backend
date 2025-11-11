@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PMS.Core.Domain.Identity;
-using PMS.Data.Repositories.CustomerDeptRepository;
+using PMS.Data.Repositories.CustomerDebtRepo;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
@@ -96,7 +96,7 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
             services.AddScoped<ISalesOrderDetailsRepository, SalesOrderDetailsRepository>();
             //
-            services.AddScoped<ICustomerDeptRepository, CustomerDeptRepository>();
+            services.AddScoped<ICustomerDebtRepository, CustomerDebtRepository>();
             //
             services.AddScoped<IInventoryHistoryRepository, InventoryHistoryRepository>();
             services.AddScoped<IInventorySessionRepository, InventorySessionRepository>();
