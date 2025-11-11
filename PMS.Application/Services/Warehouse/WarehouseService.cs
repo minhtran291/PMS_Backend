@@ -379,8 +379,11 @@ namespace PMS.Application.Services.Warehouse
             ws.Cells["A2"].Style.Font.Size = 13;
             ws.Cells["A2"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-
-
+            ws.Cells["A3:H3"].Merge = true;
+            ws.Cells["A3"].Value = "Lý do kiểm kê: Thường niên, tránh mất mát, hư hỏng, phục vụ vô điều kiện cho mục đích pháp lý";
+            ws.Cells["A3"].Style.Font.Size = 11;
+            ws.Cells["A3"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+            ws.Cells["A3"].Style.Font.Italic = true;
             int infoStartRow = 5;
 
 
@@ -428,7 +431,7 @@ namespace PMS.Application.Services.Warehouse
             int headerRow = 8;
             ws.Cells[headerRow, 1].Value = "LÔ SP";
             ws.Cells[headerRow, 2].Value = "TÊN SP";
-            ws.Cells[headerRow, 3].Value = "SỐ LƯỢNG KÊ BIÊN";
+            ws.Cells[headerRow, 3].Value = "SỐ LƯỢNG SỔ SÁCH";
             ws.Cells[headerRow, 4].Value = "SỐ LƯỢNG THỰC TẾ";
             ws.Cells[headerRow, 5].Value = "CHÊNH LỆCH";
             ws.Cells[headerRow, 6].Value = "GHI CHÚ";
@@ -469,7 +472,7 @@ namespace PMS.Application.Services.Warehouse
 
             int footerRow = row + 2;
             ws.Cells[footerRow, 1, footerRow, 8].Merge = true;
-            ws.Cells[footerRow, 1].Value = "Ghi chú: Biên bản lập theo Thông tư 133/2016/TT-BTC ngày 26/3/2016 của Bộ Tài chính.";
+            ws.Cells[footerRow, 1].Value = "Ghi chú: Biên bản lập theo điều 16, Thông tư 133/2016/TT-BTC ngày 26/8/2016 của Bộ Tài chính.";
             ws.Cells[footerRow, 1].Style.Font.Italic = true;
             ws.Cells[footerRow, 1].Style.Font.Size = 10;
             ws.Cells[footerRow, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;

@@ -1,5 +1,6 @@
 ﻿using PMS.Data.Repositories.CustomerDebtRepo;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.DebtReport;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
 using PMS.Data.Repositories.GoodsIssueNote;
@@ -8,6 +9,7 @@ using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
+using PMS.Data.Repositories.PharmacySecretInfor;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.PurchasingOrderDetailRepository;
@@ -85,6 +87,10 @@ namespace PMS.Data.UnitOfWork
         //StockExportOrder
         IStockExportOrderRepository StockExportOrder { get; }
         IStockExportOrderDetailsRepository StockExportOrderDetails { get; }
+        //Debtreport
+        IDebtReportRepository DebtReport { get; }
+        // pmc
+        IPharmacySecretInforRepository PharmacySecretInfor { get; }
         //GoodsIssueNote
         IGoodsIssueNoteRepository GoodsIssueNote { get; }
         IGoodsIssueNoteDetailsRepository GoodsIssueNoteDetails { get; }
