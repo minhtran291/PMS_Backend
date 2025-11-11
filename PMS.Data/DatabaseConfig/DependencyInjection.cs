@@ -12,6 +12,8 @@ using PMS.Data.Repositories.CustomerDebtRepo;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
+using PMS.Data.Repositories.GoodsIssueNote;
+using PMS.Data.Repositories.GoodsIssueNoteDetails;
 using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
@@ -103,6 +105,9 @@ namespace PMS.Data.DatabaseConfig
             //
             services.AddScoped<IStockExportOrderRepository, StockExportOrderRepository>();
             services.AddScoped<IStockExportOrderDetailsRepository, StockExportOrderDetailsRepository>();
+            //
+            services.AddScoped<IGoodsIssueNoteRepository, GoodsIssueNoteRepository>();
+            services.AddScoped<IGoodsIssueNoteDetailsRepository, GoodsIssueNoteDetailsRepository>();
 
         }
 

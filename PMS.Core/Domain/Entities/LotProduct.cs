@@ -42,5 +42,6 @@ namespace PMS.Core.Domain.Entities
         public virtual ICollection<SalesOrderDetails> SalesOrderDetails { get; set; } = [];
         public virtual ICollection<InventoryHistory> InventoryHistories { get; set; } = [];
         public virtual ICollection<StockExportOrderDetails> StockExportOrderDetails { get; set; } = [];
+        public virtual ICollection<GoodsIssueNoteDetails> GoodsIssueNoteDetails { get; set; } = [];
     }
 }
