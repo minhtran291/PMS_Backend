@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PMS.Data.Repositories.CustomerDeptRepository
+namespace PMS.Data.Repositories.CustomerDebtRepo
 {
-    public interface ICustomerDeptRepository : IRepositoryBase<CustomerDept>
+    public interface ICustomerDebtRepository : IRepositoryBase<CustomerDebt>
     {
     }
 }

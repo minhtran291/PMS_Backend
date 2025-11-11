@@ -23,19 +23,6 @@ namespace PMS.API.Controllers
             _service = service;
         }
 
-        /// <summary>
-        /// POST: https://localhost:7213/api/SalesOrder/fefo-plan
-        /// Nhập danh sách {productId, quantity} để tính FEFO theo LotProduct.
-        /// </summary>
-        //[HttpPost("fefo-plan")]
-        //public async Task<IActionResult> BuildFefoPlan([FromBody] FEFOPlanRequestDTO request)
-        //{
-        //    //var result = await _service.BuildFefoPlanAsync(request);
-        //    return StatusCode(200, new
-        //    {
-        //        message = "",
-        //    });
-        //}
 
         [HttpGet("get-quotation-info/{quotationId}")]
         //[Authorize(Roles = UserRoles.CUSTOMER)]
@@ -202,25 +189,26 @@ namespace PMS.API.Controllers
         /// </summary>
         [HttpPost("draft/create")]
         //[Authorize(Roles = UserRoles.CUSTOMER)]
-        public async Task<IActionResult> CreateDraftFromSalesQuotation([FromBody] SalesOrderRequestDTO body)
-        {
-            if (!ModelState.IsValid)
-                return ValidationProblem(ModelState);
+        //public async Task<IActionResult> CreateDraftFromSalesQuotation([FromBody] SalesOrderRequestDTO body)
+        //{
+        //    if (!ModelState.IsValid)
+        //        return ValidationProblem(ModelState);
 
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
-            body.CreateBy = userId;
-            body.IsDeposited = false;
-            body.Status = SalesOrderStatus.Draft;
+        //    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+        //    body.CreateBy = userId;
+        //    body.IsDeposited = false;
+        //    body.Status = SalesOrderStatus.Draft;
+        //    body.CustomerDebt.CustomerId = userId;
 
-            var result = await _service.CreateDraftFromSalesQuotationAsync(body);
+        //    var result = await _service.CreateDraftFromSalesQuotationAsync(body);
 
-            return StatusCode(result.StatusCode, new
-            {
-                success = result.Success,
-                message = result.Message,
-                data = result.Data
-            });
-        }
+        //    return StatusCode(result.StatusCode, new
+        //    {
+        //        success = result.Success,
+        //        message = result.Message,
+        //        data = result.Data
+        //    });
+        //}
 
         /// <summary>
         /// PUT: https://localhost:7213/api/SalesOrder/draft/{orderId}/quantities

@@ -183,7 +183,7 @@ namespace PMS.Data.Migrations
                     b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDept", b =>
+            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDebt", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -191,9 +191,28 @@ namespace PMS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal>("DebtAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("SalesOrderId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("status")
+                        .HasColumnType("TINYINT");
+
                     b.HasKey("Id");
 
-                    b.ToTable("CustomerDepts");
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("SalesOrderId")
+                        .IsUnique();
+
+                    b.ToTable("CustomerDebts");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
@@ -849,7 +868,7 @@ namespace PMS.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesOrderId"));
 
                     b.Property<DateTime>("CreateAt")
-                        .HasColumnType("datetime2");
+                        .HasColumnType("date");
 
                     b.Property<string>("CreateBy")
                         .IsRequired()
@@ -859,10 +878,17 @@ namespace PMS.Data.Migrations
                     b.Property<bool>("IsDeposited")
                         .HasColumnType("bit");
 
+                    b.Property<decimal>("PaidAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("SalesOrderCode")
                         .IsRequired()
                         .HasMaxLength(70)
                         .HasColumnType("nvarchar(70)");
+
+                    b.Property<DateTime>("SalesOrderExpiredDate")
+                        .HasColumnType("date");
 
                     b.Property<int>("SalesQuotationId")
                         .HasColumnType("int");
@@ -1418,6 +1444,22 @@ namespace PMS.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDebt", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.CustomerProfile", null)
+                        .WithMany("CustomerDebts")
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", null)
+                        .WithOne("CustomerDebts")
+                        .HasForeignKey("PMS.Core.Domain.Entities.CustomerDebt", "SalesOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Identity.User", "User")
@@ -1893,6 +1935,8 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
                 {
+                    b.Navigation("CustomerDebts");
+
                     b.Navigation("RequestSalesQuotations");
                 });
 
@@ -1916,7 +1960,7 @@ namespace PMS.Data.Migrations
                     b.Navigation("GoodsIssueNoteDetails");
 
                     b.Navigation("InventoryHistories");
-
+                    
                     b.Navigation("SalesOrderDetails");
 
                     b.Navigation("SalesQuotaionDetails");
@@ -1970,6 +2014,9 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrder", b =>
                 {
+                    b.Navigation("CustomerDebts")
+                        .IsRequired();
+
                     b.Navigation("SalesOrderDetails");
 
                     b.Navigation("StockExportOrders");
