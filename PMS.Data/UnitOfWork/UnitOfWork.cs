@@ -8,6 +8,7 @@ using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerDeptRepository;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.DebtReport;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
 using PMS.Data.Repositories.InventoryHistory;
@@ -74,7 +75,8 @@ namespace PMS.Data.UnitOfWork
         IInventoryHistoryRepository inventoryHistory
         ,IInventorySessionRepository inventorySession, 
         IStockExportOrderRepository stockExportOrder, 
-        IStockExportOrderDetailsRepository stockExportOrderDetails) : IUnitOfWork
+        IStockExportOrderDetailsRepository stockExportOrderDetails,
+        IDebtReportRepository debtReport) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -127,6 +129,8 @@ namespace PMS.Data.UnitOfWork
         //StockExportOrder
         public IStockExportOrderRepository StockExportOrder { get; private set; } = stockExportOrder;
         public IStockExportOrderDetailsRepository StockExportOrderDetails { get; private set; } = stockExportOrderDetails;
+        //DebtReport
+        public IDebtReportRepository DebtReport { get; private set; } = debtReport;
 
         public async Task<int> CommitAsync()
         {

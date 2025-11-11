@@ -228,6 +228,61 @@ namespace PMS.Data.Migrations
                     b.ToTable("CustomerProfiles");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.DebtReport", b =>
+                {
+                    b.Property<int>("ReportID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportID"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("CurrentDebt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("DebtCeiling")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<int?>("EntityID")
+                        .IsRequired()
+                        .HasColumnType("int");
+
+                    b.Property<int>("EntityType")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Payables")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTime?>("Payday")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TotalPaid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.HasKey("ReportID");
+
+                    b.HasIndex("EntityType", "EntityID")
+                        .HasDatabaseName("IX_DebtReport_Entity");
+
+                    b.ToTable("DebtReports", (string)null);
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.GoodReceiptNote", b =>
                 {
                     b.Property<int>("GRNID")
@@ -1814,11 +1869,11 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
+                    b.Navigation("InventoryHistories");
+
                     b.Navigation("SalesOrderDetails");
 
                     b.Navigation("SalesQuotaionDetails");
-
-                    b.Navigation("InventoryHistories");
 
                     b.Navigation("StockExportOrderDetails");
                 });

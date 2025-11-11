@@ -1002,6 +1002,57 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(d => d.LotId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+
+            builder.Entity<DebtReport>(entity =>
+            {
+                entity.ToTable("DebtReports");
+
+                entity.HasKey(e => e.ReportID);
+
+                entity.Property(e => e.ReportID)
+                      .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.EntityID)
+                      .IsRequired();
+
+                entity.Property(e => e.Payables)
+                      .HasColumnType("decimal(18,2)")
+                      .HasDefaultValue(0);
+
+                entity.Property(e => e.TotalPaid)
+                      .HasColumnType("decimal(18,2)")
+                      .HasDefaultValue(0);
+
+                entity.Property(e => e.CurrentDebt)
+                      .HasColumnType("decimal(18,2)")
+                      .HasDefaultValue(0);
+
+                entity.Property(e => e.DebtCeiling)
+                      .HasColumnType("decimal(18,2)")
+                      .HasDefaultValue(0);
+
+                entity.Property(e => e.CreatedDate);
+                     
+
+                entity.Property(e => e.Payday)
+                      .HasColumnType("datetime");
+
+                entity.Property(e => e.DueDate)
+                      .HasColumnType("datetime");
+
+                
+                entity.Property(e => e.EntityType)
+                      .HasConversion<int>()
+                      .IsRequired();
+
+                entity.Property(e => e.Status)
+                      .HasConversion<int>()
+                      .IsRequired();
+
+               
+                entity.HasIndex(e => new { e.EntityType, e.EntityID })
+                      .HasDatabaseName("IX_DebtReport_Entity");
+            });
         }
     }
 }

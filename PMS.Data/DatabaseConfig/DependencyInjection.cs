@@ -41,6 +41,7 @@ using PMS.Data.Repositories.User;
 using PMS.Data.Repositories.Warehouse;
 using PMS.Data.Repositories.WarehouseLocation;
 using PMS.Data.UnitOfWork;
+using PMS.Data.Repositories.DebtReport;
 
 namespace PMS.Data.DatabaseConfig
 {
@@ -103,6 +104,9 @@ namespace PMS.Data.DatabaseConfig
             //
             services.AddScoped<IStockExportOrderRepository, StockExportOrderRepository>();
             services.AddScoped<IStockExportOrderDetailsRepository, StockExportOrderDetailsRepository>();
+            //
+            services.AddScoped<IDebtReportRepository, DebtReportRepository>();
+
 
         }
 

@@ -1,5 +1,6 @@
 ﻿using PMS.Data.Repositories.CustomerDeptRepository;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.DebtReport;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
 using PMS.Data.Repositories.InventoryHistory;
@@ -83,6 +84,8 @@ namespace PMS.Data.UnitOfWork
         //StockExportOrder
         IStockExportOrderRepository StockExportOrder { get; }
         IStockExportOrderDetailsRepository StockExportOrderDetails { get; }
+        //Debtreport
+        IDebtReportRepository DebtReport { get; }
 
         Task<int> CommitAsync();
         Task BeginTransactionAsync();

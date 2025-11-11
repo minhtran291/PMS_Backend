@@ -4,6 +4,7 @@ using AutoMapper;
 using DinkToPdf;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.VisualBasic;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using PMS.Application.DTOs.PO;
@@ -78,7 +79,7 @@ namespace PMS.API.Services.POService
             try
             {
                 var existingPO = await _unitOfWork.PurchasingOrder.Query()
-
+                    .Include(po => po.Quotations)
                     .FirstOrDefaultAsync(po => po.POID == poid);
 
                 if (existingPO == null)
@@ -125,7 +126,24 @@ namespace PMS.API.Services.POService
                     Status = existingPO.Status,
                     Debt = existingPO.Debt,
                 };
+                var QuotationSup = await _unitOfWork.Quotation.Query().FirstOrDefaultAsync(q => q.QID == existingPO.QID);
+                if (QuotationSup == null)
+                {
+                    throw new Exception($"Lỗi hệ thống khi tìm kiếm báo giá theo đơn hàng: {existingPO.POID}");
+                }
+                var debtReport = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(x => x.EntityType == DebtEntityType.Supplier && x.EntityID == QuotationSup.SupplierID);
+                if (debtReport != null)
+                {
 
+                    debtReport.EntityID = QuotationSup.SupplierID;
+                    debtReport.EntityType = DebtEntityType.Supplier;
+                    debtReport.Payday = DateTime.Now;
+                    debtReport.Payables += existingPO.Total -existingPO.Deposit;
+                    debtReport.TotalPaid = pOUpdateDTO.paid;
+                    debtReport.DueDate = DateTime.Now.AddDays(3);
+
+
+                }
                 return new ServiceResult<POPaidViewDTO>
                 {
                     StatusCode = 200,
