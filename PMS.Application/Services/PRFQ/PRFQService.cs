@@ -194,6 +194,11 @@ namespace PMS.API.Services.PRFQService
 
                 await _unitOfWork.CommitAsync();
 
+                var excelBytes = GenerateExcel(currentPrfq);
+                if (currentPrfq.Status == PRFQStatus.Sent)
+                {
+                    await _emailService.SendEmailWithAttachmentAsync(currentPrfq.Supplier.Email, "Yêu cầu báo giá", "Kính gửi, đính kèm yêu cầu báo giá.", excelBytes, $"PRFQ_{currentPrfq.PRFQID}.xlsx");
+                }
                 return new ServiceResult<int>
                 {
                     Data = currentPrfq.PRFQID,
@@ -201,6 +206,7 @@ namespace PMS.API.Services.PRFQService
                     StatusCode = 200,
                     Success = true
                 };
+                
             }
             catch (Exception ex)
             {
@@ -468,8 +474,8 @@ namespace PMS.API.Services.PRFQService
             row++;
 
 
-            ws.Cells[row, 1].Value = "Người gửi:";
-            ws.Cells[row, 2].Value = fullPrfq.User?.FullName ?? "N/A";
+            ws.Cells[row, 1].Value = "Bên gửi";
+            ws.Cells[row, 2].Value = "CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY";
             ws.Cells[row, 3].Value = "Số PRFQID:";
             ws.Cells[row, 4].Value = prfq.PRFQID;
 
@@ -498,7 +504,7 @@ namespace PMS.API.Services.PRFQService
             row++;
 
             ws.Cells[row, 1].Value = "Ngày gửi:";
-            ws.Cells[row, 2].Value = fullPrfq.RequestDate.ToString("dd/MM/yyyy");
+            ws.Cells[row, 2].Value ="Hải Phòng ngày, "+ fullPrfq.RequestDate.ToString("dd/MM/yyyy");
 
             ws.Cells[row, 5].Value = "Liên lạc:";
             ws.Cells[row, 6, row, 8].Merge = true;
@@ -540,7 +546,7 @@ namespace PMS.API.Services.PRFQService
 
             row += 2;
 
-            // --- Ghi chú ---
+            //Ghi chú
             ws.Cells[row, 1, row, 8].Merge = true;
             ws.Cells[row, 1].Value = "GHI CHÚ (NOTES)";
             ws.Cells[row, 1].Style.ApplyHeaderBox(Color.FromArgb(240, 240, 255));
@@ -548,8 +554,12 @@ namespace PMS.API.Services.PRFQService
 
             string[] notes = {
         "• Vui lòng phản hồi báo giá qua email hoặc hệ thống trong thời gian sớm nhất.",
-        "• Báo giá cần ghi rõ điều kiện thanh toán và thời gian giao hàng.",
-        "• Đảm bảo tính trung thực, rõ ràng trong báo giá."
+        "• Báo giá cần ghi rõ điều kiện thanh toán và thời gian đáo hạn thanh toán.",
+        "• Đảm bảo tính trung thực, rõ ràng trong báo giá.",
+        "• Yêu cầu file phản hồi báo giá theo chuẩn Format đã thống nhất.",
+        "• Mọi thắc mắc, phát sinh vui lòng liên lạc theo SĐT đã đính kèm.",
+        "• BBPhamarcy xin cam kết, đảm bảo tính pháp lý của những mặt hàng được yêu cầu báo giá, thuộc loại được cấp phép lưu hành của BYT (Bộ Y Tế) trên lãnh thổ Việt Nam.",
+        "• BBPharmacy với tư cách bên mua, cam kết chịu mọi trách nhiệm trước pháp luật, hiến pháp nước CHXHCN Việt Nam."
     };
             foreach (var note in notes)
             {
@@ -560,7 +570,7 @@ namespace PMS.API.Services.PRFQService
                 row++;
             }
 
-            // --- Footer ---
+            //  Footer 
             row += 3;
             ws.Cells[row, 1, row, 8].Merge = true;
             ws.Cells[row, 1].Value = "(Khởi tạo từ CÔNG TY TNHH DƯỢC PHẨM SỐ 17 – MST: 030203002865 – Hotline: 0398233047)";
@@ -568,7 +578,7 @@ namespace PMS.API.Services.PRFQService
             ws.Cells[row, 1].Style.Font.Size = 9;
             ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
-            // --- Điều chỉnh hiển thị ---
+            // Điều chỉnh 
             ws.Cells[ws.Dimension.Address].AutoFitColumns();
             for (int i = 1; i <= 8; i++)
                 ws.Column(i).Width = Math.Min(ws.Column(i).Width, 100);
@@ -602,7 +612,7 @@ namespace PMS.API.Services.PRFQService
             ws.Cells[1, 1].Style.Border.BorderAround(ExcelBorderStyle.Medium);
 
 
-            var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.png");
+            var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "assets", "CTTNHHBBPHARMACY.png");
             if (File.Exists(logoPath))
             {
                 var picture = ws.Drawings.AddPicture("Logo", new FileInfo(logoPath));
@@ -663,9 +673,9 @@ namespace PMS.API.Services.PRFQService
             ws.Cells[6, 6].Style.Border.BorderAround(ExcelBorderStyle.Thin);
 
             ws.Cells[7, 6].Value = "Người mua:";
-            ws.Cells[7, 7].Value = user.UserName ?? "N/A";
+            ws.Cells[7, 7].Value = user.FullName ?? "N/A";
             ws.Cells[8, 6].Value = "Tên đơn vị:";
-            ws.Cells[8, 7].Value = "CÔNG TY CỔ PHẦN DƯỢC PHẨM SỐ 17";
+            ws.Cells[8, 7].Value = "CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY";
             ws.Cells[9, 6].Value = "Mã số thuế:";
             ws.Cells[9, 7].Value = "030203002865";
             ws.Cells[10, 6].Value = "Hình thức thanh toán:";
@@ -759,8 +769,13 @@ namespace PMS.API.Services.PRFQService
 
             string[] notes = {
         "• Đơn hàng có hiệu lực theo thỏa thuận. Mọi thắc mắc xin liên hệ bộ phận kinh doanh để được hỗ trợ.",
-        "• Các điều khoản khác được áp dụng theo hợp đồng đã ký giữa hai bên.",
-        "• (Khởi tạo từ CÔNG TY CỔ PHẦN DƯỢC PHẨM SỐ 17 – MST: 030203002865 – Hotline: 0398233047)"
+        "• Các điều khoản khác được áp dụng theo hợp đồng đã ký giữa hai bên, đảm bảo phản hồi kịp thời qua SĐT đã đính kèm.",
+        "• Với tư cách bên mua BBPHARMACY xin cam kết hoàn thành đầy đủ, và đúng hạn nghĩa vụ thanh toán như đã thống nhất.",
+        "• BBPHARMCY xin cam kết tính chính xác, minh bạch về pháp lý cũng như đảm bảo về tổng tiền sau cùng.",
+        "• BBPHARMCY xin cam kết chịu trách nhiệm trước pháp luật, hiến pháp nước CHXNCN Việt Nam trong quá trình kiện tụng (NẾU CÓ) ",
+        "• FILE ĐƯỢC LƯU VĨNH VIỄN, PHỤC VỤ MỤC ĐÍCH KÊ BIÊN - THEO NĐ SỐ 123/2020/NĐ-CP BTC ",
+        "• (Khởi tạo tự động từ CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY – MST: 030203002865 – Hotline: 0398233047 - BBPHARMACY RẤT VUI ĐƯỢC HỢP TÁC VỚI QUÝ ĐỐI TÁC, VÌ THỊNH VƯỢNG - PHÁT TRIỀN)",
+
     };
 
             row++;
@@ -1107,7 +1122,7 @@ namespace PMS.API.Services.PRFQService
                     return new ServiceResult<int> { StatusCode = 200, Message = "Báo giá đã quá hạn hoặc không hợp lệ." };
 
 
-                var po = await CreatePurchaseOrderAsync(userId, quotation.QID, input, worksheet, excelData.IsNewQuotation);
+                var po = await CreatePurchaseOrderAsync(userId, quotation.QID, input, worksheet, excelData.IsNewQuotation, excelData.PaymentDueDate);
 
                 if (purchasingOrderStatus == PurchasingOrderStatus.sent)
                 {
@@ -1131,6 +1146,8 @@ namespace PMS.API.Services.PRFQService
             var supplierName = worksheet.Cells[4, 6].Text?.Trim();
             if (!int.TryParse(worksheet.Cells[2, 2].Text?.Trim(), out int prfqId))
                 throw new Exception("Không thể đọc YC từ file Excel.");
+            if (!int.TryParse(worksheet.Cells[2, 7].Text?.Trim(), out int PayDD))
+                throw new Exception("Không thể đọc ngày đáo hạn từ file Excel.");
             if (!int.TryParse(worksheet.Cells[4, 4].Text?.Trim(), out int qId))
                 throw new Exception("Không thể đọc QID từ file Excel.");
 
@@ -1143,7 +1160,8 @@ namespace PMS.API.Services.PRFQService
                 PRFQID = prfqId,
                 QID = qId,
                 SendDate = sendDate,
-                ExpiredDate = expiredDate
+                ExpiredDate = expiredDate,
+                PaymentDueDate= PayDD
             };
         }
 
@@ -1181,7 +1199,7 @@ namespace PMS.API.Services.PRFQService
         }
 
         private async Task<PurchasingOrder> CreatePurchaseOrderAsync(
-        string userId, int qId, PurchaseOrderInputDto input, ExcelWorksheet worksheet, bool isNewQuotation)
+        string userId, int qId, PurchaseOrderInputDto input, ExcelWorksheet worksheet, bool isNewQuotation, int PaymentDueDate)
         {
             var po = new PurchasingOrder
             {
@@ -1190,6 +1208,7 @@ namespace PMS.API.Services.PRFQService
                 UserId = userId,
                 Total = 0,
                 Status = PurchasingOrderStatus.sent,
+                PaymentDueDate= PaymentDueDate
             };
 
             await _unitOfWork.PurchasingOrder.AddAsync(po);
@@ -1220,6 +1239,7 @@ namespace PMS.API.Services.PRFQService
                     var dvt = worksheet.Cells[currentRow, 5].Text?.Trim();
                     var unitPriceText = worksheet.Cells[currentRow, 6].Text?.Trim();
                     var expiredDateText = worksheet.Cells[currentRow, 7].Text?.Trim();
+                   
 
                     decimal.TryParse(unitPriceText, out decimal unitPrice);
                     DateTime expiredDate = DateTime.MinValue;

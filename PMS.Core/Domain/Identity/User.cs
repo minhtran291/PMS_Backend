@@ -26,5 +26,6 @@ namespace PMS.Core.Domain.Identity
         public virtual ICollection<SalesQuotationComment>? SalesQuotationComments {  get; set; }
         public virtual ICollection<SalesOrder> SalesOrders { get; set; } = [];
         public virtual ICollection<StockExportOrder> StockExportOrders { get; set; } = [];
+        public virtual ICollection<GoodsIssueNote> GoodsIssueNotes { get; set; } = [];
     }
 }

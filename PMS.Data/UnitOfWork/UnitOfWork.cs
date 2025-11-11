@@ -8,12 +8,16 @@ using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
 using PMS.Data.Repositories.CustomerDebtRepo;
 using PMS.Data.Repositories.CustomerProfile;
+using PMS.Data.Repositories.DebtReport;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
+using PMS.Data.Repositories.GoodsIssueNote;
+using PMS.Data.Repositories.GoodsIssueNoteDetails;
 using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
+using PMS.Data.Repositories.PharmacySecretInfor;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.PurchasingOrderDetailRepository;
@@ -74,7 +78,12 @@ namespace PMS.Data.UnitOfWork
         IInventoryHistoryRepository inventoryHistory
         ,IInventorySessionRepository inventorySession, 
         IStockExportOrderRepository stockExportOrder, 
-        IStockExportOrderDetailsRepository stockExportOrderDetails) : IUnitOfWork
+        IStockExportOrderDetailsRepository stockExportOrderDetails,
+        IDebtReportRepository debtReport,
+        IPharmacySecretInforRepository pharmacySecretInfor) : IUnitOfWork
+        IStockExportOrderDetailsRepository stockExportOrderDetails, 
+        IGoodsIssueNoteRepository goodsIssueNote, 
+        IGoodsIssueNoteDetailsRepository goodsIssueNoteDetails) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -127,7 +136,14 @@ namespace PMS.Data.UnitOfWork
         //StockExportOrder
         public IStockExportOrderRepository StockExportOrder { get; private set; } = stockExportOrder;
         public IStockExportOrderDetailsRepository StockExportOrderDetails { get; private set; } = stockExportOrderDetails;
+        //DebtReport
+        public IDebtReportRepository DebtReport { get; private set; } = debtReport;
 
+        public IPharmacySecretInforRepository PharmacySecretInfor { get; private set; } = pharmacySecretInfor;
+
+        //GoodsIssueNote
+        public IGoodsIssueNoteRepository GoodsIssueNote { get; private set; } = goodsIssueNote;
+        public IGoodsIssueNoteDetailsRepository GoodsIssueNoteDetails { get; private set; } = goodsIssueNoteDetails;
         public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();
