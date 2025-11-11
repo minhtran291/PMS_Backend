@@ -11,13 +11,13 @@ namespace PMS.Core.Domain.Entities
     public class PharmacySecretInfor
     {
         [Key]
-        public int PMSID { get; set; }
+        public int PMSID { get; set; } //==1
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Equity { get; set; } // Vốn chủ sở hữu
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal TotalRecieve { get; set; } // Tổng thu
+        public decimal TotalRecieve { get; set; } // Tổng thu 
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalPaid { get; set; } // Tổng chi
