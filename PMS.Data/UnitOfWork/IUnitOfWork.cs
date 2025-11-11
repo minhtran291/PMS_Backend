@@ -1,8 +1,10 @@
-﻿using PMS.Data.Repositories.CustomerDeptRepository;
+﻿using PMS.Data.Repositories.CustomerDebtRepo;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.DebtReport;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
+using PMS.Data.Repositories.GoodsIssueNote;
+using PMS.Data.Repositories.GoodsIssueNoteDetails;
 using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
@@ -77,7 +79,7 @@ namespace PMS.Data.UnitOfWork
         ISalesOrderRepository SalesOrder { get; }
         ISalesOrderDetailsRepository SalesOrderDetails { get; }
         //CustomerDept
-        ICustomerDeptRepository CustomerDept { get; }
+        ICustomerDebtRepository CustomerDebt { get; }
         //InventoryHistory
         IInventoryHistoryRepository InventoryHistory { get; }
         //InventorySession
@@ -89,6 +91,9 @@ namespace PMS.Data.UnitOfWork
         IDebtReportRepository DebtReport { get; }
         // pmc
         IPharmacySecretInforRepository PharmacySecretInfor { get; }
+        //GoodsIssueNote
+        IGoodsIssueNoteRepository GoodsIssueNote { get; }
+        IGoodsIssueNoteDetailsRepository GoodsIssueNoteDetails { get; }
 
         Task<int> CommitAsync();
         Task BeginTransactionAsync();
