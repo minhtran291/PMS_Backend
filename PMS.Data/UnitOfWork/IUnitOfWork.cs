@@ -75,7 +75,7 @@ namespace PMS.Data.UnitOfWork
         ISalesOrderRepository SalesOrder { get; }
         ISalesOrderDetailsRepository SalesOrderDetails { get; }
         //CustomerDept
-        ICustomerDebtRepository CustomerDept { get; }
+        ICustomerDebtRepository CustomerDebt { get; }
         //InventoryHistory
         IInventoryHistoryRepository InventoryHistory { get; }
         //InventorySession

@@ -117,7 +117,7 @@ namespace PMS.Data.UnitOfWork
         public ISalesOrderRepository SalesOrder { get; private set; } = salesOrder;
         public ISalesOrderDetailsRepository SalesOrderDetails { get; private set; } = salesOrderDetails;
         //CustomerDept
-        public ICustomerDebtRepository CustomerDept { get; private set; } = customerDept;
+        public ICustomerDebtRepository CustomerDebt { get; private set; } = customerDept;
 
         //InventoryHistory
         public IInventoryHistoryRepository InventoryHistory { get; private set; } = inventoryHistory;

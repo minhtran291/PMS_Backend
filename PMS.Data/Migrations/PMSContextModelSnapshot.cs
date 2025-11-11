@@ -191,8 +191,10 @@ namespace PMS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<decimal>("DebtAmount")
                         .HasColumnType("decimal(18,2)");
@@ -200,9 +202,15 @@ namespace PMS.Data.Migrations
                     b.Property<int>("SalesOrderId")
                         .HasColumnType("int");
 
+                    b.Property<byte>("status")
+                        .HasColumnType("TINYINT");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("SalesOrderId");
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("SalesOrderId")
+                        .IsUnique();
 
                     b.ToTable("CustomerDebts");
                 });
@@ -823,6 +831,9 @@ namespace PMS.Data.Migrations
                         .HasMaxLength(70)
                         .HasColumnType("nvarchar(70)");
 
+                    b.Property<DateTime>("SalesOrderExpiredDate")
+                        .HasColumnType("date");
+
                     b.Property<int>("SalesQuotationId")
                         .HasColumnType("int");
 
@@ -1379,13 +1390,18 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDebt", b =>
                 {
-                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
+                    b.HasOne("PMS.Core.Domain.Entities.CustomerProfile", null)
                         .WithMany("CustomerDebts")
-                        .HasForeignKey("SalesOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("CustomerId")
+                        .HasPrincipalKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("SalesOrder");
+                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", null)
+                        .WithOne("CustomerDebts")
+                        .HasForeignKey("PMS.Core.Domain.Entities.CustomerDebt", "SalesOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
@@ -1825,6 +1841,8 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
                 {
+                    b.Navigation("CustomerDebts");
+
                     b.Navigation("RequestSalesQuotations");
                 });
 
@@ -1840,11 +1858,11 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
+                    b.Navigation("InventoryHistories");
+
                     b.Navigation("SalesOrderDetails");
 
                     b.Navigation("SalesQuotaionDetails");
-
-                    b.Navigation("InventoryHistories");
 
                     b.Navigation("StockExportOrderDetails");
                 });
@@ -1895,7 +1913,8 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrder", b =>
                 {
-                    b.Navigation("CustomerDebts");
+                    b.Navigation("CustomerDebts")
+                        .IsRequired();
 
                     b.Navigation("SalesOrderDetails");
 

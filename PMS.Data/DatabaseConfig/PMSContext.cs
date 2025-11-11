@@ -145,6 +145,16 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasOne(cp => cp.User)
                     .WithOne(u => u.CustomerProfile)
                     .HasForeignKey<CustomerProfile>(cp => cp.UserId);
+
+                entity.HasAlternateKey(cp => cp.UserId);
+                entity.HasIndex(cp => cp.UserId).IsUnique();
+
+                builder.Entity<CustomerProfile>()
+                    .HasMany(cp => cp.CustomerDebts)
+                    .WithOne()
+                    .HasForeignKey(cd => cd.CustomerId)  
+                    .HasPrincipalKey(cp => cp.UserId) 
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<StaffProfile>(entity =>
@@ -877,6 +887,10 @@ namespace PMS.Data.DatabaseConfig
                     .HasColumnType("date")
                     .IsRequired();
 
+                entity.Property(so => so.SalesOrderExpiredDate) 
+                    .HasColumnType("date")
+                    .IsRequired();
+
                 entity.Property(so => so.PaidAmount)
                     .HasPrecision(18,2)
                     .IsRequired();
@@ -898,15 +912,15 @@ namespace PMS.Data.DatabaseConfig
 
                 // 1 - n  (SalesQuotation -> SalesOrder)
                 entity.HasOne(so => so.SalesQuotation)
-                      .WithMany(sq => sq.SalesOrders)
-                      .HasForeignKey(so => so.SalesQuotationId)
-                      .IsRequired()
-                      .OnDelete(DeleteBehavior.Restrict);
+                     .WithMany(sq => sq.SalesOrders)
+                     .HasForeignKey(so => so.SalesQuotationId)
+                     .IsRequired()
+                     .OnDelete(DeleteBehavior.Restrict);
 
-                //1 - n (1 SalesOrder to n CustomerDepts)
-                entity.HasMany(so => so.CustomerDebts)
-                    .WithOne(cd => cd.SalesOrder)
-                    .HasForeignKey(cd => cd.SalesOrderId)
+                //1 - 1 (1 SalesOrder to 1 CustomerDepts)
+                entity.HasOne(so => so.CustomerDebts)
+                    .WithOne() // CustomerDebt không có navigation ngược
+                    .HasForeignKey<CustomerDebt>(cd => cd.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
 
                 //1-n (1 Customer have n SalesOrder)
@@ -955,17 +969,17 @@ namespace PMS.Data.DatabaseConfig
                       .IsRequired();
 
                 entity.Property(cd => cd.CustomerId)
-                      .IsRequired();
+                      .IsRequired()
+                      .HasMaxLength(450);
 
                 entity.Property(cd => cd.DebtAmount)
                       .HasColumnType("decimal(18,2)")
                       .IsRequired();
 
-                //n CustomerDept thuoc ve 1 SalesOrder
-                entity.HasOne(cd => cd.SalesOrder)
-                    .WithMany(o => o.CustomerDebts)
-                    .HasForeignKey(cd => cd.SalesOrderId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(cd => cd.status) 
+                      .HasConversion<byte>()
+                      .HasColumnType("TINYINT")
+                      .IsRequired();
             });
 
             builder.Entity<StockExportOrder>(entity =>
