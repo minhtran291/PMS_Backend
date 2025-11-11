@@ -362,61 +362,6 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync(int salesOrderId, string paymentType)
-        {
-            try
-            {
-                var order = await _unitOfWork.SalesOrder.Query().FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
-                if (order == null)
-                {
-                    return new ServiceResult<VnPayInitResponseDTO>
-                    {
-                        StatusCode = 404,
-                        Message = "Không tìm thấy đơn hàng",
-                        Data = null
-                    };
-                }
-
-                if (order.Status != SalesOrderStatus.Approved)
-                    return new ServiceResult<VnPayInitResponseDTO> { 
-                        StatusCode = 400, 
-                        Message = "Chỉ khởi tạo thanh toán cho đơn ở trạng thái đã được chấp thuận." 
-                    };
-
-
-                decimal amount = paymentType.ToLower() == "deposit"
-                    ? (order.TotalPrice * order.SalesQuotation.DepositPercent)  
-                    : order.TotalPrice;
-
-                var info = paymentType == "deposit" ? "Thanh toán tiền cọc" : "Thanh toán toàn bộ đơn hàng";
-
-                var paymentUrl = _vnPay.CreatePaymentUrl(salesOrderId.ToString(), (long)amount, info);
-                var qrData = _vnPay.GenerateQrDataUrl(paymentUrl);
-
-                return new ServiceResult<VnPayInitResponseDTO>
-                {
-                    StatusCode = 200,
-                    Message = "Khởi tạo thanh toán VNPay thành công",
-                    Data = new VnPayInitResponseDTO
-                    {
-                        PaymentUrl = paymentUrl,
-                        QrDataUrl = qrData,
-                        Amount = amount,
-                        PaymentType = paymentType
-                    }
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi khởi tạo thanh toán VNPay");
-                return new ServiceResult<VnPayInitResponseDTO>
-                {
-                    StatusCode = 500,
-                    Message = "Lỗi trong quá trình tạo thanh toán VNPay",
-                    Data = null
-                };
-            }
-        }
 
         public async Task<ServiceResult<object>> GetOrderDetailsAsync(int salesOrderId)
         {
@@ -424,9 +369,22 @@ namespace PMS.Application.Services.SalesOrder
             {
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                        .ThenInclude(l => l.Product)
-                    .Include(q => q.SalesQuotation)
-                        .ThenInclude(d => d.SalesQuotaionDetails)
+                        .ThenInclude(d => d.Product)
+                    .Include(o => o.SalesOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+
+                    .Include(o => o.SalesQuotation)
+                        .ThenInclude(q => q.SalesQuotaionDetails)
+                            .ThenInclude(qd => qd.Product)
+                    .Include(o => o.SalesQuotation)
+                        .ThenInclude(q => q.SalesQuotaionDetails)
+                            .ThenInclude(qd => qd.LotProduct)
+                    .Include(o => o.SalesQuotation)
+                        .ThenInclude(q => q.SalesQuotaionDetails)
+                            .ThenInclude(qd => qd.TaxPolicy)
+
+                    .Include(o => o.CustomerDebts)
+
                     .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (order == null)
@@ -439,24 +397,37 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
+                var orderDetailsDto = order.SalesOrderDetails.Select(d => new
+                {
+                    d.SalesOrderId,
+                    d.ProductId,
+                    d.LotId,
+                    ProductName = d.Product?.ProductName,
+                    d.Quantity,
+                    d.UnitPrice,
+                    d.SubTotalPrice,
+                    Lot = d.LotProduct == null ? null : new
+                    {
+                        d.LotProduct.InputDate,
+                        d.LotProduct.ExpiredDate
+                    }
+                }).ToList();
+
                 var data = new
                 {
-                    order. SalesOrderId,
+                    order.SalesOrderId,
+                    order.SalesOrderCode,
                     order.SalesQuotationId,
                     order.CreateBy,
                     order.CreateAt,
                     order.Status,
                     order.TotalPrice,
-                    //order.DepositAmount,
-                    Details = order.SalesOrderDetails.Select(d => new
-                    {
-                        d.SalesOrderId,
-                        d.LotProduct,
-                        d.Quantity,
-                        d.UnitPrice,
-                        ProductName = d.Product.ProductName,
-                        ExpiredDate = d.SalesOrder.SalesQuotation.ExpiredDate
-                    })
+                    order.PaidAmount,
+                    order.SalesOrderExpiredDate,
+
+                    CustomerDebt = order.CustomerDebts,
+
+                    Details = orderDetailsDto
                 };
 
                 return new ServiceResult<object>
@@ -671,94 +642,170 @@ namespace PMS.Application.Services.SalesOrder
         }
 
         //customer update sales order when status is draft
-        public async Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(int salesOrderId, List<SalesOrderDetailsUpdateDTO> items)
+        public async Task<ServiceResult<object>> UpdateDraftQuantitiesAsync(SalesOrderUpdateDTO upd)
         {
             try
             {
-                if (items == null || items.Count == 0)
-                    return new ServiceResult<bool> { 
-                        StatusCode = 400, 
-                        Message = "Danh sách cập nhật rỗng.", 
-                        Data = false 
+                // Validate payload
+                if (upd == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Payload trống.",
+                        Data = null
                     };
 
-                var so = await _unitOfWork.SalesOrder.Query()
+                if (upd.SalesOrderId <= 0)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesOrderId là bắt buộc.",
+                        Data = null
+                    };
+
+                if (upd.Details == null || upd.Details.Count == 0)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Danh sách Details trống.",
+                        Data = null
+                    };
+
+                // Kiểm tra quantity âm sớm để fail fast
+                foreach (var it in upd.Details)
+                {
+                    if (it.Quantity < 0)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"Quantity âm ở ProductId={it.ProductId}.",
+                            Data = null
+                        };
+                }
+
+                // Lấy SalesOrder + Details + Debt
+                var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                        .ThenInclude(d => d.Product)
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == upd.SalesOrderId);
 
-                if (so == null)
-                    return new ServiceResult<bool> { 
-                        StatusCode = 404, 
-                        Message = "Không tìm thấy SalesOrder.", 
-                        Data = false 
+                if (order == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesOrder.",
+                        Data = null
                     };
 
-                if (so.Status != SalesOrderStatus.Draft)
-                    return new ServiceResult<bool> { 
-                        StatusCode = 400, 
-                        Message = "Chỉ được cập nhật khi đơn ở trạng thái Draft.", 
-                        Data = false 
+                if (order.Status != SalesOrderStatus.Draft)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được phép sửa đơn hàng ở trạng thái Draft.",
+                        Data = null
                     };
 
-                var qtyMap = items.ToDictionary(x => x.ProductId, x => x.Quantity);
+                // SalesOrder expired => cannot update
+                if (order.SalesOrderExpiredDate.Date < DateTime.Now.Date)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesOrder Draft đã hết hạn. Không thể cập nhật số lượng.",
+                        Data = null
+                    };
+
+                var orderDetailByKey = order.SalesOrderDetails
+                    .ToDictionary(d => (d.ProductId, d.LotId), d => d);
+
+                foreach (var it in upd.Details)
+                {
+                    var key = (it.ProductId, it.LotId);
+                    if (!orderDetailByKey.ContainsKey(key))
+                    {
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"Dòng không thuộc đơn hàng: ProductId={it.ProductId}, LotId={it.LotId}.",
+                            Data = null
+                        };
+                    }
+                }
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                foreach (var d in so.SalesOrderDetails)
+                foreach (var it in upd.Details)
                 {
-                    if (!qtyMap.TryGetValue(d.ProductId, out var newQty)) continue;
-                    if (newQty < 0) newQty = 0;
+                    var d = orderDetailByKey[(it.ProductId, it.LotId)];
+                    d.Quantity = it.Quantity;
 
-                    d.Quantity = newQty;
+                    var sub = (it.Quantity > 0) ? decimal.Round(d.UnitPrice * it.Quantity, 2) : 0m;
+                    d.SubTotalPrice = sub;
 
-                    decimal picked = 0m, costSum = 0m;
-
-                    if (newQty > 0)
-                    {
-                        var lots = await _unitOfWork.LotProduct.Query()
-                            .Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
-                            .OrderBy(l => l.ExpiredDate)
-                            .Select(l => new { l.LotQuantity, l.SalePrice })
-                            .ToListAsync();
-
-                        var remain = (decimal)newQty;
-                        foreach (var lot in lots)
-                        {
-                            if (remain <= 0) break;
-                            var take = Math.Min(remain, (decimal)lot.LotQuantity);
-                            picked += take;
-                            costSum += take * lot.SalePrice;
-                            remain -= take;
-                        }
-                    }
-
-                    d.UnitPrice = picked > 0 ? Math.Round(costSum / picked, 2, MidpointRounding.AwayFromZero) : 0m;
-                    d.SubTotalPrice = Math.Round(d.UnitPrice * d.Quantity, 2, MidpointRounding.AwayFromZero);
+                    _unitOfWork.SalesOrderDetails.Update(d);
                 }
 
-                so.TotalPrice = Math.Round(so.SalesOrderDetails.Sum(x => x.SubTotalPrice), 2, MidpointRounding.AwayFromZero);
+                order.TotalPrice = order.SalesOrderDetails.Sum(x => x.SubTotalPrice);
+                
 
-                _unitOfWork.SalesOrder.Update(so);
+                _unitOfWork.SalesOrder.Update(order);
+
+                var debt = await _unitOfWork.CustomerDebt.Query()
+                    .FirstOrDefaultAsync(x => x.SalesOrderId == order.SalesOrderId);
+
+                if (debt != null)
+                {
+                    debt.DebtAmount = order.TotalPrice - order.PaidAmount;
+                    _unitOfWork.CustomerDebt.Update(debt);
+                }
+
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                return new ServiceResult<bool>
+                var response = new
+                {
+                    order.SalesOrderId,
+                    order.SalesOrderCode,
+                    order.SalesQuotationId,
+                    order.Status,
+                    order.IsDeposited,
+                    order.TotalPrice,
+                    order.PaidAmount,
+                    order.SalesOrderExpiredDate,
+                    order.CreateBy,
+                    order.CreateAt,
+                    CustomerDebt = debt == null ? null : new
+                    {
+                        debt.CustomerId,
+                        debt.SalesOrderId,
+                        debt.DebtAmount,
+                        debt.status
+                    },
+                    Details = order.SalesOrderDetails.Select(d => new
+                    {
+                        d.ProductId,
+                        d.LotId,
+                        d.Quantity,
+                        d.UnitPrice,
+                        d.SubTotalPrice
+                    }).ToList()
+                };
+
+                return new ServiceResult<object>
                 {
                     StatusCode = 200,
-                    Message = "Cập nhật số lượng bản nháp thành công.",
-                    Data = true
+                    Message = "Cập nhật số lượng cho SalesOrder Draft thành công.",
+                    Data = response
                 };
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync({SalesOrderId})", salesOrderId);
-                return new ServiceResult<bool>
+                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync({SalesOrderId})", upd?.SalesOrderId);
+
+                return new ServiceResult<object>
                 {
                     StatusCode = 500,
-                    Message = "Có lỗi khi cập nhật bản nháp.",
-                    Data = false
+                    Message = "Có lỗi xảy ra khi cập nhật số lượng đơn nháp.",
+                    Data = null
                 };
             }
         }

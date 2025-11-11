@@ -16,5 +16,7 @@ namespace PMS.Application.DTOs.SalesOrder
         public bool IsDeposited { get; set; }
         public decimal TotalPrice { get; set; }
         public DateTime CreateAt { get; set; }
+        public DateTime SalesOrderExpiredDate { get; set; }
+        public decimal PaidAmount { get; set; }
     }
 }
