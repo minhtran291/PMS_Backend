@@ -194,6 +194,11 @@ namespace PMS.API.Services.PRFQService
 
                 await _unitOfWork.CommitAsync();
 
+                var excelBytes = GenerateExcel(currentPrfq);
+                if (currentPrfq.Status == PRFQStatus.Sent)
+                {
+                    await _emailService.SendEmailWithAttachmentAsync(currentPrfq.Supplier.Email, "Yêu cầu báo giá", "Kính gửi, đính kèm yêu cầu báo giá.", excelBytes, $"PRFQ_{currentPrfq.PRFQID}.xlsx");
+                }
                 return new ServiceResult<int>
                 {
                     Data = currentPrfq.PRFQID,
@@ -201,6 +206,7 @@ namespace PMS.API.Services.PRFQService
                     StatusCode = 200,
                     Success = true
                 };
+                
             }
             catch (Exception ex)
             {
