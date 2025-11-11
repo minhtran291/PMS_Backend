@@ -723,7 +723,7 @@ namespace PMS.API.Services.POService
                     }
                 }
 
-                var dto = new POQuantityStatus { POID = po.POID };
+                var dto = new POQuantityStatus { POID = po.POID, Status=po.Status };
 
                 if (!anyReceived)
                     notReceived.Add(dto);
