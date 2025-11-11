@@ -10,6 +10,8 @@ using PMS.Data.Repositories.CustomerDeptRepository;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
+using PMS.Data.Repositories.GoodsIssueNote;
+using PMS.Data.Repositories.GoodsIssueNoteDetails;
 using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
@@ -74,7 +76,9 @@ namespace PMS.Data.UnitOfWork
         IInventoryHistoryRepository inventoryHistory
         ,IInventorySessionRepository inventorySession, 
         IStockExportOrderRepository stockExportOrder, 
-        IStockExportOrderDetailsRepository stockExportOrderDetails) : IUnitOfWork
+        IStockExportOrderDetailsRepository stockExportOrderDetails, 
+        IGoodsIssueNoteRepository goodsIssueNote, 
+        IGoodsIssueNoteDetailsRepository goodsIssueNoteDetails) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -127,7 +131,9 @@ namespace PMS.Data.UnitOfWork
         //StockExportOrder
         public IStockExportOrderRepository StockExportOrder { get; private set; } = stockExportOrder;
         public IStockExportOrderDetailsRepository StockExportOrderDetails { get; private set; } = stockExportOrderDetails;
-
+        //GoodsIssueNote
+        public IGoodsIssueNoteRepository GoodsIssueNote { get; private set; } = goodsIssueNote;
+        public IGoodsIssueNoteDetailsRepository GoodsIssueNoteDetails { get; private set; } = goodsIssueNoteDetails;
         public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();

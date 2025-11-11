@@ -56,6 +56,9 @@ namespace PMS.Data.DatabaseConfig
         // StockExportOrder
         public virtual DbSet<StockExportOrder> StockExportOrders { get; set; }
         public virtual DbSet<StockExportOrderDetails> StockExportOrderDetails {  get; set; }
+        //GoodsIssueNote
+        public virtual DbSet<GoodsIssueNote> GoodsIssueNotes { get; set; }
+        public virtual DbSet<GoodsIssueNoteDetails> GoodsIssueNoteDetails { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -999,6 +1002,51 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.HasOne(d => d.LotProduct)
                     .WithMany(lp => lp.StockExportOrderDetails)
+                    .HasForeignKey(d => d.LotId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<GoodsIssueNote>(entity =>
+            {
+                entity.HasKey(gin => gin.Id);
+
+                entity.Property(gin => gin.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(gin => gin.CreateBy)
+                    .HasMaxLength(450)
+                    .IsRequired();
+
+                entity.Property(gin => gin.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.HasOne(gin => gin.StockExportOrder)
+                    .WithOne(seo => seo.GoodsIssueNote)
+                    .HasForeignKey<GoodsIssueNote>(gin => gin.StockExportOrderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(gin => gin.WarehouseStaff)
+                    .WithMany(u => u.GoodsIssueNotes)
+                    .HasForeignKey(gin => gin.CreateBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<GoodsIssueNoteDetails>(entity =>
+            {
+                entity.HasKey(d => new { d.GoodsIssueNoteId, d.LotId });
+
+                entity.Property(d => d.Quantity)
+                    .IsRequired();
+
+                entity.HasOne(d => d.GoodsIssueNote)
+                    .WithMany(gin => gin.GoodsIssueNoteDetails)
+                    .HasForeignKey(d => d.GoodsIssueNoteId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(d => d.LotProduct)
+                    .WithMany(lp => lp.GoodsIssueNoteDetails)
                     .HasForeignKey(d => d.LotId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
