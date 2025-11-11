@@ -20,5 +20,6 @@ namespace PMS.Core.Domain.Entities
         public virtual SalesOrder SalesOrder { get; set; } = null!;
         public virtual User SalesStaff { get; set; } = null!;
         public virtual ICollection<StockExportOrderDetails> StockExportOrderDetails { get; set; } = [];
+        public virtual GoodsIssueNote? GoodsIssueNote { get; set; }
     }
 }

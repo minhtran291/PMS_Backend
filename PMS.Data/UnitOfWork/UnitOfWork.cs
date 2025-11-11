@@ -6,11 +6,13 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Storage;
 using PMS.Core.Domain.Entities;
 using PMS.Data.DatabaseConfig;
-using PMS.Data.Repositories.CustomerDeptRepository;
+using PMS.Data.Repositories.CustomerDebtRepo;
 using PMS.Data.Repositories.CustomerProfile;
 using PMS.Data.Repositories.DebtReport;
 using PMS.Data.Repositories.GoodReceiptNoteDetailRepository;
 using PMS.Data.Repositories.GoodReceiptNoteRepository;
+using PMS.Data.Repositories.GoodsIssueNote;
+using PMS.Data.Repositories.GoodsIssueNoteDetails;
 using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
@@ -72,13 +74,16 @@ namespace PMS.Data.UnitOfWork
         ISalesQuotationNoteRepository salesQuotationNote,
         ISalesOrderRepository salesOrder,
         ISalesOrderDetailsRepository salesOrderDetails,
-        ICustomerDeptRepository customerDept, 
+        ICustomerDebtRepository customerDept, 
         IInventoryHistoryRepository inventoryHistory
         ,IInventorySessionRepository inventorySession, 
         IStockExportOrderRepository stockExportOrder, 
         IStockExportOrderDetailsRepository stockExportOrderDetails,
         IDebtReportRepository debtReport,
         IPharmacySecretInforRepository pharmacySecretInfor) : IUnitOfWork
+        IStockExportOrderDetailsRepository stockExportOrderDetails, 
+        IGoodsIssueNoteRepository goodsIssueNote, 
+        IGoodsIssueNoteDetailsRepository goodsIssueNoteDetails) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -121,7 +126,7 @@ namespace PMS.Data.UnitOfWork
         public ISalesOrderRepository SalesOrder { get; private set; } = salesOrder;
         public ISalesOrderDetailsRepository SalesOrderDetails { get; private set; } = salesOrderDetails;
         //CustomerDept
-        public ICustomerDeptRepository CustomerDept { get; private set; } = customerDept;
+        public ICustomerDebtRepository CustomerDebt { get; private set; } = customerDept;
 
         //InventoryHistory
         public IInventoryHistoryRepository InventoryHistory { get; private set; } = inventoryHistory;
@@ -136,6 +141,9 @@ namespace PMS.Data.UnitOfWork
 
         public IPharmacySecretInforRepository PharmacySecretInfor { get; private set; } = pharmacySecretInfor;
 
+        //GoodsIssueNote
+        public IGoodsIssueNoteRepository GoodsIssueNote { get; private set; } = goodsIssueNote;
+        public IGoodsIssueNoteDetailsRepository GoodsIssueNoteDetails { get; private set; } = goodsIssueNoteDetails;
         public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();

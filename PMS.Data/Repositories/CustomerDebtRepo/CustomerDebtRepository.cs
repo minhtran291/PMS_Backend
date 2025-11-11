@@ -7,10 +7,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PMS.Data.Repositories.CustomerDeptRepository
+namespace PMS.Data.Repositories.CustomerDebtRepo
 {
-    public class CustomerDeptRepository : RepositoryBase<CustomerDept>, ICustomerDeptRepository
+    public class CustomerDebtRepository : RepositoryBase<CustomerDebt>, ICustomerDebtRepository
     {
-        public CustomerDeptRepository(PMSContext context) : base(context) { }
+        public CustomerDebtRepository(PMSContext context) : base(context) { }
     }
 }

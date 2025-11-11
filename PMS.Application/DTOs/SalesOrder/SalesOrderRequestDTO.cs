@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
 using System;
 using System.Collections.Generic;
@@ -24,5 +25,6 @@ namespace PMS.Application.DTOs.SalesOrder
 
         [Required, MinLength(1)]
         public List<SalesOrderDetailsRequestDTO> Details { get; set; } = [];
+        public CustomerDebt CustomerDebt { get; set; }
     }
 }
