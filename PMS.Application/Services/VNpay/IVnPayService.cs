@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using PMS.Application.DTOs.VnPay;
 using PMS.Core.Domain.Constant;
 using System;
 using System.Collections.Generic;
@@ -10,11 +11,8 @@ namespace PMS.Application.Services.VNpay
 {
     public interface IVnPayService
     {
-        string CreatePaymentUrl(string salesOrderId,
-            long amountVnd, string orderInfo, string locale = "vn");
-        bool ValidateReturn(IQueryCollection query, out IDictionary<string, string> data);
-        string GenerateQrDataUrl(string paymentUrl);
-        //Task<ServiceResult<bool>> VNPayConfirmPaymentAsync(string salesOrderId, decimal amountVnd,
-        //    string gateway, string? externalTxnId);
+        Task<ServiceResult<VnPayInitResponseDTO>> InitVnPayAsync(VnPayInitRequestDTO req, string clientIp);
+        Task<ServiceResult<bool>> HandleVnPayReturnAsync(IQueryCollection query);
+        Task<ServiceResult<bool>> HandleVnPayIpnAsync(IQueryCollection query);
     }
 }

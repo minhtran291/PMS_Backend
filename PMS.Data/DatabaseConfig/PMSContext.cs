@@ -1094,6 +1094,8 @@ namespace PMS.Data.DatabaseConfig
                       .HasColumnType("decimal(18,2)")
                       .HasComputedColumnSql("(([TotalRecieve] - [TotalPaid]) + [Equity]) * 3", stored: true)
                       .HasComment("Nợ trần");
+            });
+
             builder.Entity<GoodsIssueNote>(entity =>
             {
                 entity.HasKey(gin => gin.Id);

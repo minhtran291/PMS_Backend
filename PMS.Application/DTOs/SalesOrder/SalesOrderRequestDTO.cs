@@ -17,9 +17,7 @@ namespace PMS.Application.DTOs.SalesOrder
         public int SalesQuotationId { get; set; }
         public required string CreateBy { get; set; }
         public DateTime CreateAt { get; set; } = DateTime.Now;
-        [Required(ErrorMessage = "Trạng thái là bắt buộc")]
         public SalesOrderStatus Status { get; set; }
-        [Required(ErrorMessage = "Tổng giá trị đơn hàng là bắt buộc!")]
         public decimal TotalPrice { get; set; }
         public bool IsDeposited { get; set; } = false;
 
