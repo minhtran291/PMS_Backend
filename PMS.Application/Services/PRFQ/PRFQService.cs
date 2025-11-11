@@ -376,7 +376,7 @@ namespace PMS.API.Services.PRFQService
 
                         products.Add(new PreviewProductDto
                         {
-                            STT= stt,
+                            STT = stt,
                             ProductID = productId,
                             ProductName = info?.ProductName ?? "Unknown",
                             Description = description,
@@ -434,7 +434,7 @@ namespace PMS.API.Services.PRFQService
             using var package = new ExcelPackage();
             var ws = package.Workbook.Worksheets.Add("Yêu cầu báo giá");
 
- 
+
             ws.Cells.Style.Font.Name = "Arial";
             ws.Cells.Style.Font.Size = 11;
             ws.DefaultRowHeight = 18;
@@ -1081,7 +1081,7 @@ namespace PMS.API.Services.PRFQService
                 Success = true,
             };
         }
-      
+
         public async Task<ServiceResult<int>> ConvertExcelToPurchaseOrderAsync(string userId, PurchaseOrderInputDto input, PurchasingOrderStatus purchasingOrderStatus)
         {
             await _unitOfWork.BeginTransactionAsync();
@@ -1193,7 +1193,7 @@ namespace PMS.API.Services.PRFQService
             };
 
             await _unitOfWork.PurchasingOrder.AddAsync(po);
-            await _unitOfWork.CommitAsync(); 
+            await _unitOfWork.CommitAsync();
 
             var products = await _unitOfWork.Product.Query()
                 .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
@@ -1203,7 +1203,7 @@ namespace PMS.API.Services.PRFQService
             var poDetails = new List<PurchasingOrderDetail>();
             var quotationDetails = new List<QuotationDetail>();
 
-            
+
             if (isNewQuotation)
             {
                 int currentRow = excelStartRow;
@@ -1211,7 +1211,7 @@ namespace PMS.API.Services.PRFQService
                 {
                     var productIdText = worksheet.Cells[currentRow, 2].Text?.Trim();
                     if (string.IsNullOrEmpty(productIdText))
-                        break; 
+                        break;
 
                     if (!int.TryParse(productIdText, out int productId))
                         throw new Exception($"Không thể đọc ProductID tại dòng {currentRow}.");
@@ -1247,7 +1247,7 @@ namespace PMS.API.Services.PRFQService
                     _unitOfWork.QuotationDetail.AddRange(quotationDetails);
             }
 
-            
+
             ///
             foreach (var item in input.Details.Where(d => d.Quantity > 0))
             {
@@ -1321,7 +1321,7 @@ namespace PMS.API.Services.PRFQService
                 "Yêu cầu nhập hàng",
                 $"Nhân viên {senderUser.UserName} đã gửi mail đặt hàng đến NCC: {supplier.Name}",
                 Core.Domain.Enums.NotificationType.Reminder);
-            }            
+            }
         }
 
         private async Task SendEmailAndNotificationAsync2(PurchasingOrder po, Supplier supplier, User senderUser, PurchasingOrderStatus status, string userId)
@@ -1329,7 +1329,7 @@ namespace PMS.API.Services.PRFQService
         {
             var poExcelBytes = await GeneratePOExcelAsync(userId, po);
             if (status == PurchasingOrderStatus.sent)
-            {                
+            {
                 await _emailService.SendEmailWithAttachmentAsync(
                     supplier.Email,
                     "Đơn hàng",
@@ -1354,7 +1354,6 @@ namespace PMS.API.Services.PRFQService
             await _unitOfWork.BeginTransactionAsync();
             try
             {
-
                 var quotation = await _unitOfWork.Quotation.Query()
                     .Include(q => q.QuotationDetails)
                     .FirstOrDefaultAsync(q => q.QID == input.QID);
@@ -1363,7 +1362,7 @@ namespace PMS.API.Services.PRFQService
                     return new ServiceResult<int> { StatusCode = 404, Message = "Không tìm thấy báo giá.", Data = 0, Success = false };
 
                 if (DateTime.Now > quotation.QuotationExpiredDate)
-                    return new ServiceResult<int> { StatusCode = 400, Message = "Báo giá đã hết hạn.",Data=0,Success=false };
+                    return new ServiceResult<int> { StatusCode = 400, Message = "Báo giá đã hết hạn.", Data = 0, Success = false };
 
                 var supplier = await _unitOfWork.Supplier.Query()
                     .FirstOrDefaultAsync(s => s.Id == quotation.SupplierID);
@@ -1373,7 +1372,6 @@ namespace PMS.API.Services.PRFQService
 
                 var senderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
 
-
                 var po = new PurchasingOrder
                 {
                     OrderDate = DateTime.Now,
@@ -1381,40 +1379,41 @@ namespace PMS.API.Services.PRFQService
                     UserId = userId,
                     Total = 0,
                     Status = input.Status,
-                    
                 };
 
                 await _unitOfWork.PurchasingOrder.AddAsync(po);
                 await _unitOfWork.CommitAsync();
 
-
-                var quotationDetails = quotation.QuotationDetails.ToDictionary(qd => qd.ProductID);
-
                 var poDetails = new List<PurchasingOrderDetail>();
+
                 foreach (var item in input.Details)
                 {
-                    if (!quotationDetails.TryGetValue(item.ProductID, out var qd))
-                        throw new Exception($"Sản phẩm {item.ProductID} không tồn tại trong báo giá {quotation.QID}");
+                    // Tìm chi tiết trong báo giá khớp ProductID và ExpiredDate đảm bảo cho chọn linh hoạt
+                    var matchedDetail = quotation.QuotationDetails
+                        .FirstOrDefault(qd => qd.ProductID == item.ProductID && qd.ProductDate.Date == item.Date.Date);
 
-                    decimal total = item.Quantity * qd.UnitPrice * 1.1m;
+                    if (matchedDetail == null)
+                        throw new Exception($"Sản phẩm {item.ProductID} với ngày {item.Date:yyyy-MM-dd} không tồn tại trong báo giá {quotation.QID}");
+
+                    decimal total = item.Quantity * matchedDetail.UnitPrice * 1.1m;
 
                     poDetails.Add(new PurchasingOrderDetail
                     {
                         POID = po.POID,
-                        ProductID = qd.ProductID,
-                        ProductName = qd.ProductName,
-                        Description = qd.ProductDescription,
-                        DVT = qd.ProductUnit,
+                        ProductID = matchedDetail.ProductID,
+                        ProductName = matchedDetail.ProductName,
+                        Description = matchedDetail.ProductDescription,
+                        DVT = matchedDetail.ProductUnit,
                         Quantity = item.Quantity,
-                        UnitPrice = qd.UnitPrice,
+                        UnitPrice = matchedDetail.UnitPrice,
                         UnitPriceTotal = total,
-                        ExpiredDate = qd.ProductDate
+                        ExpiredDate = matchedDetail.ProductDate
                     });
 
                     po.Total += total;
                 }
 
-                if (poDetails.Count == 0)
+                if (!poDetails.Any())
                     throw new Exception("Không có sản phẩm nào hợp lệ trong đơn hàng.");
 
                 _unitOfWork.PurchasingOrderDetail.AddRange(poDetails);
@@ -1424,6 +1423,7 @@ namespace PMS.API.Services.PRFQService
                 {
                     await SendEmailAndNotificationAsync2(po, supplier, senderUser, input.Status, userId);
                 }
+
                 await _unitOfWork.CommitTransactionAsync();
 
                 return new ServiceResult<int>
@@ -1441,5 +1441,110 @@ namespace PMS.API.Services.PRFQService
                 return new ServiceResult<int> { StatusCode = 400, Message = "Thất bại khi tạo đơn hàng." };
             }
         }
+
+
+        public async Task<ServiceResult<bool>> CountinueEditPurchasingOrderAsync(int poid, string userid, PurchaseOrderByQuotaionInputDto input)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+
+                var po = await _unitOfWork.PurchasingOrder.Query()
+                    .Include(p => p.PurchasingOrderDetails)
+                    .FirstOrDefaultAsync(p => p.POID == poid);
+
+                if (po == null)
+                    return new ServiceResult<bool> { StatusCode = 404, Data = false, Message = $"Không tìm thấy order với id:{poid}", Success = false };
+
+                if (po.Status != PurchasingOrderStatus.draft)
+                    return new ServiceResult<bool> { StatusCode = 400, Data = false, Message = "Không thể edit với PO không ở trạng thái nháp", Success = false };
+
+
+                var exQ = await _unitOfWork.Quotation.Query()
+                    .Include(q => q.QuotationDetails)
+                    .FirstOrDefaultAsync(q => q.QID == po.QID);
+
+                if (exQ == null)
+                    return new ServiceResult<bool> { StatusCode = 404, Data = false, Message = $"Không tìm thấy báo giá với QID:{po.QID}", Success = false };
+
+                if (DateTime.Now > exQ.QuotationExpiredDate)
+                    return new ServiceResult<bool> { StatusCode = 400, Data = false, Message = "Báo giá đã hết hạn.", Success = false };
+
+
+                var supplier = await _unitOfWork.Supplier.Query()
+                    .FirstOrDefaultAsync(s => s.Id == exQ.SupplierID);
+                if (supplier == null)
+                    return new ServiceResult<bool> { StatusCode = 400, Data = false, Message = "Không tìm thấy nhà cung cấp.", Success = false };
+
+                var senderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userid);
+
+
+                if (po.PurchasingOrderDetails.Any())
+                {
+                    _unitOfWork.PurchasingOrderDetail.RemoveRange(po.PurchasingOrderDetails);
+                    po.Total = 0;
+                }
+
+                // 5. Tạo chi tiết mới
+                var poDetails = new List<PurchasingOrderDetail>();
+                foreach (var item in input.Details)
+                {
+                    var matchedDetail = exQ.QuotationDetails
+                        .FirstOrDefault(qd => qd.ProductID == item.ProductID && qd.ProductDate.Date == item.Date.Date);
+
+                    if (matchedDetail == null)
+                        throw new Exception($"Sản phẩm {item.ProductID} với ngày {item.Date:yyyy-MM-dd} không tồn tại trong báo giá {exQ.QID}");
+
+                    decimal total = item.Quantity * matchedDetail.UnitPrice * 1.1m;
+
+                    poDetails.Add(new PurchasingOrderDetail
+                    {
+                        POID = po.POID,
+                        ProductID = matchedDetail.ProductID,
+                        ProductName = matchedDetail.ProductName,
+                        Description = matchedDetail.ProductDescription,
+                        DVT = matchedDetail.ProductUnit,
+                        Quantity = item.Quantity,
+                        UnitPrice = matchedDetail.UnitPrice,
+                        UnitPriceTotal = total,
+                        ExpiredDate = matchedDetail.ProductDate
+                    });
+
+                    po.Total += total;
+                }
+
+                if (!poDetails.Any())
+                    throw new Exception("Không có sản phẩm hợp lệ trong đơn hàng.");
+
+                _unitOfWork.PurchasingOrderDetail.AddRange(poDetails);
+
+                po.Status = input.Status;
+
+                await _unitOfWork.CommitAsync();
+
+
+                if (po.Status == PurchasingOrderStatus.sent)
+                {
+                    await SendEmailAndNotificationAsync2(po, supplier, senderUser, po.Status, userid);
+                }
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Data = true,
+                    Message = "Cập nhật PO thành công.",
+                    Success = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CountinueEditPurchasingOrderAsync failed");
+                await _unitOfWork.RollbackTransactionAsync();
+                return new ServiceResult<bool> { StatusCode = 400, Message = "Thất bại khi cập nhật đơn hàng.", Success = false };
+            }
+        }
+
     }
 }

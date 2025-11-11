@@ -33,6 +33,8 @@ using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotationNote;
 using PMS.Data.Repositories.StaffProfile;
+using PMS.Data.Repositories.StockExportOrder;
+using PMS.Data.Repositories.StockExportOrderDetails;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.TaxPolicy;
 using PMS.Data.Repositories.User;
@@ -98,6 +100,9 @@ namespace PMS.Data.DatabaseConfig
             //
             services.AddScoped<IInventoryHistoryRepository, InventoryHistoryRepository>();
             services.AddScoped<IInventorySessionRepository, InventorySessionRepository>();
+            //
+            services.AddScoped<IStockExportOrderRepository, StockExportOrderRepository>();
+            services.AddScoped<IStockExportOrderDetailsRepository, StockExportOrderDetailsRepository>();
 
         }
 

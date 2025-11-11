@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PMS.Data.DatabaseConfig;
 
@@ -11,9 +12,11 @@ using PMS.Data.DatabaseConfig;
 namespace PMS.Data.Migrations
 {
     [DbContext(typeof(PMSContext))]
-    partial class PMSContextModelSnapshot : ModelSnapshot
+    [Migration("20251109152111_Add_Stock_Export_Order")]
+    partial class Add_Stock_Export_Order
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -183,7 +186,7 @@ namespace PMS.Data.Migrations
                     b.ToTable("Categories");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDebt", b =>
+            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDept", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -191,20 +194,9 @@ namespace PMS.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CustomerId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("DebtAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("SalesOrderId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("SalesOrderId");
-
-                    b.ToTable("CustomerDebts");
+                    b.ToTable("CustomerDepts");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
@@ -309,77 +301,6 @@ namespace PMS.Data.Migrations
                     b.ToTable("GoodReceiptNoteDetails");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.InventoryHistory", b =>
-                {
-                    b.Property<int>("InventoryHistoryID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InventoryHistoryID"));
-
-                    b.Property<int>("ActualQuantity")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.Property<string>("InventoryBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("InventorySessionID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("LastUpdated")
-                        .HasColumnType("datetime");
-
-                    b.Property<int>("LotID")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("SystemQuantity")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.HasKey("InventoryHistoryID");
-
-                    b.HasIndex("InventorySessionID");
-
-                    b.HasIndex("LotID");
-
-                    b.ToTable("InventoryHistories", (string)null);
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.InventorySession", b =>
-                {
-                    b.Property<int>("InventorySessionID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InventorySessionID"));
-
-                    b.Property<string>("CreatedBy")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("EndDate")
-                        .HasColumnType("datetime");
-
-                    b.Property<DateTime>("StartDate")
-                        .HasColumnType("datetime");
-
-                    b.Property<int?>("Status")
-                        .HasMaxLength(50)
-                        .HasColumnType("int");
-
-                    b.HasKey("InventorySessionID");
-
-                    b.ToTable("InventorySessions", (string)null);
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
                     b.Property<int>("LotID")
@@ -387,6 +308,9 @@ namespace PMS.Data.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LotID"));
+
+                    b.Property<int>("Diff")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("ExpiredDate")
                         .HasColumnType("date");
@@ -396,9 +320,6 @@ namespace PMS.Data.Migrations
 
                     b.Property<decimal>("InputPrice")
                         .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("LastCheckedDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<int>("LotQuantity")
                         .HasColumnType("int");
@@ -414,6 +335,16 @@ namespace PMS.Data.Migrations
 
                     b.Property<int>("WarehouselocationID")
                         .HasColumnType("int");
+
+                    b.Property<string>("inventoryBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("lastedUpdate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("LotID");
 
@@ -804,7 +735,7 @@ namespace PMS.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SalesOrderId"));
 
                     b.Property<DateTime>("CreateAt")
-                        .HasColumnType("date");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("CreateBy")
                         .IsRequired()
@@ -813,10 +744,6 @@ namespace PMS.Data.Migrations
 
                     b.Property<bool>("IsDeposited")
                         .HasColumnType("bit");
-
-                    b.Property<decimal>("PaidAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("SalesOrderCode")
                         .IsRequired()
@@ -1377,17 +1304,6 @@ namespace PMS.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerDebt", b =>
-                {
-                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
-                        .WithMany("CustomerDebts")
-                        .HasForeignKey("SalesOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SalesOrder");
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Identity.User", "User")
@@ -1427,25 +1343,6 @@ namespace PMS.Data.Migrations
                     b.Navigation("GoodReceiptNote");
 
                     b.Navigation("Product");
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.InventoryHistory", b =>
-                {
-                    b.HasOne("PMS.Core.Domain.Entities.InventorySession", "InventorySession")
-                        .WithMany("InventoryHistories")
-                        .HasForeignKey("InventorySessionID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("PMS.Core.Domain.Entities.LotProduct", "LotProduct")
-                        .WithMany("InventoryHistories")
-                        .HasForeignKey("LotID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("InventorySession");
-
-                    b.Navigation("LotProduct");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
@@ -1833,18 +1730,11 @@ namespace PMS.Data.Migrations
                     b.Navigation("GoodReceiptNoteDetails");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.InventorySession", b =>
-                {
-                    b.Navigation("InventoryHistories");
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
                     b.Navigation("SalesOrderDetails");
 
                     b.Navigation("SalesQuotaionDetails");
-
-                    b.Navigation("InventoryHistories");
 
                     b.Navigation("StockExportOrderDetails");
                 });
@@ -1895,8 +1785,6 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrder", b =>
                 {
-                    b.Navigation("CustomerDebts");
-
                     b.Navigation("SalesOrderDetails");
 
                     b.Navigation("StockExportOrders");

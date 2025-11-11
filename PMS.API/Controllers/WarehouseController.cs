@@ -225,19 +225,43 @@ namespace PMS.API.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { Message = "Không thể xác thực người dùng." });
-
             var result = await _warehouseService.ExportInventorySessionToExcelAsync(userId, sessionId);
 
             if (!result.Success)
                 return HandleServiceResult(result);
 
-            var fileName = $"InventorySession_{sessionId}_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            var fileName = $"BaoCaoKiemKeTheoPhien_{sessionId}_Author_{userId}{DateTime.Now:yyyyMMddHHmmss}.xlsx";
 
             return File(
                 result.Data,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 fileName
             );
+        }
+
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/GetAllsession
+        /// Lấy danh sách tất cả các phiên kiểm kê 
+        /// </summary>
+        [HttpGet("GetAllsession")]
+        public async Task<IActionResult> GetAllInventorySessionsAsync()
+        {
+            var result = await _warehouseService.GetAllInventorySessionsAsync();
+            return HandleServiceResult(result);
+        }
+
+
+
+        /// <summary>
+        /// https://localhost:7213/api/Warehouse/sessionbywarehouse/{warehouseLocationId}
+        /// </summary>
+        /// <param name="warehouseLocationId"></param>
+        /// <returns></returns>
+        [HttpGet("sessionbywarehouse/{warehouseLocationId}")]
+        public async Task<IActionResult> GetAllSessionsByWarehouse(int warehouseLocationId)
+        {
+            var result = await _warehouseService.GetAllInventorySessionsByWarehouseLocationAsync(warehouseLocationId);
+            return HandleServiceResult(result);
         }
 
     }

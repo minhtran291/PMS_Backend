@@ -53,6 +53,10 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<SalesOrder> SalesOrders { get; set; }
         public virtual DbSet<SalesOrderDetails> SalesOrderDetails { get; set; }
         public virtual DbSet<CustomerDebt> CustomerDebts { get; set; }
+        // StockExportOrder
+        public virtual DbSet<StockExportOrder> StockExportOrders { get; set; }
+        public virtual DbSet<StockExportOrderDetails> StockExportOrderDetails {  get; set; }
+        
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -962,6 +966,51 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(o => o.CustomerDebts)
                     .HasForeignKey(cd => cd.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<StockExportOrder>(entity =>
+            {
+                entity.HasKey(seo => seo.Id);
+
+                entity.Property(seo => seo.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(seo => seo.SalesOrderId)
+                    .IsRequired();
+
+                entity.Property(seo => seo.CreateBy)
+                    .HasMaxLength(450)
+                    .IsRequired();
+
+                entity.Property(seo => seo.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.HasOne(seo => seo.SalesOrder)
+                    .WithMany(so => so.StockExportOrders)
+                    .HasForeignKey(seo => seo.SalesOrderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(seo => seo.SalesStaff)
+                    .WithMany(ss => ss.StockExportOrders)
+                    .HasForeignKey(seo => seo.CreateBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<StockExportOrderDetails>(entity =>
+            {
+                entity.HasKey(d => new { d.StockExportOrderId, d.LotId});
+
+                entity.HasOne(d => d.StockExportOrder)
+                    .WithMany(seo => seo.StockExportOrderDetails)
+                    .HasForeignKey(d => d.StockExportOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(d => d.LotProduct)
+                    .WithMany(lp => lp.StockExportOrderDetails)
+                    .HasForeignKey(d => d.LotId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

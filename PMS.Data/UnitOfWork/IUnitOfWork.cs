@@ -23,6 +23,8 @@ using PMS.Data.Repositories.SalesQuotationComment;
 using PMS.Data.Repositories.SalesQuotationDetails;
 using PMS.Data.Repositories.SalesQuotationNote;
 using PMS.Data.Repositories.StaffProfile;
+using PMS.Data.Repositories.StockExportOrder;
+using PMS.Data.Repositories.StockExportOrderDetails;
 using PMS.Data.Repositories.Supplier;
 using PMS.Data.Repositories.TaxPolicy;
 using PMS.Data.Repositories.User;
@@ -78,6 +80,9 @@ namespace PMS.Data.UnitOfWork
         IInventoryHistoryRepository InventoryHistory { get; }
         //InventorySession
         IInventorySessionRepository InventorySession { get; }
+        //StockExportOrder
+        IStockExportOrderRepository StockExportOrder { get; }
+        IStockExportOrderDetailsRepository StockExportOrderDetails { get; }
 
         Task<int> CommitAsync();
         Task BeginTransactionAsync();
