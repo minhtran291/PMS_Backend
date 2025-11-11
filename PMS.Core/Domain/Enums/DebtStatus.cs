@@ -11,6 +11,7 @@ namespace PMS.Core.Domain.Enums
         Maturity = 1, // đáo hạn
         BadDebt = 2, // nợ xấu
         OnTime = 3, // đúng hạn
+        Apart=4, // Một phần
 
     }
 }

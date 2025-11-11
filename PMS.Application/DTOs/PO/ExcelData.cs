@@ -14,5 +14,6 @@ namespace PMS.Application.DTOs.PO
         public DateTime SendDate { get; set; }
         public DateTime ExpiredDate { get; set; }
         public bool IsNewQuotation { get; set; }
+        public int PaymentDueDate {  get; set; }
     }
 }

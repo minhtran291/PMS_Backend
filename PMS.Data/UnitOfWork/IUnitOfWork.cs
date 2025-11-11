@@ -7,6 +7,7 @@ using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
+using PMS.Data.Repositories.PharmacySecretInfor;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.PurchasingOrderDetailRepository;
@@ -86,6 +87,8 @@ namespace PMS.Data.UnitOfWork
         IStockExportOrderDetailsRepository StockExportOrderDetails { get; }
         //Debtreport
         IDebtReportRepository DebtReport { get; }
+        // pmc
+        IPharmacySecretInforRepository PharmacySecretInfor { get; }
 
         Task<int> CommitAsync();
         Task BeginTransactionAsync();

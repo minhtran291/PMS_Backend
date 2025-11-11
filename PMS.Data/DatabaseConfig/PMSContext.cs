@@ -533,6 +533,8 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(po => po.Deposit).HasColumnType("decimal(18,2)");
 
                 entity.Property(po => po.OrderDate).IsRequired();
+                entity.Property(po => po.PaymentDueDate).IsRequired();
+                entity.Property(po => po.DepositDate);
 
                 entity.HasOne(po => po.User)
                     .WithMany(u => u.PurchasingOrders)
@@ -1019,27 +1021,14 @@ namespace PMS.Data.DatabaseConfig
                       .HasColumnType("decimal(18,2)")
                       .HasDefaultValue(0);
 
-                entity.Property(e => e.TotalPaid)
-                      .HasColumnType("decimal(18,2)")
-                      .HasDefaultValue(0);
-
                 entity.Property(e => e.CurrentDebt)
-                      .HasColumnType("decimal(18,2)")
-                      .HasDefaultValue(0);
-
-                entity.Property(e => e.DebtCeiling)
                       .HasColumnType("decimal(18,2)")
                       .HasDefaultValue(0);
 
                 entity.Property(e => e.CreatedDate);
                      
-
                 entity.Property(e => e.Payday)
                       .HasColumnType("datetime");
-
-                entity.Property(e => e.DueDate)
-                      .HasColumnType("datetime");
-
                 
                 entity.Property(e => e.EntityType)
                       .HasConversion<int>()
@@ -1052,6 +1041,34 @@ namespace PMS.Data.DatabaseConfig
                
                 entity.HasIndex(e => new { e.EntityType, e.EntityID })
                       .HasDatabaseName("IX_DebtReport_Entity");
+            });
+
+
+            builder.Entity<PharmacySecretInfor>(entity =>
+            {
+                entity.ToTable("PharmacySecretInfor");
+
+                entity.HasKey(e => e.PMSID);
+
+                entity.Property(e => e.PMSID)
+                      .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.Equity)
+                      .HasColumnType("decimal(18,2)")
+                      .HasComment("Vốn chủ sở hữu");
+
+                entity.Property(e => e.TotalRecieve)
+                      .HasColumnType("decimal(18,2)")
+                      .HasComment("Tổng thu");
+
+                entity.Property(e => e.TotalPaid)
+                      .HasColumnType("decimal(18,2)")
+                      .HasComment("Tổng chi");
+
+                entity.Property(e => e.DebtCeiling)
+                      .HasColumnType("decimal(18,2)")
+                      .HasComputedColumnSql("(([TotalRecieve] - [TotalPaid]) + [Equity]) * 3", stored: true)
+                      .HasComment("Nợ trần");
             });
         }
     }

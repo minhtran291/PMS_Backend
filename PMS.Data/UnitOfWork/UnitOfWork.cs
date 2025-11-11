@@ -15,6 +15,7 @@ using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
+using PMS.Data.Repositories.PharmacySecretInfor;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
 using PMS.Data.Repositories.PurchasingOrderDetailRepository;
@@ -76,7 +77,8 @@ namespace PMS.Data.UnitOfWork
         ,IInventorySessionRepository inventorySession, 
         IStockExportOrderRepository stockExportOrder, 
         IStockExportOrderDetailsRepository stockExportOrderDetails,
-        IDebtReportRepository debtReport) : IUnitOfWork
+        IDebtReportRepository debtReport,
+        IPharmacySecretInforRepository pharmacySecretInfor) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -131,6 +133,8 @@ namespace PMS.Data.UnitOfWork
         public IStockExportOrderDetailsRepository StockExportOrderDetails { get; private set; } = stockExportOrderDetails;
         //DebtReport
         public IDebtReportRepository DebtReport { get; private set; } = debtReport;
+
+        public IPharmacySecretInforRepository PharmacySecretInfor { get; private set; } = pharmacySecretInfor;
 
         public async Task<int> CommitAsync()
         {

@@ -19,16 +19,12 @@ namespace PMS.Core.Domain.Entities
         public DebtEntityType EntityType { get; set; }// Phân loại đối tượng
         public DateTime? Payday { get; set; } // Ngày thanh toán thực tế
 
-        public DateTime? DueDate { get; set; } // Ngày đến hạn 
-
         public DebtStatus Status { get; set; } // trạng thái
 
-        public decimal TotalPaid { get; set; }        // Tổng chi
-        public decimal CurrentDebt { get; set; }     // Dư nợ hiện tại
-
-        public decimal DebtCeiling { get; set; }  // trần nợ
+        public decimal CurrentDebt { get; set; } // Dư nợ hiện tại
 
         public DateTime CreatedDate { get; set; } // ngày tạo
+
 
     }
 }

@@ -16,6 +16,7 @@ using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
 using PMS.Core.Domain.Identity;
+using PMS.Data.Migrations;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Services.POService
@@ -74,94 +75,128 @@ namespace PMS.API.Services.POService
             };
         }
 
-        public async Task<ServiceResult<POPaidViewDTO>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
-        {
-            try
-            {
-                var existingPO = await _unitOfWork.PurchasingOrder.Query()
-                    .Include(po => po.Quotations)
-                    .FirstOrDefaultAsync(po => po.POID == poid);
+        //public async Task<ServiceResult<POPaidViewDTO>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
+        //{
+        //    await _unitOfWork.BeginTransactionAsync();
+        //    try
+        //    {
+        //        var existingPO = await _unitOfWork.PurchasingOrder.Query()
+        //            .Include(po => po.Quotations)
+        //            .FirstOrDefaultAsync(po => po.POID == poid);
 
-                if (existingPO == null)
-                {
-                    return new ServiceResult<POPaidViewDTO>
-                    {
-                        StatusCode = 404,
-                        Message = $"Không tìm thấy đơn hàng với POID = {poid}",
-                        Data = null
-                    };
-                }
+        //        if (existingPO == null)
+        //        {
+        //            return new ServiceResult<POPaidViewDTO>
+        //            {
+        //                StatusCode = 404,
+        //                Message = $"Không tìm thấy đơn hàng với POID = {poid}",
+        //                Data = null
+        //            };
+        //        }
 
-                if (pOUpdateDTO.paid > existingPO.Total)
-                {
-                    return new ServiceResult<POPaidViewDTO>
-                    {
-                        StatusCode = 400,
-                        Message = "Thanh toán vượt quá tổng giá trị đơn hàng",
-                        Data = null
-                    };
-                }
+        //        if (pOUpdateDTO.paid > existingPO.Total)
+        //        {
+        //            return new ServiceResult<POPaidViewDTO>
+        //            {
+        //                StatusCode = 400,
+        //                Message = "Thanh toán vượt quá tổng giá trị đơn hàng",
+        //                Data = null
+        //            };
+        //        }
 
-                existingPO.Status = Core.Domain.Enums.PurchasingOrderStatus.deposited;
-                existingPO.Deposit = pOUpdateDTO.paid;
-                existingPO.Debt = existingPO.Total - pOUpdateDTO.paid;
-                existingPO.PaymentDate = DateTime.Now;
-                existingPO.PaymentBy = userId;
-
-
-
-                _unitOfWork.PurchasingOrder.Update(existingPO);
-                await _unitOfWork.CommitAsync();
-                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy);
-                if (user == null)
-                {
-                    throw new Exception("Lỗi khi ghi nhận tiền gửi");
-                }
-                var paymentName = user.UserName;
-
-                var resultDto = new POPaidViewDTO
-                {
-                    PaymentBy = paymentName,
-                    PaymentDate = existingPO.PaymentDate,
-                    Status = existingPO.Status,
-                    Debt = existingPO.Debt,
-                };
-                var QuotationSup = await _unitOfWork.Quotation.Query().FirstOrDefaultAsync(q => q.QID == existingPO.QID);
-                if (QuotationSup == null)
-                {
-                    throw new Exception($"Lỗi hệ thống khi tìm kiếm báo giá theo đơn hàng: {existingPO.POID}");
-                }
-                var debtReport = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(x => x.EntityType == DebtEntityType.Supplier && x.EntityID == QuotationSup.SupplierID);
-                if (debtReport != null)
-                {
-
-                    debtReport.EntityID = QuotationSup.SupplierID;
-                    debtReport.EntityType = DebtEntityType.Supplier;
-                    debtReport.Payday = DateTime.Now;
-                    debtReport.Payables += existingPO.Total -existingPO.Deposit;
-                    debtReport.TotalPaid = pOUpdateDTO.paid;
-                    debtReport.DueDate = DateTime.Now.AddDays(3);
+        //        existingPO.Status = Core.Domain.Enums.PurchasingOrderStatus.deposited;
+        //        existingPO.Deposit = pOUpdateDTO.paid;
+        //        existingPO.Debt = existingPO.Total - pOUpdateDTO.paid;
+        //        existingPO.PaymentDate = DateTime.Now;
+        //        existingPO.PaymentBy = userId;
 
 
-                }
-                return new ServiceResult<POPaidViewDTO>
-                {
-                    StatusCode = 200,
-                    Message = "Xác nhận tiền cọc thành công.",
-                    Data = resultDto
-                };
-            }
-            catch (Exception ex)
-            {
-                return new ServiceResult<POPaidViewDTO>
-                {
-                    StatusCode = 500,
-                    Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
-                    Data = null
-                };
-            }
-        }
 
+        //        _unitOfWork.PurchasingOrder.Update(existingPO);
+        //        await _unitOfWork.CommitAsync();
+        //        var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy);
+        //        if (user == null)
+        //        {
+        //            throw new Exception("Lỗi khi ghi nhận tiền gửi");
+        //        }
+        //        var paymentName = user.UserName;
+
+        //        var resultDto = new POPaidViewDTO
+        //        {
+        //            PaymentBy = paymentName,
+        //            PaymentDate = existingPO.PaymentDate,
+        //            Status = existingPO.Status,
+        //            Debt = existingPO.Debt,
+        //        };
+        //        var QuotationSup = await _unitOfWork.Quotation.Query().FirstOrDefaultAsync(q => q.QID == existingPO.QID);
+        //        if (QuotationSup == null)
+        //        {
+        //            throw new Exception($"Lỗi hệ thống khi tìm kiếm báo giá theo đơn hàng: {existingPO.POID}");
+        //        }
+        //        var debtReport = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(x => x.EntityType == DebtEntityType.Supplier && x.EntityID == QuotationSup.SupplierID);
+
+        //        // data tổng
+        //        var pharmacySecretInfor = await _unitOfWork.PharmacySecretInfor.Query().FirstOrDefaultAsync(x => x.PMSID == 1);
+        //        if(pharmacySecretInfor == null) { throw new Exception("Lỗi khi tìm kiếm thông tin quan trọng"); }
+        //        // nếu tồn tại nợ với nhà cc cụ thể thì update
+        //        if (debtReport != null)
+        //        {
+
+        //            debtReport.Payday = existingPO.PaymentDate;
+        //            debtReport.Payables += existingPO.Debt;
+        //            if (debtReport.Payables > pharmacySecretInfor.DebtCeiling)
+        //            {
+        //                // neu no phai tra (Payables) > nợ trần (DebtCeiling) thì trạng thái debtReport.Status
+        //                debtReport.Status = DebtStatus.BadDebt; // nợ xấu
+        //                // dư nợ (CurrentDebt) = DebtCeiling.DebtCeiling - debtReport.Payables;
+
+        //                debtReport.CurrentDebt = pharmacySecretInfor.DebtCeiling - debtReport.Payables;
+        //            }
+        //            _unitOfWork.DebtReport.Update(debtReport);
+        //            await _unitOfWork.CommitAsync();
+        //            pharmacySecretInfor.TotalPaid = pOUpdateDTO.paid;
+        //            _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
+        //            await _unitOfWork.CommitAsync();
+        //        }
+        //        else
+        //        {
+        //            // nếu chưa thì tạo mới nợ với ncc
+        //            var newdebtreport = new DebtReport
+        //            {
+        //                EntityID = QuotationSup.SupplierID,
+        //                CreatedDate = existingPO.PaymentDate,
+        //                Payables = existingPO.Debt,
+        //                EntityType = DebtEntityType.Supplier,
+        //                Status = DebtStatus.Apart,
+        //                Payday = existingPO.PaymentDate
+        //            };
+        //            _unitOfWork.DebtReport.Update(newdebtreport);
+        //            await _unitOfWork.CommitAsync();
+        //            pharmacySecretInfor.TotalPaid = pOUpdateDTO.paid;
+        //            _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
+        //            await _unitOfWork.CommitAsync();
+        //        }
+        //        await _unitOfWork.CommitTransactionAsync();
+
+        //        return new ServiceResult<POPaidViewDTO>
+        //        {
+        //            StatusCode = 200,
+        //            Message = "Xác nhận tiền cọc thành công.",
+        //            Data = resultDto
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await _unitOfWork.RollbackTransactionAsync();
+        //        return new ServiceResult<POPaidViewDTO>
+        //        {
+        //            StatusCode = 500,
+        //            Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
+        //            Data = null
+        //        };
+        //    }
+        //}
+        //DueDate = existingPO.PaymentDate.AddDays(existingPO.PaymentDueDate),
         public async Task<ServiceResult<POViewDTO>> ViewDetailPObyID(int poid)
         {
             try
@@ -240,94 +275,94 @@ namespace PMS.API.Services.POService
             }
         }
 
-        public async Task<ServiceResult<POPaidViewDTO>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
-        {
-            await _unitOfWork.BeginTransactionAsync();
-            try
-            {
-                var existingPO = await _unitOfWork.PurchasingOrder.Query()
-                    .FirstOrDefaultAsync(po => po.POID == poid);
+        //public async Task<ServiceResult<POPaidViewDTO>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
+        //{
+        //    await _unitOfWork.BeginTransactionAsync();
+        //    try
+        //    {
+        //        var existingPO = await _unitOfWork.PurchasingOrder.Query()
+        //            .FirstOrDefaultAsync(po => po.POID == poid);
 
-                if (existingPO == null)
-                {
-                    return new ServiceResult<POPaidViewDTO>
-                    {
-                        StatusCode = 404,
-                        Message = $"Không tìm thấy đơn hàng với POID = {poid}",
-                        Data = null
-                    };
-                }
-
-
-                if (pOUpdateDTO.paid > existingPO.Debt)
-                {
-                    return new ServiceResult<POPaidViewDTO>
-                    {
-                        StatusCode = 400,
-                        Message = "Thanh toán vượt quá số nợ còn lại.",
-                        Data = null
-                    };
-                }
+        //        if (existingPO == null)
+        //        {
+        //            return new ServiceResult<POPaidViewDTO>
+        //            {
+        //                StatusCode = 404,
+        //                Message = $"Không tìm thấy đơn hàng với POID = {poid}",
+        //                Data = null
+        //            };
+        //        }
 
 
-                existingPO.Deposit += pOUpdateDTO.paid;
-                existingPO.Debt = existingPO.Total - existingPO.Deposit;
+        //        if (pOUpdateDTO.paid > existingPO.Debt)
+        //        {
+        //            return new ServiceResult<POPaidViewDTO>
+        //            {
+        //                StatusCode = 400,
+        //                Message = "Thanh toán vượt quá số nợ còn lại.",
+        //                Data = null
+        //            };
+        //        }
 
 
-                if (existingPO.Debt == 0)
-                {
-                    existingPO.Status = PurchasingOrderStatus.compeleted;
-                }
-                else
-                {
-                    existingPO.Status = PurchasingOrderStatus.paid;
-                }
-
-                existingPO.PaymentDate = DateTime.Now;
-                existingPO.PaymentBy = userId;
-
-                _unitOfWork.PurchasingOrder.Update(existingPO);
-                await _unitOfWork.CommitAsync();
+        //        existingPO.Deposit += pOUpdateDTO.paid;
+        //        existingPO.Debt = existingPO.Total - existingPO.Deposit;
 
 
-                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy);
-                if (user == null)
-                {
-                    throw new Exception("Không tìm thấy thông tin người xác nhận thanh toán.");
-                }
+        //        if (existingPO.Debt == 0)
+        //        {
+        //            existingPO.Status = PurchasingOrderStatus.compeleted;
+        //        }
+        //        else
+        //        {
+        //            existingPO.Status = PurchasingOrderStatus.paid;
+        //        }
 
-                var paymentName = user.UserName;
+        //        existingPO.PaymentDate = DateTime.Now;
+        //        existingPO.PaymentBy = userId;
+
+        //        _unitOfWork.PurchasingOrder.Update(existingPO);
+        //        await _unitOfWork.CommitAsync();
 
 
-                var resultDto = new POPaidViewDTO
-                {
-                    PaymentBy = paymentName,
-                    PaymentDate = existingPO.PaymentDate,
-                    Status = existingPO.Status,
-                    Debt = existingPO.Debt
-                };
+        //        var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy);
+        //        if (user == null)
+        //        {
+        //            throw new Exception("Không tìm thấy thông tin người xác nhận thanh toán.");
+        //        }
 
-                await _unitOfWork.CommitTransactionAsync();
+        //        var paymentName = user.UserName;
 
-                return new ServiceResult<POPaidViewDTO>
-                {
-                    StatusCode = 200,
-                    Message = "Cập nhật thanh toán thành công.",
-                    Data = resultDto
-                };
-            }
-            catch (Exception ex)
-            {
-                await _unitOfWork.RollbackTransactionAsync();
 
-                return new ServiceResult<POPaidViewDTO>
-                {
-                    StatusCode = 500,
-                    Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
-                    Data = null
-                };
-            }
-        }
+        //        var resultDto = new POPaidViewDTO
+        //        {
+        //            PaymentBy = paymentName,
+        //            PaymentDate = existingPO.PaymentDate,
+        //            Status = existingPO.Status,
+        //            Debt = existingPO.Debt
+        //        };
+
+        //        await _unitOfWork.CommitTransactionAsync();
+
+        //        return new ServiceResult<POPaidViewDTO>
+        //        {
+        //            StatusCode = 200,
+        //            Message = "Cập nhật thanh toán thành công.",
+        //            Data = resultDto
+        //        };
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        await _unitOfWork.RollbackTransactionAsync();
+
+        //        return new ServiceResult<POPaidViewDTO>
+        //        {
+        //            StatusCode = 500,
+        //            Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
+        //            Data = null
+        //        };
+        //    }
+        //}
 
         public async Task<ServiceResult<bool>> ChangeStatusAsync(string userId, int poid, PurchasingOrderStatus newStatus)
         {
@@ -754,6 +789,224 @@ namespace PMS.API.Services.POService
         }
 
 
+        public async Task<ServiceResult<POPaidViewDTO>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+
+            try
+            {
+                // Lấy đơn hàng theo POID
+                var existingPO = await _unitOfWork.PurchasingOrder.Query()
+                    .Include(po => po.Quotations)
+                    .FirstOrDefaultAsync(po => po.POID == poid);
+
+                if (existingPO == null)
+                    return ServiceResult<POPaidViewDTO>.Fail($"Không tìm thấy đơn hàng với POID = {poid}", 404);
+
+                // Kiểm tra tiền thanh toán không vượt tổng đơn hàng
+                if (pOUpdateDTO.paid > existingPO.Total)
+                    return ServiceResult<POPaidViewDTO>.Fail("Thanh toán vượt quá tổng giá trị đơn hàng", 400);
+
+                // Cập nhật trạng thái đơn hàng (deposit lần 1)
+                existingPO.Status = PurchasingOrderStatus.deposited;
+                existingPO.Deposit = pOUpdateDTO.paid;
+                existingPO.Debt = existingPO.Total - pOUpdateDTO.paid;
+                existingPO.PaymentDate = DateTime.Now;
+                existingPO.DepositDate = DateTime.Now;
+                existingPO.PaymentBy = userId;
+
+                _unitOfWork.PurchasingOrder.Update(existingPO);
+                await _unitOfWork.CommitAsync();
+
+                // Lấy thông tin người thanh toán
+                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy)
+                           ?? throw new Exception("Không tìm thấy thông tin người thanh toán.");
+                var paymentName = user.UserName;
+
+                // Lấy báo giá (để biết nhà cung cấp tương ứng)
+                var quotation = await _unitOfWork.Quotation.Query()
+                    .FirstOrDefaultAsync(q => q.QID == existingPO.QID)
+                    ?? throw new Exception($"Không tìm thấy báo giá cho đơn hàng POID = {existingPO.POID}");
+
+                // Lấy thông tin tài chính của doanh nghiệp (để kiểm tra trần nợ)
+                var pharmacySecretInfor = await _unitOfWork.PharmacySecretInfor.Query()
+                    .FirstOrDefaultAsync(x => x.PMSID == 1)
+                    ?? throw new Exception("Không tìm thấy thông tin tài chính của doanh nghiệp.");
+
+                //Lấy hoặc tạo mới bản ghi công nợ cho nhà cung cấp
+                var debtReport = await _unitOfWork.DebtReport.Query()
+                    .FirstOrDefaultAsync(x => x.EntityType == DebtEntityType.Supplier && x.EntityID == quotation.SupplierID);
+
+                if (debtReport == null)
+                {
+                    // Nếu chưa có, tạo mới công nợ
+                    debtReport = new DebtReport
+                    {
+                        EntityID = quotation.SupplierID,
+                        EntityType = DebtEntityType.Supplier,
+                        Payables = existingPO.Debt,
+                        Payday = existingPO.PaymentDate,
+                        CreatedDate = DateTime.Now,
+                        Status = DebtStatus.OnTime
+                    };
+                    await _unitOfWork.DebtReport.AddAsync(debtReport);
+                }
+                else
+                {
+                    // Nếu đã có, cập nhật nợ phải trả
+                    debtReport.Payables += existingPO.Debt;
+                    debtReport.Payday = existingPO.PaymentDate;
+                }
+
+                //Kiểm tra và cập nhật trạng thái nợ theo nợ trần
+                var debtCeiling = pharmacySecretInfor.DebtCeiling;
+                var currentDebt = debtCeiling - debtReport.Payables; //  âm nếu vượt trần
+
+                if (debtReport.Payables > debtCeiling)
+                {
+                    debtReport.Status = DebtStatus.BadDebt;
+                }
+                else
+                {
+                    debtReport.Status = DebtStatus.OnTime;
+                }
+
+                debtReport.CurrentDebt = currentDebt; // lưu cả âm nếu vượt trần
+                _unitOfWork.DebtReport.Update(debtReport);
+
+                // Cập nhật lại thông tin chi phí của doanh nghiệp
+                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
+                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
+
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+
+                var resultDto = new POPaidViewDTO
+                {
+                    PaymentBy = paymentName,
+                    PaymentDate = existingPO.PaymentDate,
+                    Status = existingPO.Status,
+                    Debt = existingPO.Debt
+                };
+
+                return ServiceResult<POPaidViewDTO>.SuccessResult(resultDto, "Xác nhận tiền cọc thành công.");
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<POPaidViewDTO>.Fail($"Lỗi khi cập nhật đơn hàng: {ex.Message}", 500);
+            }
+        }
+
+        public async Task<ServiceResult<POPaidViewDTO>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+
+                var existingPO = await _unitOfWork.PurchasingOrder.Query()
+                    .FirstOrDefaultAsync(po => po.POID == poid);
+
+                if (existingPO == null)
+                    return ServiceResult<POPaidViewDTO>.Fail($"Không tìm thấy đơn hàng với POID = {poid}", 404);
+
+
+                if (pOUpdateDTO.paid > existingPO.Debt)
+                    return ServiceResult<POPaidViewDTO>.Fail("Thanh toán vượt quá số nợ còn lại.", 400);
+
+
+                existingPO.Deposit += pOUpdateDTO.paid;
+                existingPO.Debt = existingPO.Total - existingPO.Deposit;
+                existingPO.PaymentDate = DateTime.Now;
+                existingPO.PaymentBy = userId;
+                existingPO.Status = existingPO.Debt == 0 ? PurchasingOrderStatus.compeleted : PurchasingOrderStatus.paid;
+
+                _unitOfWork.PurchasingOrder.Update(existingPO);
+                await _unitOfWork.CommitAsync();
+
+
+                var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy)
+                           ?? throw new Exception("Không tìm thấy thông tin người xác nhận thanh toán.");
+                var paymentName = user.UserName;
+
+                var quotation = await _unitOfWork.Quotation.Query()
+                    .FirstOrDefaultAsync(q => q.QID == existingPO.QID)
+                    ?? throw new Exception($"Không tìm thấy báo giá cho đơn hàng POID = {existingPO.POID}");
+
+                // Lấy thông tin tài chính doanh nghiệp
+                var pharmacySecretInfor = await _unitOfWork.PharmacySecretInfor.Query()
+                    .FirstOrDefaultAsync(x => x.PMSID == 1)
+                    ?? throw new Exception("Không tìm thấy thông tin tài chính doanh nghiệp.");
+
+                var debtReport = await _unitOfWork.DebtReport.Query()
+                    .FirstOrDefaultAsync(x => x.EntityType == DebtEntityType.Supplier && x.EntityID == quotation.SupplierID);
+
+                if (debtReport == null)
+                {
+                    // Trường hợp không có nợ  là PO trước đã được thanh toán hết 
+                    debtReport = new DebtReport
+                    {
+                        EntityID = quotation.SupplierID,
+                        EntityType = DebtEntityType.Supplier,
+                        Payables = 0,
+                        CurrentDebt = pharmacySecretInfor.DebtCeiling,
+                        Status = DebtStatus.OnTime,
+                        CreatedDate = DateTime.Now,
+                        Payday = existingPO.PaymentDate
+                    };
+                    await _unitOfWork.DebtReport.AddAsync(debtReport);
+                }
+                else
+                {
+                    // Cập nhật giảm nợ (thanh toán)
+                    debtReport.Payables -= pOUpdateDTO.paid;
+                    if (debtReport.Payables < 0) debtReport.Payables = 0;
+                    debtReport.Payday = existingPO.PaymentDate;
+                }
+
+                // Tính lại nợ trần và trạng thái
+                var debtCeiling = pharmacySecretInfor.DebtCeiling;
+                debtReport.CurrentDebt = debtCeiling - debtReport.Payables;
+
+
+                // Mốc ngày bắt đầu tính hạn = DepositDate của đợt 1
+                var depositDate = existingPO.DepositDate;
+                var dueDate = depositDate.AddDays(existingPO.PaymentDueDate);
+                if (debtReport.Payables > debtCeiling || DateTime.Now > dueDate)
+                    debtReport.Status = DebtStatus.BadDebt;
+                else if (debtReport.Payables == 0)
+                    debtReport.Status = DebtStatus.Maturity;
+                else
+                    debtReport.Status = DebtStatus.OnTime;
+
+                _unitOfWork.DebtReport.Update(debtReport);
+
+                //Cập nhật tổng chi 
+                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
+                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+
+                var resultDto = new POPaidViewDTO
+                {
+                    PaymentBy = paymentName,
+                    PaymentDate = existingPO.PaymentDate,
+                    Status = existingPO.Status,
+                    Debt = existingPO.Debt
+                };
+
+                return ServiceResult<POPaidViewDTO>.SuccessResult(resultDto, "Cập nhật thanh toán thành công.");
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<POPaidViewDTO>.Fail($"Lỗi khi cập nhật đơn hàng: {ex.Message}", 500);
+            }
+        }
 
 
     }
