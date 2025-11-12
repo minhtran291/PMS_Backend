@@ -189,41 +189,43 @@ namespace PMS.API.Controllers
         /// </summary>
         [HttpPost("draft/create")]
         //[Authorize(Roles = UserRoles.CUSTOMER)]
-        //public async Task<IActionResult> CreateDraftFromSalesQuotation([FromBody] SalesOrderRequestDTO body)
-        //{
-        //    if (!ModelState.IsValid)
-        //        return ValidationProblem(ModelState);
+        public async Task<IActionResult> CreateDraftFromSalesQuotation([FromBody] SalesOrderRequestDTO body)
+        {
+            if (!ModelState.IsValid)
+                return ValidationProblem(ModelState);
 
-        //    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
-        //    body.CreateBy = userId;
-        //    body.IsDeposited = false;
-        //    body.Status = SalesOrderStatus.Draft;
-        //    body.CustomerDebt.CustomerId = userId;
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            body.CreateBy = userId;
+            body.IsDeposited = false;
+            body.Status = SalesOrderStatus.Draft;
+            body.CustomerDebt.CustomerId = userId;
 
-        //    var result = await _service.CreateDraftFromSalesQuotationAsync(body);
+            var result = await _service.CreateDraftFromSalesQuotationAsync(body);
 
-        //    return StatusCode(result.StatusCode, new
-        //    {
-        //        success = result.Success,
-        //        message = result.Message,
-        //        data = result.Data
-        //    });
-        //}
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
 
         /// <summary>
         /// PUT: https://localhost:7213/api/SalesOrder/draft/{orderId}/quantities
         /// Cập nhật số lượng từng sản phẩm trong Draft (chỉ thay đổi Quantity).
         /// </summary>
-        //[HttpPut("draft/{orderId}/quantities")]
+        [HttpPut("draft/{orderId}/quantities")]
         //[Authorize(Roles = UserRoles.CUSTOMER)]
-        //public async Task<IActionResult> UpdateDraftQuantities(string orderId, [FromBody] List<DraftSalesOrderDTO> items)
-        //{
-        //    //var result = await _service.UpdateDraftQuantitiesAsync(orderId, items);
-        //    return StatusCode(200, new
-        //    {
-        //        message = "",
-        //    });
-        //}
+        public async Task<IActionResult> UpdateDraftQuantities([FromBody] SalesOrderUpdateDTO items)
+        {
+            var result = await _service.UpdateDraftQuantitiesAsync(items);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
 
         /// <summary>
         /// DELETE: https://localhost:7213/api/SalesOrder/draft/{orderId}

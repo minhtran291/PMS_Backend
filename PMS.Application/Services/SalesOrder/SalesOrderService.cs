@@ -35,6 +35,8 @@ namespace PMS.Application.Services.SalesOrder
             try
             {
                 var order = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesOrderDetails)
+                    .Include(o => o.CustomerDebts)
                     .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (order == null)
@@ -57,9 +59,40 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                order.Status = status;
-                order.IsDeposited = true;
-                order.PaidAmount = order.TotalPrice;
+                decimal depositAmount = order.TotalPrice * decimal.Round(order.SalesQuotation.DepositPercent / 100, 2);
+
+                if (status == SalesOrderStatus.Deposited)
+                {
+                    order.Status = status;
+                    order.IsDeposited = true;
+                    order.PaidAmount = depositAmount;
+                    order.CustomerDebts.DebtAmount = order.TotalPrice - depositAmount;
+                    if (DateTime.Now > order.SalesOrderExpiredDate)
+                    {
+                        order.CustomerDebts.status = CustomerDebtStatus.OverTime;
+                    }
+                    else
+                    {
+                        order.CustomerDebts.status = CustomerDebtStatus.OnTime;
+                    }
+                }
+
+                if (status == SalesOrderStatus.Paid)
+                {
+                    order.Status = status;
+                    order.IsDeposited = true;
+                    order.PaidAmount = order.TotalPrice;
+                    order.CustomerDebts.DebtAmount = 0;
+                    if (DateTime.Now > order.SalesOrderExpiredDate)
+                    {
+                        order.CustomerDebts.status = CustomerDebtStatus.OverTime;
+                    }
+                    else
+                    {
+                        order.CustomerDebts.status = CustomerDebtStatus.OnTime;
+                    }
+                }
+                
 
                 _unitOfWork.SalesOrder.Update(order);
                 await _unitOfWork.CommitAsync();
@@ -83,175 +116,193 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        //public async Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(SalesOrderRequestDTO req)
-        //{
-        //    try
-        //    {
-        //        if (req == null)
-        //            return new ServiceResult<object> { 
-        //                StatusCode = 400, 
-        //                Message = "Payload trống.", 
-        //                Data = null 
-        //            };
+        public async Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(SalesOrderRequestDTO req)
+        {
+            try
+            {
+                if (req == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Payload trống.",
+                        Data = null
+                    };
 
-        //        if (string.IsNullOrWhiteSpace(req.CreateBy))
-        //            return new ServiceResult<object> { 
-        //                StatusCode = 400, 
-        //                Message = "CreateBy là bắt buộc.", 
-        //                Data = null 
-        //            };
+                if (string.IsNullOrWhiteSpace(req.CreateBy))
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "CreateBy là bắt buộc.",
+                        Data = null
+                    };
 
-        //        if (req.Details == null || req.Details.Count == 0)
-        //            return new ServiceResult<object> { 
-        //                StatusCode = 400, 
-        //                Message = "Danh sách Details trống.", 
-        //                Data = null 
-                    
-        //            };
+                if (req.Details == null || req.Details.Count == 0)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Danh sách Details trống.",
+                        Data = null
 
-        //        var sq = await _unitOfWork.SalesQuotation.Query()
-        //            .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.Product)
-        //            .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.LotProduct)
-        //            .FirstOrDefaultAsync(q => q.Id == req.SalesQuotationId);
+                    };
 
-        //        if (sq == null)
-        //            return new ServiceResult<object> { 
-        //                StatusCode = 404, 
-        //                Message = "Không tìm thấy SalesQuotation.", 
-        //                Data = null 
-        //            };
+                var sq = await _unitOfWork.SalesQuotation.Query()
+                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.Product)
+                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.LotProduct)
+                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.TaxPolicy)
+                    .FirstOrDefaultAsync(q => q.Id == req.SalesQuotationId);
 
-        //        if (sq.ExpiredDate < DateTime.Now.Date)
-        //            return new ServiceResult<object> { 
-        //                StatusCode = 400, 
-        //                Message = "SalesQuotation đã hết hạn. Không thể tạo đơn nháp.", 
-        //                Data = null 
-        //            };
+                if (sq == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesQuotation.",
+                        Data = null
+                    };
 
-        //        var sqDetailByKey = sq.SalesQuotaionDetails
-        //            .ToDictionary(d => (d.ProductId, d.LotId), d => d);
+                if (sq.ExpiredDate < DateTime.Now.Date)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesQuotation đã hết hạn. Không thể tạo đơn nháp.",
+                        Data = null
+                    };
 
-        //        foreach (var it in req.Details)
-        //        {
-        //            if (it.Quantity < 0)
-        //                return new ServiceResult<object> { 
-        //                    StatusCode = 400, 
-        //                    Message = $"Quantity âm ở ProductId={it.ProductId}.", 
-        //                    Data = null 
-        //                };
+                var sqDetailByKey = sq.SalesQuotaionDetails
+                    .ToDictionary(d => (d.ProductId, d.LotId), d => d);
 
-        //            var key = (it.ProductId, it.LotId);
-        //            if (!sqDetailByKey.ContainsKey(key))
-        //                return new ServiceResult<object> { 
-        //                    StatusCode = 400, 
-        //                    Message = $"Dòng không thuộc báo giá: ProductId={it.ProductId}, LotId={it.LotId}.", 
-        //                    Data = null 
-        //                };
-        //        }
+                foreach (var it in req.Details)
+                {
+                    if (it.Quantity < 0)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"Quantity âm ở ProductId={it.ProductId}.",
+                            Data = null
+                        };
 
-        //        await _unitOfWork.BeginTransactionAsync();
+                    var key = (it.ProductId, it.LotId);
+                    if (!sqDetailByKey.ContainsKey(key))
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"Dòng không thuộc báo giá: ProductId={it.ProductId}, LotId={it.LotId}.",
+                            Data = null
+                        };
+                }
 
-        //        var order = new Core.Domain.Entities.SalesOrder
-        //        {
-        //            SalesQuotationId = sq.Id,
-        //            SalesOrderCode = GenerateSalesOrderCode(),
-        //            CreateBy = req.CreateBy.Trim(),
-        //            CreateAt = DateTime.Now,  
-        //            Status = SalesOrderStatus.Draft, 
-        //            IsDeposited = false,
-        //            TotalPrice = 0m,
-        //            PaidAmount = 0m
-        //        };
+                await _unitOfWork.BeginTransactionAsync();
 
-        //        await _unitOfWork.SalesOrder.AddAsync(order);
-        //        await _unitOfWork.CommitAsync();
+                //Create Sales Order Draft
+                var order = new Core.Domain.Entities.SalesOrder
+                {
+                    SalesQuotationId = sq.Id,
+                    SalesOrderCode = GenerateSalesOrderCode(),
+                    CreateBy = req.CreateBy.Trim(),
+                    CreateAt = DateTime.Now,
+                    Status = SalesOrderStatus.Draft,
+                    IsDeposited = false,
+                    TotalPrice = 0m,
+                    PaidAmount = 0m,
+                    SalesOrderExpiredDate = DateTime.Today.AddDays(7)
+                };
 
-        //        var detailEntities = new List<SalesOrderDetails>();
-        //        foreach (var it in req.Details)
-        //        {
-        //            var sqd = sqDetailByKey[(it.ProductId, it.LotId)];
+                await _unitOfWork.SalesOrder.AddAsync(order);
+                await _unitOfWork.CommitAsync();
 
-        //            //sqd.LotProduct != null ? sqd.LotProduct.SalePrice : it.UnitPrice
-        //            var serverUnitPrice = it.UnitPrice + (it.UnitPrice * sqd.TaxPolicy.Rate);
+                //add order details
+                var detailEntities = new List<SalesOrderDetails>();
+                foreach (var it in req.Details)
+                {
+                    var sqd = sqDetailByKey[(it.ProductId, it.LotId)];
 
-        //            var sub = (it.Quantity > 0) ? serverUnitPrice * it.Quantity : 0m;
+                    var basePrice = sqd.LotProduct?.SalePrice ?? 0m;
 
-        //            detailEntities.Add(new SalesOrderDetails
-        //            {
-        //                SalesOrderId = order.SalesOrderId,
-        //                ProductId = it.ProductId,
-        //                LotId = it.LotId,
-        //                Quantity = it.Quantity,
-        //                UnitPrice = serverUnitPrice,
-        //                SubTotalPrice = sub
-        //            });
-        //        }
+                    var taxRate = sqd.TaxPolicy?.Rate ?? 0m; 
 
-        //        if (detailEntities.Count > 0)
-        //            await _unitOfWork.SalesOrderDetails.AddRangeAsync(detailEntities);
+                    var serverUnitPrice = decimal.Round(basePrice * (1 + taxRate), 2);
 
-        //        order.TotalPrice = detailEntities.Sum(d => d.SubTotalPrice);
+                    var sub = (it.Quantity > 0) ? decimal.Round(serverUnitPrice * it.Quantity, 2) : 0m;
 
-        //        _unitOfWork.SalesOrder.Update(order);
+                    detailEntities.Add(new SalesOrderDetails
+                    {
+                        SalesOrderId = order.SalesOrderId,
+                        ProductId = it.ProductId,
+                        LotId = it.LotId,
+                        Quantity = it.Quantity,
+                        UnitPrice = serverUnitPrice,
+                        SubTotalPrice = sub
+                    });
+                }
 
-        //        var debt = new CustomerDebt
-        //        {
-        //            //CustomerId = CustomerId,
-        //            SalesOrderId = order.SalesOrderId,
-        //            DebtAmount = order.TotalPrice - order.PaidAmount // = 100% TotalPrice - PaidAmount=0
-        //        };
-        //        await _unitOfWork.CustomerDebt.AddAsync(debt);
+                if (detailEntities.Count > 0)
+                    await _unitOfWork.SalesOrderDetails.AddRangeAsync(detailEntities);
 
-        //        await _unitOfWork.CommitAsync();
-        //        await _unitOfWork.CommitTransactionAsync();
+                //Sum
+                order.TotalPrice = detailEntities.Sum(d => d.SubTotalPrice);
 
-        //        var data = new
-        //        {
-        //            order.SalesOrderId,
-        //            order.SalesOrderCode,
-        //            order.SalesQuotationId,
-        //            order.CreateBy,
-        //            order.CreateAt,
-        //            order.Status,
-        //            order.IsDeposited,
-        //            order.TotalPrice,
-        //            CustomerDebt = new
-        //            {
-        //                debt.Id,
-        //                debt.CustomerId,
-        //                debt.SalesOrderId,
-        //                debt.DebtAmount
-        //            },
-        //            Details = detailEntities.Select(d => new
-        //            {
-        //                d.ProductId,
-        //                d.LotId,
-        //                ProductName = sqDetailByKey[(d.ProductId, d.LotId)].Product.ProductName,
-        //                d.Quantity,
-        //                d.UnitPrice,
-        //                d.SubTotalPrice
-        //            }).ToList()
-        //        };
+                _unitOfWork.SalesOrder.Update(order);
 
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 201,
-        //            Message = "Tạo SalesOrder Draft từ SalesQuotation thành công.",
-        //            Data = data
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await _unitOfWork.RollbackTransactionAsync();
-        //        _logger.LogError(ex, "Lỗi CreateDraftFromSalesQuotationAsync({SalesQuotationId})", req?.SalesQuotationId);
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi xảy ra khi tạo bản nháp đơn hàng.",
-        //            Data = null
-        //        };
-        //    }
-        //}
+                //Customer dept
+                var debt = new CustomerDebt
+                {
+                    CustomerId = req.CreateBy,
+                    SalesOrderId = order.SalesOrderId,
+                    DebtAmount = order.TotalPrice - order.PaidAmount,
+                    status = CustomerDebtStatus.UnPaid
+                };
+                await _unitOfWork.CustomerDebt.AddAsync(debt);
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                var data = new
+                {
+                    order.SalesOrderId,
+                    order.SalesOrderCode,
+                    order.SalesQuotationId,
+                    order.CreateBy,
+                    order.CreateAt,
+                    order.Status,
+                    order.IsDeposited,
+                    order.TotalPrice,
+                    order.SalesOrderExpiredDate,
+                    CustomerDebt = new
+                    {
+                        debt.CustomerId,
+                        debt.SalesOrderId,
+                        debt.DebtAmount,
+                        debt.status
+                    },
+                    Details = detailEntities.Select(d => new
+                    {
+                        d.ProductId,
+                        d.LotId,
+                        ProductName = sqDetailByKey[(d.ProductId, d.LotId)].Product.ProductName,
+                        d.Quantity,
+                        d.UnitPrice,
+                        d.SubTotalPrice
+                    }).ToList()
+                };
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 201,
+                    Message = "Tạo SalesOrder Draft từ SalesQuotation thành công.",
+                    Data = data
+                };
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Lỗi CreateDraftFromSalesQuotationAsync({SalesQuotationId})", req?.SalesQuotationId);
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi xảy ra khi tạo bản nháp đơn hàng.",
+                    Data = null
+                };
+            }
+        }
 
         public async Task<ServiceResult<bool>> DeleteDraftAsync(int salesOrderId)
         {
@@ -311,61 +362,6 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync(int salesOrderId, string paymentType)
-        {
-            try
-            {
-                var order = await _unitOfWork.SalesOrder.Query().FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
-                if (order == null)
-                {
-                    return new ServiceResult<VnPayInitResponseDTO>
-                    {
-                        StatusCode = 404,
-                        Message = "Không tìm thấy đơn hàng",
-                        Data = null
-                    };
-                }
-
-                if (order.Status != SalesOrderStatus.Approved)
-                    return new ServiceResult<VnPayInitResponseDTO> { 
-                        StatusCode = 400, 
-                        Message = "Chỉ khởi tạo thanh toán cho đơn ở trạng thái đã được chấp thuận." 
-                    };
-
-
-                decimal amount = paymentType.ToLower() == "deposit"
-                    ? (order.TotalPrice * order.SalesQuotation.DepositPercent)  
-                    : order.TotalPrice;
-
-                var info = paymentType == "deposit" ? "Thanh toán tiền cọc" : "Thanh toán toàn bộ đơn hàng";
-
-                var paymentUrl = _vnPay.CreatePaymentUrl(salesOrderId.ToString(), (long)amount, info);
-                var qrData = _vnPay.GenerateQrDataUrl(paymentUrl);
-
-                return new ServiceResult<VnPayInitResponseDTO>
-                {
-                    StatusCode = 200,
-                    Message = "Khởi tạo thanh toán VNPay thành công",
-                    Data = new VnPayInitResponseDTO
-                    {
-                        PaymentUrl = paymentUrl,
-                        QrDataUrl = qrData,
-                        Amount = amount,
-                        PaymentType = paymentType
-                    }
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Lỗi khi khởi tạo thanh toán VNPay");
-                return new ServiceResult<VnPayInitResponseDTO>
-                {
-                    StatusCode = 500,
-                    Message = "Lỗi trong quá trình tạo thanh toán VNPay",
-                    Data = null
-                };
-            }
-        }
 
         public async Task<ServiceResult<object>> GetOrderDetailsAsync(int salesOrderId)
         {
@@ -373,9 +369,22 @@ namespace PMS.Application.Services.SalesOrder
             {
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                        .ThenInclude(l => l.Product)
-                    .Include(q => q.SalesQuotation)
-                        .ThenInclude(d => d.SalesQuotaionDetails)
+                        .ThenInclude(d => d.Product)
+                    .Include(o => o.SalesOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+
+                    .Include(o => o.SalesQuotation)
+                        .ThenInclude(q => q.SalesQuotaionDetails)
+                            .ThenInclude(qd => qd.Product)
+                    .Include(o => o.SalesQuotation)
+                        .ThenInclude(q => q.SalesQuotaionDetails)
+                            .ThenInclude(qd => qd.LotProduct)
+                    .Include(o => o.SalesQuotation)
+                        .ThenInclude(q => q.SalesQuotaionDetails)
+                            .ThenInclude(qd => qd.TaxPolicy)
+
+                    .Include(o => o.CustomerDebts)
+
                     .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (order == null)
@@ -388,23 +397,37 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
+                var orderDetailsDto = order.SalesOrderDetails.Select(d => new
+                {
+                    d.SalesOrderId,
+                    d.ProductId,
+                    d.LotId,
+                    ProductName = d.Product?.ProductName,
+                    d.Quantity,
+                    d.UnitPrice,
+                    d.SubTotalPrice,
+                    Lot = d.LotProduct == null ? null : new
+                    {
+                        d.LotProduct.InputDate,
+                        d.LotProduct.ExpiredDate
+                    }
+                }).ToList();
+
                 var data = new
                 {
-                    order. SalesOrderId,
+                    order.SalesOrderId,
+                    order.SalesOrderCode,
                     order.SalesQuotationId,
                     order.CreateBy,
                     order.CreateAt,
                     order.Status,
                     order.TotalPrice,
-                    //order.DepositAmount,
-                    Details = order.SalesOrderDetails.Select(d => new
-                    {
-                        
-                        d.Quantity,
-                        d.UnitPrice,
-                        ProductName = d.Product.ProductName,
-                        ExpiredDate = d.SalesOrder.SalesQuotation.ExpiredDate
-                    })
+                    order.PaidAmount,
+                    order.SalesOrderExpiredDate,
+
+                    CustomerDebt = order.CustomerDebts,
+
+                    Details = orderDetailsDto
                 };
 
                 return new ServiceResult<object>
@@ -475,7 +498,7 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        ////Customer mark order is complete
+        //Customer mark order is complete
         public async Task<ServiceResult<bool>> MarkCompleteAsync(int salesOrderId)
         {
             try
@@ -526,7 +549,7 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        ////Customer send the sales order draft
+        //Customer send the sales order draft
         public async Task<ServiceResult<object>> SendOrderAsync(int salesOrderId)
         {
             try
@@ -618,95 +641,171 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        // customer update sales order when status is draft
-        public async Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync(int salesOrderId, List<SalesOrderDetailsUpdateDTO> items)
+        //customer update sales order when status is draft
+        public async Task<ServiceResult<object>> UpdateDraftQuantitiesAsync(SalesOrderUpdateDTO upd)
         {
             try
             {
-                if (items == null || items.Count == 0)
-                    return new ServiceResult<bool> { 
-                        StatusCode = 400, 
-                        Message = "Danh sách cập nhật rỗng.", 
-                        Data = false 
+                // Validate payload
+                if (upd == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Payload trống.",
+                        Data = null
                     };
 
-                var so = await _unitOfWork.SalesOrder.Query()
+                if (upd.SalesOrderId <= 0)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesOrderId là bắt buộc.",
+                        Data = null
+                    };
+
+                if (upd.Details == null || upd.Details.Count == 0)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Danh sách Details trống.",
+                        Data = null
+                    };
+
+                // Kiểm tra quantity âm sớm để fail fast
+                foreach (var it in upd.Details)
+                {
+                    if (it.Quantity < 0)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"Quantity âm ở ProductId={it.ProductId}.",
+                            Data = null
+                        };
+                }
+
+                // Lấy SalesOrder + Details + Debt
+                var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                        .ThenInclude(d => d.Product)
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == upd.SalesOrderId);
 
-                if (so == null)
-                    return new ServiceResult<bool> { 
-                        StatusCode = 404, 
-                        Message = "Không tìm thấy SalesOrder.", 
-                        Data = false 
+                if (order == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesOrder.",
+                        Data = null
                     };
 
-                if (so.Status != SalesOrderStatus.Draft)
-                    return new ServiceResult<bool> { 
-                        StatusCode = 400, 
-                        Message = "Chỉ được cập nhật khi đơn ở trạng thái Draft.", 
-                        Data = false 
+                if (order.Status != SalesOrderStatus.Draft)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được phép sửa đơn hàng ở trạng thái Draft.",
+                        Data = null
                     };
 
-                var qtyMap = items.ToDictionary(x => x.ProductId, x => x.Quantity);
+                // SalesOrder expired => cannot update
+                if (order.SalesOrderExpiredDate.Date < DateTime.Now.Date)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesOrder Draft đã hết hạn. Không thể cập nhật số lượng.",
+                        Data = null
+                    };
+
+                var orderDetailByKey = order.SalesOrderDetails
+                    .ToDictionary(d => (d.ProductId, d.LotId), d => d);
+
+                foreach (var it in upd.Details)
+                {
+                    var key = (it.ProductId, it.LotId);
+                    if (!orderDetailByKey.ContainsKey(key))
+                    {
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"Dòng không thuộc đơn hàng: ProductId={it.ProductId}, LotId={it.LotId}.",
+                            Data = null
+                        };
+                    }
+                }
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                foreach (var d in so.SalesOrderDetails)
+                foreach (var it in upd.Details)
                 {
-                    if (!qtyMap.TryGetValue(d.ProductId, out var newQty)) continue;
-                    if (newQty < 0) newQty = 0;
+                    var d = orderDetailByKey[(it.ProductId, it.LotId)];
+                    d.Quantity = it.Quantity;
 
-                    d.Quantity = newQty;
+                    var sub = (it.Quantity > 0) ? decimal.Round(d.UnitPrice * it.Quantity, 2) : 0m;
+                    d.SubTotalPrice = sub;
 
-                    decimal picked = 0m, costSum = 0m;
-
-                    if (newQty > 0)
-                    {
-                        var lots = await _unitOfWork.LotProduct.Query()
-                            .Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
-                            .OrderBy(l => l.ExpiredDate)
-                            .Select(l => new { l.LotQuantity, l.SalePrice })
-                            .ToListAsync();
-
-                        var remain = (decimal)newQty;
-                        foreach (var lot in lots)
-                        {
-                            if (remain <= 0) break;
-                            var take = Math.Min(remain, (decimal)lot.LotQuantity);
-                            picked += take;
-                            costSum += take * lot.SalePrice;
-                            remain -= take;
-                        }
-                    }
-
-                    d.UnitPrice = picked > 0 ? Math.Round(costSum / picked, 2, MidpointRounding.AwayFromZero) : 0m;
-                    d.SubTotalPrice = Math.Round(d.UnitPrice * d.Quantity, 2, MidpointRounding.AwayFromZero);
+                    _unitOfWork.SalesOrderDetails.Update(d);
                 }
 
-                so.TotalPrice = Math.Round(so.SalesOrderDetails.Sum(x => x.SubTotalPrice), 2, MidpointRounding.AwayFromZero);
+                order.TotalPrice = order.SalesOrderDetails.Sum(x => x.SubTotalPrice);
+                
 
-                _unitOfWork.SalesOrder.Update(so);
+                _unitOfWork.SalesOrder.Update(order);
+
+                var debt = await _unitOfWork.CustomerDebt.Query()
+                    .FirstOrDefaultAsync(x => x.SalesOrderId == order.SalesOrderId);
+
+                if (debt != null)
+                {
+                    debt.DebtAmount = order.TotalPrice - order.PaidAmount;
+                    _unitOfWork.CustomerDebt.Update(debt);
+                }
+
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                return new ServiceResult<bool>
+                var response = new
+                {
+                    order.SalesOrderId,
+                    order.SalesOrderCode,
+                    order.SalesQuotationId,
+                    order.Status,
+                    order.IsDeposited,
+                    order.TotalPrice,
+                    order.PaidAmount,
+                    order.SalesOrderExpiredDate,
+                    order.CreateBy,
+                    order.CreateAt,
+                    CustomerDebt = debt == null ? null : new
+                    {
+                        debt.CustomerId,
+                        debt.SalesOrderId,
+                        debt.DebtAmount,
+                        debt.status
+                    },
+                    Details = order.SalesOrderDetails.Select(d => new
+                    {
+                        d.ProductId,
+                        d.LotId,
+                        d.Quantity,
+                        d.UnitPrice,
+                        d.SubTotalPrice
+                    }).ToList()
+                };
+
+                return new ServiceResult<object>
                 {
                     StatusCode = 200,
-                    Message = "Cập nhật số lượng bản nháp thành công.",
-                    Data = true
+                    Message = "Cập nhật số lượng cho SalesOrder Draft thành công.",
+                    Data = response
                 };
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync({SalesOrderId})", salesOrderId);
-                return new ServiceResult<bool>
+                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync({SalesOrderId})", upd?.SalesOrderId);
+
+                return new ServiceResult<object>
                 {
                     StatusCode = 500,
-                    Message = "Có lỗi khi cập nhật bản nháp.",
-                    Data = false
+                    Message = "Có lỗi xảy ra khi cập nhật số lượng đơn nháp.",
+                    Data = null
                 };
             }
         }
@@ -854,6 +953,30 @@ namespace PMS.Application.Services.SalesOrder
                 _unitOfWork.SalesOrder.Update(so);
                 await _unitOfWork.CommitAsync();
 
+                try
+                {
+                    var title = "Đơn hàng đã được chấp thuận";
+                    var message = $"Đơn {so.SalesOrderCode} của bạn đã được chấp thuận.";
+
+                    // senderId: có thể là system hoặc user duyệt đơn (tùy hệ thống bạn)
+                    var senderId = "system";
+                    var receiverId = so.CreateBy;
+
+                    await _noti.SendNotificationToCustomerAsync(
+                        senderId: senderId,
+                        receiverId: receiverId,
+                        title: title,
+                        message: message,
+                        type: NotificationType.Message
+                    );
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification thất bại: orderId={OrderId}, receiver={ReceiverId}",
+                        so.SalesOrderId, so.CreateBy);
+                }
+
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
@@ -904,10 +1027,35 @@ namespace PMS.Application.Services.SalesOrder
                 _unitOfWork.SalesOrder.Update(so);
                 await _unitOfWork.CommitAsync();
 
+                try
+                {
+                    var title = "Đơn hàng đã bị từ chối";
+                    var message = $"Đơn {so.SalesOrderCode} của bạn đã bị từ chối vì lý do thiếu hàng.";
+
+                    // senderId: có thể là system hoặc user duyệt đơn (tùy hệ thống bạn)
+                    var senderId = "system";
+                    var receiverId = so.CreateBy;
+
+                    await _noti.SendNotificationToCustomerAsync(
+                        senderId: senderId,
+                        receiverId: receiverId,
+                        title: title,
+                        message: message,
+                        type: NotificationType.Message
+                    );
+                }
+                catch (Exception exNotify)
+                {
+                    // Không rollback trạng thái; chỉ log cảnh báo khi gửi noti lỗi
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification thất bại: orderId={OrderId}, receiver={ReceiverId}",
+                        so.SalesOrderId, so.CreateBy);
+                }
+
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
-                    Message = "Đơn hàng đã được chấp nhận!",
+                    Message = "Đơn hàng đã bị từ chối!",
                     Data = true
                 };
             }

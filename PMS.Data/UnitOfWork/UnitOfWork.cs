@@ -81,7 +81,7 @@ namespace PMS.Data.UnitOfWork
         IStockExportOrderDetailsRepository stockExportOrderDetails,
         IDebtReportRepository debtReport,
         IPharmacySecretInforRepository pharmacySecretInfor,
-        IGoodsIssueNoteRepository goodsIssueNote,
+        IGoodsIssueNoteRepository goodsIssueNote, 
         IGoodsIssueNoteDetailsRepository goodsIssueNoteDetails) : IUnitOfWork
     {
         private readonly PMSContext _context = context;

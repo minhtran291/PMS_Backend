@@ -194,6 +194,11 @@ namespace PMS.API.Services.PRFQService
 
                 await _unitOfWork.CommitAsync();
 
+                var excelBytes = GenerateExcel(currentPrfq);
+                if (currentPrfq.Status == PRFQStatus.Sent)
+                {
+                    await _emailService.SendEmailWithAttachmentAsync(currentPrfq.Supplier.Email, "Yêu cầu báo giá", "Kính gửi, đính kèm yêu cầu báo giá.", excelBytes, $"PRFQ_{currentPrfq.PRFQID}.xlsx");
+                }
                 return new ServiceResult<int>
                 {
                     Data = currentPrfq.PRFQID,
@@ -201,6 +206,7 @@ namespace PMS.API.Services.PRFQService
                     StatusCode = 200,
                     Success = true
                 };
+                
             }
             catch (Exception ex)
             {
@@ -497,8 +503,8 @@ namespace PMS.API.Services.PRFQService
             ws.Cells[row, 6].Value = fullPrfq.Supplier?.Address ?? "—";
             row++;
 
-            ws.Cells[row, 1].Value = "Ngày gửi:";
-            ws.Cells[row, 2].Value ="Hải Phòng ngày, "+ fullPrfq.RequestDate.ToString("dd/MM/yyyy");
+            ws.Cells[row, 1].Value = "Ngày gửi: Hải Phòng ngày,";
+            ws.Cells[row, 2].Value = fullPrfq.RequestDate.ToString("dd/MM/yyyy");
 
             ws.Cells[row, 5].Value = "Liên lạc:";
             ws.Cells[row, 6, row, 8].Merge = true;

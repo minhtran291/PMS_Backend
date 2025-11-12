@@ -59,6 +59,15 @@ namespace PMS.Data.DatabaseConfig
         //GoodsIssueNote
         public virtual DbSet<GoodsIssueNote> GoodsIssueNotes { get; set; }
         public virtual DbSet<GoodsIssueNoteDetails> GoodsIssueNoteDetails { get; set; }
+
+        //
+        public virtual DbSet<PharmacySecretInfor> PharmacySecretInfors { get; set; }
+        //
+        public virtual DbSet<InventoryHistory> InventoryHistories { get; set; }
+        public virtual DbSet<InventorySession> InventorySessions { get; set; }
+        //
+        public virtual DbSet<DebtReport> DebtReports { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseLazyLoadingProxies();
@@ -1076,7 +1085,7 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasKey(e => e.PMSID);
 
                 entity.Property(e => e.PMSID)
-                      .ValueGeneratedOnAdd();
+                      .ValueGeneratedNever();
 
                 entity.Property(e => e.Equity)
                       .HasColumnType("decimal(18,2)")
@@ -1143,3 +1152,5 @@ namespace PMS.Data.DatabaseConfig
         }
     }
 }
+
+
