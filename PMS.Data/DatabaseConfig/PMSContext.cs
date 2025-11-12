@@ -55,10 +55,19 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<CustomerDebt> CustomerDebts { get; set; }
         // StockExportOrder
         public virtual DbSet<StockExportOrder> StockExportOrders { get; set; }
-        public virtual DbSet<StockExportOrderDetails> StockExportOrderDetails {  get; set; }
+        public virtual DbSet<StockExportOrderDetails> StockExportOrderDetails { get; set; }
         //GoodsIssueNote
         public virtual DbSet<GoodsIssueNote> GoodsIssueNotes { get; set; }
         public virtual DbSet<GoodsIssueNoteDetails> GoodsIssueNoteDetails { get; set; }
+
+        //
+        public virtual DbSet<PharmacySecretInfor> PharmacySecretInfors { get; set; }
+        //
+        public virtual DbSet<InventoryHistory> InventoryHistories { get; set; }
+        public virtual DbSet<InventorySession> InventorySessions { get; set; }
+        //
+        public virtual DbSet<DebtReport> DebtReports { get; set; }
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseLazyLoadingProxies();
@@ -153,8 +162,8 @@ namespace PMS.Data.DatabaseConfig
                 builder.Entity<CustomerProfile>()
                     .HasMany(cp => cp.CustomerDebts)
                     .WithOne()
-                    .HasForeignKey(cd => cd.CustomerId)  
-                    .HasPrincipalKey(cp => cp.UserId) 
+                    .HasForeignKey(cd => cd.CustomerId)
+                    .HasPrincipalKey(cp => cp.UserId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
@@ -620,7 +629,7 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired();
 
                 entity.Property(q => q.PRFQID);
-                   
+
 
 
                 entity.HasMany(q => q.PurchasingOrders)
@@ -890,12 +899,12 @@ namespace PMS.Data.DatabaseConfig
                     .HasColumnType("date")
                     .IsRequired();
 
-                entity.Property(so => so.SalesOrderExpiredDate) 
+                entity.Property(so => so.SalesOrderExpiredDate)
                     .HasColumnType("date")
                     .IsRequired();
 
                 entity.Property(so => so.PaidAmount)
-                    .HasPrecision(18,2)
+                    .HasPrecision(18, 2)
                     .IsRequired();
 
                 entity.Property(so => so.TotalPrice)
@@ -979,7 +988,7 @@ namespace PMS.Data.DatabaseConfig
                       .HasColumnType("decimal(18,2)")
                       .IsRequired();
 
-                entity.Property(cd => cd.status) 
+                entity.Property(cd => cd.status)
                       .HasConversion<byte>()
                       .HasColumnType("TINYINT")
                       .IsRequired();
@@ -1017,7 +1026,7 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<StockExportOrderDetails>(entity =>
             {
-                entity.HasKey(d => new { d.StockExportOrderId, d.LotId});
+                entity.HasKey(d => new { d.StockExportOrderId, d.LotId });
 
                 entity.HasOne(d => d.StockExportOrder)
                     .WithMany(seo => seo.StockExportOrderDetails)
@@ -1051,10 +1060,10 @@ namespace PMS.Data.DatabaseConfig
                       .HasDefaultValue(0);
 
                 entity.Property(e => e.CreatedDate);
-                     
+
                 entity.Property(e => e.Payday)
                       .HasColumnType("datetime");
-                
+
                 entity.Property(e => e.EntityType)
                       .HasConversion<int>()
                       .IsRequired();
@@ -1063,7 +1072,7 @@ namespace PMS.Data.DatabaseConfig
                       .HasConversion<int>()
                       .IsRequired();
 
-               
+
                 entity.HasIndex(e => new { e.EntityType, e.EntityID })
                       .HasDatabaseName("IX_DebtReport_Entity");
             });
@@ -1076,7 +1085,7 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasKey(e => e.PMSID);
 
                 entity.Property(e => e.PMSID)
-                      .ValueGeneratedOnAdd();
+                      .ValueGeneratedNever();
 
                 entity.Property(e => e.Equity)
                       .HasColumnType("decimal(18,2)")
@@ -1094,6 +1103,10 @@ namespace PMS.Data.DatabaseConfig
                       .HasColumnType("decimal(18,2)")
                       .HasComputedColumnSql("(([TotalRecieve] - [TotalPaid]) + [Equity]) * 3", stored: true)
                       .HasComment("Nợ trần");
+
+            });
+
+
             builder.Entity<GoodsIssueNote>(entity =>
             {
                 entity.HasKey(gin => gin.Id);
@@ -1141,3 +1154,5 @@ namespace PMS.Data.DatabaseConfig
         }
     }
 }
+
+

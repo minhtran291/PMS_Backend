@@ -579,10 +579,7 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.PharmacySecretInfor", b =>
                 {
                     b.Property<int>("PMSID")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PMSID"));
 
                     b.Property<decimal>("DebtCeiling")
                         .ValueGeneratedOnAddOrUpdate()
@@ -2039,7 +2036,7 @@ namespace PMS.Data.Migrations
                     b.Navigation("GoodsIssueNoteDetails");
 
                     b.Navigation("InventoryHistories");
-                    
+
                     b.Navigation("SalesOrderDetails");
 
                     b.Navigation("SalesQuotaionDetails");

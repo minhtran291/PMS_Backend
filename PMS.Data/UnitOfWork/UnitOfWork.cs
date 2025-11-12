@@ -80,8 +80,7 @@ namespace PMS.Data.UnitOfWork
         IStockExportOrderRepository stockExportOrder, 
         IStockExportOrderDetailsRepository stockExportOrderDetails,
         IDebtReportRepository debtReport,
-        IPharmacySecretInforRepository pharmacySecretInfor) : IUnitOfWork
-        IStockExportOrderDetailsRepository stockExportOrderDetails, 
+        IPharmacySecretInforRepository pharmacySecretInfor,
         IGoodsIssueNoteRepository goodsIssueNote, 
         IGoodsIssueNoteDetailsRepository goodsIssueNoteDetails) : IUnitOfWork
     {

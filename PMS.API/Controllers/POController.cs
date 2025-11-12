@@ -32,7 +32,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// https://localhost:7213/api/PO/DepositedPurchaseOrder/{id}
+        /// https://localhost:7213/api/PO/DepositedPurchaseOrder/{poid}
         /// ghi nhận tiền gửi
         /// </summary>
         /// <param name="id"></param>
