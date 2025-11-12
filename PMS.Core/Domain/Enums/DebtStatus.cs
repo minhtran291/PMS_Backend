@@ -8,10 +8,9 @@ namespace PMS.Core.Domain.Enums
 {
     public enum DebtStatus
     {
-        Maturity = 1, // đáo hạn
         BadDebt = 2, // nợ xấu
-        OnTime = 3, // đúng hạn
         Apart=4, // Một phần
-
+        NoDebt=5, // hết nợ
+        overTime=6 // quá hạn thanh toán
     }
 }

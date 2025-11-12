@@ -847,37 +847,36 @@ namespace PMS.API.Services.POService
                         Payables = existingPO.Debt,
                         Payday = existingPO.PaymentDate,
                         CreatedDate = DateTime.Now,
-                        Status = DebtStatus.OnTime
+                        Status = DebtStatus.Apart
                     };
                     await _unitOfWork.DebtReport.AddAsync(debtReport);
+                    await _unitOfWork.CommitAsync();
                 }
                 else
                 {
                     // Nếu đã có, cập nhật nợ phải trả
                     debtReport.Payables += existingPO.Debt;
                     debtReport.Payday = existingPO.PaymentDate;
-                }
-
-                //Kiểm tra và cập nhật trạng thái nợ theo nợ trần
+                }               
+                // cap nhat lai tong chi
+                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
+                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
+                await _unitOfWork.CommitAsync();
+                //
                 var debtCeiling = pharmacySecretInfor.DebtCeiling;
-                var currentDebt = debtCeiling - debtReport.Payables; //  âm nếu vượt trần
+                var currentDebt = debtCeiling - debtReport.Payables; 
 
                 if (debtReport.Payables > debtCeiling)
                 {
-                    debtReport.Status = DebtStatus.BadDebt;
+                    debtReport.Status = DebtStatus.BadDebt;//2
                 }
                 else
                 {
-                    debtReport.Status = DebtStatus.OnTime;
+                    debtReport.Status = DebtStatus.Apart;//4
                 }
 
-                debtReport.CurrentDebt = currentDebt; // lưu cả âm nếu vượt trần
+                debtReport.CurrentDebt = currentDebt; 
                 _unitOfWork.DebtReport.Update(debtReport);
-
-                // Cập nhật lại thông tin chi phí của doanh nghiệp
-                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
-                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
-
 
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
@@ -945,48 +944,51 @@ namespace PMS.API.Services.POService
 
                 if (debtReport == null)
                 {
-                    // Trường hợp không có nợ  là PO trước đã được thanh toán hết 
+                    // Trường hợp không có nợ  là PO trước đã được thanh toán hết (Hơi vô lý nhưng thôi vẫn xử lý)
                     debtReport = new DebtReport
                     {
                         EntityID = quotation.SupplierID,
                         EntityType = DebtEntityType.Supplier,
                         Payables = 0,
                         CurrentDebt = pharmacySecretInfor.DebtCeiling,
-                        Status = DebtStatus.OnTime,
+                        Status = DebtStatus.Apart,
                         CreatedDate = DateTime.Now,
                         Payday = existingPO.PaymentDate
                     };
                     await _unitOfWork.DebtReport.AddAsync(debtReport);
+                    await _unitOfWork.CommitAsync();
                 }
                 else
                 {
-                    // Cập nhật giảm nợ (thanh toán)
+                    // Cập nhật giảm nợ (thanh toán) 
                     debtReport.Payables -= pOUpdateDTO.paid;
                     if (debtReport.Payables < 0) debtReport.Payables = 0;
                     debtReport.Payday = existingPO.PaymentDate;
+                    _unitOfWork.DebtReport.Update(debtReport);
+                    await _unitOfWork.CommitAsync();
                 }
+                // tinh lai tong chi
+                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
+                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
+                await _unitOfWork.CommitAsync();
 
                 // Tính lại nợ trần và trạng thái
                 var debtCeiling = pharmacySecretInfor.DebtCeiling;
                 debtReport.CurrentDebt = debtCeiling - debtReport.Payables;
-
-
+                _unitOfWork.DebtReport.Update(debtReport);
+                await _unitOfWork.CommitAsync();
                 // Mốc ngày bắt đầu tính hạn = DepositDate của đợt 1
                 var depositDate = existingPO.DepositDate;
                 var dueDate = depositDate.AddDays(existingPO.PaymentDueDate);
                 if (debtReport.Payables > debtCeiling || DateTime.Now > dueDate)
-                    debtReport.Status = DebtStatus.BadDebt;
-                else if (debtReport.Payables == 0)
-                    debtReport.Status = DebtStatus.Maturity;
-                else
-                    debtReport.Status = DebtStatus.OnTime;
-
-                _unitOfWork.DebtReport.Update(debtReport);
-
-                //Cập nhật tổng chi 
-                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
-                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
-
+                    debtReport.Status = DebtStatus.overTime;
+                else if (debtReport.Payables >0)
+                    debtReport.Status = DebtStatus.Apart;//4
+                else if(debtReport.Payables == 0)
+                    debtReport.Status = DebtStatus.NoDebt;//5
+                else if(debtReport.Payables > debtReport.CurrentDebt)
+                    debtReport.Status = DebtStatus.BadDebt;//2
+               _unitOfWork.DebtReport.Update(debtReport);
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 

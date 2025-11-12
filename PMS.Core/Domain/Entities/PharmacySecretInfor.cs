@@ -10,7 +10,6 @@ namespace PMS.Core.Domain.Entities
 {
     public class PharmacySecretInfor
     {
-        [Key]
         public int PMSID { get; set; } //==1
 
         [Column(TypeName = "decimal(18,2)")]

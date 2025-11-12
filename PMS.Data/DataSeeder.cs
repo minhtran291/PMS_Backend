@@ -631,6 +631,20 @@ namespace PMS.Data
                 await context.SaveChangesAsync();
             }
 
+
+            if (!context.PharmacySecretInfors.Any())
+            {
+                var newinfor = new PharmacySecretInfor
+                {
+                    PMSID = 1,
+                    Equity = 10000000000,
+                    TotalPaid = 0,
+                    TotalRecieve = 0,
+                };
+                await context.PharmacySecretInfors.AddAsync(newinfor);
+                await context.SaveChangesAsync();
+            }
+
             if (!context.SalesQuotationNotes.Any())
             {
                 var notes = new SalesQuotationNote
