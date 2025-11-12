@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PMS.Data.DatabaseConfig;
 
@@ -11,9 +12,11 @@ using PMS.Data.DatabaseConfig;
 namespace PMS.Data.Migrations
 {
     [DbContext(typeof(PMSContext))]
-    partial class PMSContextModelSnapshot : ModelSnapshot
+    [Migration("20251111140916_Update_Goods_Issue_Note")]
+    partial class Update_Goods_Issue_Note
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -245,48 +248,6 @@ namespace PMS.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("CustomerProfiles");
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.DebtReport", b =>
-                {
-                    b.Property<int>("ReportID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReportID"));
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("CurrentDebt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(18,2)")
-                        .HasDefaultValue(0m);
-
-                    b.Property<int?>("EntityID")
-                        .IsRequired()
-                        .HasColumnType("int");
-
-                    b.Property<int>("EntityType")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Payables")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(18,2)")
-                        .HasDefaultValue(0m);
-
-                    b.Property<DateTime?>("Payday")
-                        .HasColumnType("datetime");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.HasKey("ReportID");
-
-                    b.HasIndex("EntityType", "EntityID")
-                        .HasDatabaseName("IX_DebtReport_Entity");
-
-                    b.ToTable("DebtReports", (string)null);
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.GoodReceiptNote", b =>
@@ -579,34 +540,6 @@ namespace PMS.Data.Migrations
                     b.ToTable("Notifications");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.PharmacySecretInfor", b =>
-                {
-                    b.Property<int>("PMSID")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("DebtCeiling")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("decimal(18,2)")
-                        .HasComputedColumnSql("(([TotalRecieve] - [TotalPaid]) + [Equity]) * 3", true)
-                        .HasComment("Nợ trần");
-
-                    b.Property<decimal>("Equity")
-                        .HasColumnType("decimal(18,2)")
-                        .HasComment("Vốn chủ sở hữu");
-
-                    b.Property<decimal>("TotalPaid")
-                        .HasColumnType("decimal(18,2)")
-                        .HasComment("Tổng chi");
-
-                    b.Property<decimal>("TotalRecieve")
-                        .HasColumnType("decimal(18,2)")
-                        .HasComment("Tổng thu");
-
-                    b.HasKey("PMSID");
-
-                    b.ToTable("PharmacySecretInfor", (string)null);
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
                 {
                     b.Property<int>("ProductID")
@@ -668,9 +601,6 @@ namespace PMS.Data.Migrations
                     b.Property<decimal>("Deposit")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime>("DepositDate")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime>("OrderDate")
                         .HasColumnType("datetime2");
 
@@ -679,9 +609,6 @@ namespace PMS.Data.Migrations
 
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<int>("PaymentDueDate")
-                        .HasColumnType("int");
 
                     b.Property<int>("QID")
                         .HasColumnType("int");

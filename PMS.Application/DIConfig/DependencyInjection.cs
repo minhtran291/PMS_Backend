@@ -27,6 +27,7 @@ using PMS.Application.Services.Warehouse;
 using PMS.Application.Services.WarehouseLocation;
 using PMS.Core.ConfigOptions;
 using PMS.Application.Services.StockExportOrder;
+using PMS.Application.Services.GoodsIssueNote;
 
 namespace PMS.Application.DIConfig
 {
@@ -59,6 +60,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<ISalesOrderService, SalesOrderService>();
             services.AddScoped<IVnPayService, VnPayService>();
             services.AddScoped<IStockExportOderService, StockExportOrderService>();
+            services.AddScoped<IGoodsIssueNoteService, GoodsIssueNoteService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
