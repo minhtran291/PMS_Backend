@@ -16,10 +16,10 @@ namespace PMS.Application.Services.SalesOrder
         //Sales Order Draft (Customer)
         Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListCustomerSalesOrdersAsync(string userId);
         Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int salesQuotationId);
-        //Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync
-           // (SalesOrderRequestDTO req);
-        Task<ServiceResult<bool>> UpdateDraftQuantitiesAsync
-            (int salesOrderId, List<SalesOrderDetailsUpdateDTO> items);
+        Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync
+           (SalesOrderRequestDTO req);
+        Task<ServiceResult<object>> UpdateDraftQuantitiesAsync
+            (SalesOrderUpdateDTO upd);
         Task<ServiceResult<bool>> DeleteDraftAsync(int orderId);
 
         //Send Order and check current product quantity
@@ -27,11 +27,6 @@ namespace PMS.Application.Services.SalesOrder
 
         //Customer mark is receipted of goods
         Task<ServiceResult<bool>> MarkCompleteAsync(int salesOrderId);
-
-        //Create payment
-        Task<ServiceResult<VnPayInitResponseDTO>> GenerateVnPayPaymentAsync
-            (int salesOrderId, string paymentType);
-
 
         //View Sales Orders
         Task<ServiceResult<object>> GetOrderDetailsAsync(int salesOrderId);

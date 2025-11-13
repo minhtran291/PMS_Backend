@@ -4,9 +4,12 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using PMS.API.Helpers.VnPay;
+using PMS.Application.DTOs.VnPay;
 using PMS.Application.DTOs.VNPay;
 using PMS.Application.Services.SalesOrder;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
 using PMS.Data.UnitOfWork;
 using QRCoder;
@@ -21,146 +24,165 @@ namespace PMS.Application.Services.VNpay
 {
     public class VnPayService : IVnPayService
     {
+        private readonly IVnPayGateway _gateway;
         private readonly VNPayConfig _opt;
-        public VnPayService(IOptions<VNPayConfig> opt) => _opt = opt.Value;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly ILogger<SalesOrderService> _logger;
-        public string CreatePaymentUrl(string salesOrderId, long amountVnd, string orderInfo, string locale = "vn")
+        private readonly ILogger<VnPayService> _logger;
+
+        public VnPayService(
+            IVnPayGateway gateway, 
+            IUnitOfWork uow,
+            IOptions<VNPayConfig> opt,
+            ILogger<VnPayService> logger)
         {
-            var dict = new SortedDictionary<string, string>
+            _gateway = gateway;
+            _unitOfWork = uow;
+            _opt = opt.Value;
+            _logger = logger;
+        }
+
+        public async Task<ServiceResult<bool>> HandleVnPayIpnAsync(IQueryCollection query)
+        {
+            return await ConfirmAsync(query, "ipn");
+        }
+
+        public async Task<ServiceResult<bool>> HandleVnPayReturnAsync(IQueryCollection query)
+        {
+            return await ConfirmAsync(query, "return");
+        }
+
+        public async Task<ServiceResult<VnPayInitResponseDTO>> InitVnPayAsync(VnPayInitRequestDTO req, string clientIp)
+        {
+            try
             {
-                ["vnp_Version"] = "2.1.0",
-                ["vnp_Command"] = "pay",
-                ["vnp_TmnCode"] = _opt.TmnCode,
-                ["vnp_Amount"] = (amountVnd * 100).ToString(), // VNPay yêu cầu *100
-                ["vnp_CurrCode"] = "VND",
-                ["vnp_TxnRef"] = salesOrderId,
-                ["vnp_OrderInfo"] = orderInfo,
-                ["vnp_OrderType"] = "other",
-                ["vnp_Locale"] = locale,
-                ["vnp_ReturnUrl"] = _opt.ReturnUrl,
-                ["vnp_IpnUrl"] = _opt.IpnDebugDomain,          // IPN gửi về API này
-                ["vnp_IpAddr"] = "127.0.0.1",
-                ["vnp_CreateDate"] = DateTime.Now.ToString("yyyyMMddHHmmss"),
-                ["vnp_ExpireDate"] = DateTime.Now.AddMinutes(15).ToString("yyyyMMddHHmmss")
-            };
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesQuotation)
+                    .Include(o => o.CustomerDebts)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == req.SalesOrderId);
 
-            // Ký chữ ký trên chuỗi raw KHÔNG có vnp_SecureHash
-            var raw = BuildQuery(dict);
-            var sign = ComputeHmacSHA512(_opt.HashSecret, raw);
+                if (order == null)
+                    return ServiceResult<VnPayInitResponseDTO>.Fail("Không tìm thấy đơn hàng.", 404);
 
-            // Thêm chữ ký rồi dùng AddQueryString để ghép URL
-            dict["vnp_SecureHash"] = sign;
+                if (order.Status != SalesOrderStatus.Approved && order.Status != SalesOrderStatus.Deposited)
+                    return ServiceResult<VnPayInitResponseDTO>.Fail("Chỉ khởi tạo thanh toán cho đơn ở trạng thái Approved hoặc Deposited.", 400);
 
-            return QueryHelpers.AddQueryString(_opt.VnpUrl, dict);
-        }
+                var depositAmount = decimal.Round(order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m), 0, MidpointRounding.AwayFromZero);
+                var amount = (req.PaymentType?.ToLowerInvariant() == "full") ? order.TotalPrice : depositAmount;
 
-        public string GenerateQrDataUrl(string paymentUrl)
-        {
-            using var gen = new QRCodeGenerator();
-            var data = gen.CreateQrCode(paymentUrl, QRCodeGenerator.ECCLevel.Q);
-            using var qr = new QRCode(data);
-            using var bmp = qr.GetGraphic(5);
-            using var ms = new MemoryStream();
-            bmp.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
-            return $"data:image/png;base64,{Convert.ToBase64String(ms.ToArray())}";
-        }
+                if (amount <= 0)
+                    return ServiceResult<VnPayInitResponseDTO>.Fail("Số tiền thanh toán không hợp lệ.", 400);
 
-        public bool ValidateReturn(IQueryCollection query, out IDictionary<string, string> data)
-        {
-            var dict = new SortedDictionary<string, string>();
-            foreach (var kv in query)
-                if (kv.Key.StartsWith("vnp_") && kv.Key != "vnp_SecureHash" && kv.Key != "vnp_SecureHashType")
-                    dict[kv.Key] = kv.Value!;
+                var info = req.PaymentType?.ToLowerInvariant() == "full"
+                    ? $"Thanh toan toan bo SO#{order.SalesOrderCode} ({order.SalesOrderId})"
+                    : $"Dat coc SO#{order.SalesOrderCode} ({order.SalesOrderId})";
 
-            var raw = BuildQuery(dict);
-            var calc = ComputeHmacSHA512(_opt.HashSecret, raw);
+                var (url, qr, txnRef) = await _gateway.BuildPaymentAsync(order.SalesOrderId, amount, info, req.BankCode, req.Locale, clientIp);
 
-            data = dict;
-            var received = query["vnp_SecureHash"].ToString();
-            return string.Equals(calc, received, StringComparison.OrdinalIgnoreCase);
-        }
-
-        // Helpers
-        private static string BuildQuery(IDictionary<string, string> dict)
-        {
-            var sb = new StringBuilder();
-            foreach (var kv in dict.OrderBy(k => k.Key))
-            {
-                if (sb.Length > 0) sb.Append('&');
-                sb.Append(Uri.EscapeDataString(kv.Key)).Append('=').Append(Uri.EscapeDataString(kv.Value));
+                var data = new VnPayInitResponseDTO { PaymentUrl = url, QrBase64 = qr, Amount = amount, TxnRef = txnRef };
+                return ServiceResult<VnPayInitResponseDTO>.SuccessResult(data, "Khởi tạo VNPay thành công.", 200);
             }
-            return sb.ToString();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Init VNPay error");
+                return ServiceResult<VnPayInitResponseDTO>.Fail("Lỗi khởi tạo thanh toán.", 500);
+            }
         }
 
-        private static string ComputeHmacSHA512(string key, string data)
+        // Core xác nhận thanh toán + cập nhật đơn & công nợ (theo form bạn gửi)
+        private async Task<ServiceResult<bool>> ConfirmAsync(IQueryCollection query, string source)
         {
-            using var hmac = new HMACSHA512(Encoding.UTF8.GetBytes(key));
-            return string.Concat(hmac.ComputeHash(Encoding.UTF8.GetBytes(data)).Select(b => b.ToString("x2")));
+            try
+            {
+                if (!_gateway.ValidateSignature(query))
+                    return ServiceResult<bool>.Fail("Chữ ký VNPay không hợp lệ.", 400);
+
+                var rspCode = _gateway.GetQueryValue(query, "vnp_ResponseCode");
+                var amountStr = _gateway.GetQueryValue(query, "vnp_Amount");
+                var txnRef = _gateway.GetQueryValue(query, "vnp_TxnRef") ?? "";
+
+                if (rspCode != "00")
+                    return ServiceResult<bool>.Fail($"Thanh toán bị từ chối ({rspCode}).", 400);
+
+                if (string.IsNullOrWhiteSpace(txnRef))
+                    return ServiceResult<bool>.Fail("Thiếu mã tham chiếu giao dịch.", 400);
+
+                var idPart = txnRef.Split('-').FirstOrDefault();
+                if (!int.TryParse(idPart, out var salesOrderId))
+                    return ServiceResult<bool>.Fail("Mã tham chiếu không hợp lệ.", 400);
+
+                if (!long.TryParse(amountStr, out var amountVnp))
+                    return ServiceResult<bool>.Fail("Số tiền không hợp lệ.", 400);
+
+                var paidAmount = (decimal)amountVnp / 100m;
+
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesQuotation)
+                    .Include(o => o.CustomerDebts)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+
+                if (order == null)
+                    return ServiceResult<bool>.Fail("Không tìm thấy đơn hàng.", 404);
+
+                if (order.Status != SalesOrderStatus.Approved && order.Status != SalesOrderStatus.Deposited)
+                    return ServiceResult<bool>.Fail("Chỉ xác nhận thanh toán cho đơn ở trạng thái Approved hoặc Deposited.", 400);
+
+                var depositAmount = decimal.Round(order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m), 0, MidpointRounding.AwayFromZero);
+
+                // Quy tắc cập nhật giống form bạn đưa:
+                SalesOrderStatus newStatus;
+                decimal newPaid;
+
+                if (paidAmount >= order.TotalPrice)
+                {
+                    // trả full trong 1 lần
+                    newStatus = SalesOrderStatus.Paid;
+                    newPaid = order.TotalPrice;
+                }
+                else if (paidAmount == depositAmount || order.Status == SalesOrderStatus.Deposited)
+                {
+                    // cọc hoặc đã cọc trước đó và trả tiếp
+                    var accumulated = Math.Min(order.PaidAmount + paidAmount, order.TotalPrice);
+                    newPaid = accumulated;
+                    newStatus = accumulated >= order.TotalPrice ? SalesOrderStatus.Paid : SalesOrderStatus.Deposited;
+                }
+                else
+                {
+                    // các trường hợp lệch số tiền: cộng dồn nhưng không vượt tổng
+                    newPaid = Math.Min(order.PaidAmount + paidAmount, order.TotalPrice);
+                    newStatus = newPaid >= order.TotalPrice ? SalesOrderStatus.Paid : SalesOrderStatus.Deposited;
+                }
+
+                order.PaidAmount = newPaid;
+                order.IsDeposited = newStatus == SalesOrderStatus.Deposited || newStatus == SalesOrderStatus.Paid;
+                order.Status = newStatus;
+
+                if (order.CustomerDebts == null)
+                {
+                    order.CustomerDebts = new CustomerDebt
+                    {
+                        CustomerId = order.CreateBy, // entity của bạn: string
+                        SalesOrderId = order.SalesOrderId,
+                        DebtAmount = order.TotalPrice - order.PaidAmount,
+                        status = DateTime.Now > order.SalesOrderExpiredDate ? CustomerDebtStatus.OverTime : CustomerDebtStatus.OnTime
+                    };
+                    await _unitOfWork.CustomerDebt.AddAsync(order.CustomerDebts);
+                }
+                else
+                {
+                    order.CustomerDebts.DebtAmount = order.TotalPrice - order.PaidAmount;
+                    order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate ? CustomerDebtStatus.OverTime : CustomerDebtStatus.OnTime;
+                }
+
+                _unitOfWork.SalesOrder.Update(order);
+                await _unitOfWork.CommitAsync();
+
+                return ServiceResult<bool>.SuccessResult(true, $"Xác nhận thanh toán thành công qua {source}.", 200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "VNPay confirm error ({source})", source);
+                return ServiceResult<bool>.Fail("Lỗi xử lý kết quả VNPay.", 500);
+            }
         }
-
-        //public async Task<ServiceResult<bool>> VNPayConfirmPaymentAsync(int salesOrderId, decimal amountVnd, string gateway, string? externalTxnId)
-        //{
-        //    try
-        //    {
-        //        var order = await _unitOfWork.SalesOrder.Query()
-        //            .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
-
-        //        if (order == null)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy đơn hàng",
-        //                Data = false
-        //            };
-        //        }
-
-        //        if (order.Status != SalesOrderStatus.Send)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã gửi (Send).",
-        //                Data = false
-        //            };
-        //        }
-
-        //        if (amountVnd < order.TotalPrice)
-        //        {
-        //            order.Status = SalesOrderStatus.Deposited;
-        //            order.DepositAmount = amountVnd;
-        //        }
-        //        else
-        //        {
-        //            order.Status = SalesOrderStatus.Paid;
-        //            order.DepositAmount = order.TotalPrice;
-        //        }
-
-        //        _unitOfWork.SalesOrder.Update(order);
-        //        await _unitOfWork.CommitAsync();
-
-        //        _logger.LogInformation(
-        //            "VNPay IPN OK. Order={OrderId}, Amount={Amount}, Txn={Txn}, NewStatus={Status}",
-        //            salesOrderId, amountVnd, externalTxnId, order.Status);
-
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Xác nhận thanh toán thành công.",
-        //            Data = true
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "VNPayConfirmPaymentAsync fail. Order={OrderId}", salesOrderId);
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Lỗi xác nhận thanh toán",
-        //            Data = false
-        //        };
-        //    }
-        //}
     }
 }
