@@ -8,6 +8,7 @@ using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using PMS.Application.DTOs.PO;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
 
 namespace PMS.Application.Services.PO
@@ -30,6 +31,13 @@ namespace PMS.Application.Services.PO
         Task<ServiceResult<Dictionary<string, IEnumerable<POQuantityStatus>>>> GetPOByReceivingStatusAsync();
 
         Task<ServiceResult<bool>> DeletePOWithDraftStatus(int poid);
+
+        Task<ServiceResult<List<PharmacySecretInfor>>> PharmacySecretInfor();
+
+
+        Task<ServiceResult<List<DebtReport>>> GetAllDebtReport();
+
+        Task<ServiceResult<DebtReport>> GetDebtReportDetail(int dbid);
 
     }
 }
