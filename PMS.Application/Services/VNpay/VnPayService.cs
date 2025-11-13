@@ -73,8 +73,9 @@ namespace PMS.Application.Services.VNpay
                     return ServiceResult<VnPayInitResponseDTO>.Fail("Số tiền thanh toán không hợp lệ.", 400);
 
                 var info = req.PaymentType?.ToLowerInvariant() == "full"
-                    ? $"Thanh toan toan bo SO#{order.SalesOrderCode} ({order.SalesOrderId})"
-                    : $"Dat coc SO#{order.SalesOrderCode} ({order.SalesOrderId})";
+                    ? $"Thanh toan toan bo {order.SalesOrderCode} ({order.SalesOrderId})"
+                    : $"Dat coc {order.SalesOrderCode} ({order.SalesOrderId})";
+
 
                 var (url, qr, txnRef) = await _gateway.BuildPaymentAsync(order.SalesOrderId, amount, info, req.BankCode, req.Locale, clientIp);
 
@@ -93,28 +94,41 @@ namespace PMS.Application.Services.VNpay
         {
             try
             {
+                // 0) Chữ ký
                 if (!_gateway.ValidateSignature(query))
                     return ServiceResult<bool>.Fail("Chữ ký VNPay không hợp lệ.", 400);
 
+                // 1) Các tham số cần kiểm tra
                 var rspCode = _gateway.GetQueryValue(query, "vnp_ResponseCode");
+                var txnStatus = _gateway.GetQueryValue(query, "vnp_TransactionStatus"); // ✅ thêm
                 var amountStr = _gateway.GetQueryValue(query, "vnp_Amount");
                 var txnRef = _gateway.GetQueryValue(query, "vnp_TxnRef") ?? "";
+                var tmnCode = _gateway.GetQueryValue(query, "vnp_TmnCode");
+                var currCode = _gateway.GetQueryValue(query, "vnp_CurrCode");
+                var orderInfo = _gateway.GetQueryValue(query, "vnp_OrderInfo")?.ToLowerInvariant();
 
-                if (rspCode != "00")
-                    return ServiceResult<bool>.Fail($"Thanh toán bị từ chối ({rspCode}).", 400);
+                // 2) Điều kiện thành công chuẩn
+                if (rspCode != "00" || txnStatus != "00")
+                    return ServiceResult<bool>.Fail($"Thanh toán bị từ chối ({rspCode}/{txnStatus}).", 400);
 
+                // 3) Ràng buộc tính toàn vẹn cơ bản
                 if (string.IsNullOrWhiteSpace(txnRef))
                     return ServiceResult<bool>.Fail("Thiếu mã tham chiếu giao dịch.", 400);
+                if (tmnCode == null || !tmnCode.Equals(_opt.TmnCode, StringComparison.OrdinalIgnoreCase))
+                    return ServiceResult<bool>.Fail("TmnCode không khớp.", 400);
+                if (!string.Equals(currCode, "VND", StringComparison.OrdinalIgnoreCase))
+                    return ServiceResult<bool>.Fail("Tiền tệ không hợp lệ.", 400);
+                if (!long.TryParse(amountStr, out var amountVnp))
+                    return ServiceResult<bool>.Fail("Số tiền không hợp lệ.", 400);
 
+                // TxnRef: "SOID-yyyyMMddHHmmssfff"
                 var idPart = txnRef.Split('-').FirstOrDefault();
                 if (!int.TryParse(idPart, out var salesOrderId))
                     return ServiceResult<bool>.Fail("Mã tham chiếu không hợp lệ.", 400);
 
-                if (!long.TryParse(amountStr, out var amountVnp))
-                    return ServiceResult<bool>.Fail("Số tiền không hợp lệ.", 400);
-
                 var paidAmount = (decimal)amountVnp / 100m;
 
+                // 4) Nạp đơn
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesQuotation)
                     .Include(o => o.CustomerDebts)
@@ -126,51 +140,66 @@ namespace PMS.Application.Services.VNpay
                 if (order.Status != SalesOrderStatus.Approved && order.Status != SalesOrderStatus.Deposited)
                     return ServiceResult<bool>.Fail("Chỉ xác nhận thanh toán cho đơn ở trạng thái Approved hoặc Deposited.", 400);
 
+                // 5) Ràng buộc số tiền hợp lệ (chống chỉnh sửa số tiền phía client)
                 var depositAmount = decimal.Round(order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m), 0, MidpointRounding.AwayFromZero);
+                var remaining = order.TotalPrice - order.PaidAmount;
 
-                // Quy tắc cập nhật giống form bạn đưa:
+                // Dựa vào OrderInfo nếu có "dat coc" / "toan bo"
+                var isDepositHint = orderInfo?.Contains("dat coc") == true;
+                var isFullHint = orderInfo?.Contains("toan bo") == true;
+
+                bool amountOk =
+                    (isFullHint && paidAmount == order.TotalPrice) ||
+                    (isDepositHint && paidAmount == depositAmount) ||
+                    (!isFullHint && !isDepositHint && paidAmount > 0 && paidAmount <= remaining);
+                if (!amountOk)
+                    return ServiceResult<bool>.Fail("Số tiền thanh toán không khớp quy tắc.", 400);
+
+                // 6) Idempotency cơ bản: nếu đã đủ tiền rồi thì bỏ qua (hoặc TODO: kiểm tra bảng PaymentTxn)
+                if (order.PaidAmount >= order.TotalPrice)
+                    return ServiceResult<bool>.SuccessResult(true, "Giao dịch đã được ghi nhận trước đó.", 200);
+
+                // 7) Cập nhật PaidAmount/Status
                 SalesOrderStatus newStatus;
                 decimal newPaid;
 
                 if (paidAmount >= order.TotalPrice)
                 {
-                    // trả full trong 1 lần
                     newStatus = SalesOrderStatus.Paid;
                     newPaid = order.TotalPrice;
                 }
                 else if (paidAmount == depositAmount || order.Status == SalesOrderStatus.Deposited)
                 {
-                    // cọc hoặc đã cọc trước đó và trả tiếp
                     var accumulated = Math.Min(order.PaidAmount + paidAmount, order.TotalPrice);
                     newPaid = accumulated;
                     newStatus = accumulated >= order.TotalPrice ? SalesOrderStatus.Paid : SalesOrderStatus.Deposited;
                 }
                 else
                 {
-                    // các trường hợp lệch số tiền: cộng dồn nhưng không vượt tổng
                     newPaid = Math.Min(order.PaidAmount + paidAmount, order.TotalPrice);
                     newStatus = newPaid >= order.TotalPrice ? SalesOrderStatus.Paid : SalesOrderStatus.Deposited;
                 }
 
                 order.PaidAmount = newPaid;
-                order.IsDeposited = newStatus == SalesOrderStatus.Deposited || newStatus == SalesOrderStatus.Paid;
+                order.IsDeposited = newStatus is SalesOrderStatus.Deposited or SalesOrderStatus.Paid;
                 order.Status = newStatus;
 
+                // 8) Cập nhật công nợ (lưu ý: nếu quan hệ là 1-n, bạn nên tạo CustomerDebt mới thay vì gán 1 object)
                 if (order.CustomerDebts == null)
                 {
                     order.CustomerDebts = new CustomerDebt
                     {
-                        CustomerId = order.CreateBy, // entity của bạn: string
+                        CustomerId = order.CreateBy, // string userId
                         SalesOrderId = order.SalesOrderId,
                         DebtAmount = order.TotalPrice - order.PaidAmount,
-                        status = DateTime.Now > order.SalesOrderExpiredDate ? CustomerDebtStatus.OverTime : CustomerDebtStatus.OnTime
+                        status = DateTime.Now > order.SalesOrderExpiredDate ? CustomerDebtStatus.BadDebt : CustomerDebtStatus.OnTime
                     };
                     await _unitOfWork.CustomerDebt.AddAsync(order.CustomerDebts);
                 }
                 else
                 {
                     order.CustomerDebts.DebtAmount = order.TotalPrice - order.PaidAmount;
-                    order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate ? CustomerDebtStatus.OverTime : CustomerDebtStatus.OnTime;
+                    order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate ? CustomerDebtStatus.BadDebt : CustomerDebtStatus.OnTime;
                 }
 
                 _unitOfWork.SalesOrder.Update(order);
@@ -184,5 +213,6 @@ namespace PMS.Application.Services.VNpay
                 return ServiceResult<bool>.Fail("Lỗi xử lý kết quả VNPay.", 500);
             }
         }
+
     }
 }
