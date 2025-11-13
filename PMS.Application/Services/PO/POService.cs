@@ -152,7 +152,7 @@ namespace PMS.API.Services.POService
                 };
             }
         }
-      
+
 
         public async Task<ServiceResult<bool>> ChangeStatusAsync(string userId, int poid, PurchasingOrderStatus newStatus)
         {
@@ -513,7 +513,7 @@ namespace PMS.API.Services.POService
                     }
                 }
 
-                var dto = new POQuantityStatus { POID = po.POID, Status=po.Status };
+                var dto = new POQuantityStatus { POID = po.POID, Status = po.Status };
 
                 if (!anyReceived)
                     notReceived.Add(dto);
@@ -578,7 +578,8 @@ namespace PMS.API.Services.POService
             }
         }
 
-
+        //Luật Doanh nghiệp 2020 và Nghị định 01/2021/NĐ-CP
+        //Luật Dược số 105/2016/QH13, cùng Nghị định 54/2017/NĐ-CP (và Nghị định 155/2018/NĐ-CP sửa đổi), ngành bán buôn thuốc là ngành nghề kinh doanh có điều kiện. nợ trần : ko quá 3 lần equity
         public async Task<ServiceResult<POPaidViewDTO>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
         {
             await _unitOfWork.BeginTransactionAsync();
@@ -647,14 +648,14 @@ namespace PMS.API.Services.POService
                     // Nếu đã có, cập nhật nợ phải trả
                     debtReport.Payables += existingPO.Debt;
                     debtReport.Payday = existingPO.PaymentDate;
-                }               
+                }
                 // cap nhat lai tong chi
                 pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
                 _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
                 await _unitOfWork.CommitAsync();
                 //
                 var debtCeiling = pharmacySecretInfor.DebtCeiling;
-                var currentDebt = debtCeiling - debtReport.Payables; 
+                var currentDebt = debtCeiling - debtReport.Payables;
 
                 if (debtReport.Payables > debtCeiling)
                 {
@@ -665,7 +666,7 @@ namespace PMS.API.Services.POService
                     debtReport.Status = DebtStatus.Apart;//4
                 }
 
-                debtReport.CurrentDebt = currentDebt; 
+                debtReport.CurrentDebt = currentDebt;
                 _unitOfWork.DebtReport.Update(debtReport);
 
                 await _unitOfWork.CommitAsync();
@@ -772,13 +773,13 @@ namespace PMS.API.Services.POService
                 var dueDate = depositDate.AddDays(existingPO.PaymentDueDate);
                 if (debtReport.Payables > debtCeiling || DateTime.Now > dueDate)
                     debtReport.Status = DebtStatus.overTime;
-                else if (debtReport.Payables >0)
+                else if (debtReport.Payables > 0)
                     debtReport.Status = DebtStatus.Apart;//4
-                else if(debtReport.Payables == 0)
+                else if (debtReport.Payables == 0)
                     debtReport.Status = DebtStatus.NoDebt;//5
-                else if(debtReport.Payables > debtReport.CurrentDebt)
+                else if (debtReport.Payables > debtReport.CurrentDebt)
                     debtReport.Status = DebtStatus.BadDebt;//2
-               _unitOfWork.DebtReport.Update(debtReport);
+                _unitOfWork.DebtReport.Update(debtReport);
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -801,5 +802,91 @@ namespace PMS.API.Services.POService
         }
 
 
+        public async Task<ServiceResult<List<PharmacySecretInfor>>> PharmacySecretInfor()
+        {
+            try
+            {
+                var pharmacy = await _unitOfWork.PharmacySecretInfor.Query().ToListAsync();
+                if (pharmacy == null)
+                {
+                    return new ServiceResult<List<PharmacySecretInfor>>
+                    {
+                        Success = false,
+                        Data = null,
+                        Message = "Lấy thông tin kinh doanh của công ty thất bại ",
+                        StatusCode = 400,
+                    };
+                }
+                return new ServiceResult<List<PharmacySecretInfor>>
+                {
+                    Success = true,
+                    Data = pharmacy,
+                    Message = "Lấy dữ liệu thành công",
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<PharmacySecretInfor>>.Fail($"Lỗi khi lấy thông tin kinh doanh thất bại: {ex.Message}", 500);
+            }
+        }
+
+        public async Task<ServiceResult<List<DebtReport>>> GetAllDebtReport()
+        {
+            try
+            {
+                var pharmacy = await _unitOfWork.DebtReport.Query().ToListAsync();
+                if (pharmacy == null)
+                {
+                    return new ServiceResult<List<DebtReport>>
+                    {
+                        Success = false,
+                        Data = null,
+                        Message = "Lấy thông tin tài chính của công ty thất bại ",
+                        StatusCode = 400,
+                    };
+                }
+                return new ServiceResult<List<DebtReport>>
+                {
+                    Success = true,
+                    Data = pharmacy,
+                    Message = "Lấy dữ liệu thành công",
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<DebtReport>>.Fail($"Lỗi khi lấy thông tin tài chính thất bại: {ex.Message}", 500);
+            }
+        }
+
+        public async Task<ServiceResult<DebtReport>> GetDebtReportDetail(int dbid)
+        {
+            try
+            {
+                var pharmacy = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(db=>db.ReportID ==dbid);
+                if (pharmacy == null)
+                {
+                    return new ServiceResult<DebtReport>
+                    {
+                        Success = false,
+                        Data = null,
+                        Message = "Lấy thông tin tài chính của công ty thất bại ",
+                        StatusCode = 400,
+                    };
+                }
+                return new ServiceResult<DebtReport>
+                {
+                    Success = true,
+                    Data = pharmacy,
+                    Message = "Lấy dữ liệu thành công",
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<DebtReport>.Fail($"Lỗi khi lấy thông tin tài chính thất bại: {ex.Message}", 500);
+            }
+        }
     }
 }
