@@ -801,7 +801,6 @@ namespace PMS.API.Services.POService
             }
         }
 
-
         public async Task<ServiceResult<List<PharmacySecretInfor>>> PharmacySecretInfor()
         {
             try
