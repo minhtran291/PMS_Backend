@@ -103,7 +103,23 @@ namespace PMS.API.Controllers
             return StatusCode(result.StatusCode, new
             {
                 message = result.Message,
-                data = result.Data,
+            });
+        }
+
+        [HttpDelete, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("delete-stock-export-order")]
+        public async Task<IActionResult> Delete(int seoId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _stockExportOderService.DeleteAsync(seoId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
             });
         }
     }

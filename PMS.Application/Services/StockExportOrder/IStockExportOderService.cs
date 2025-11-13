@@ -15,5 +15,6 @@ namespace PMS.Application.Services.StockExportOrder
         Task<ServiceResult<object>> ListAsync(string userId);
         Task<ServiceResult<object>> DetailsAsync(int seoId, string userId);
         Task<ServiceResult<object>> UpdateAsync(UpdateStockExportOrderDTO dto, string userId);
+        Task<ServiceResult<object>> DeleteAsync(int seoId, string userId);
     }
 }
