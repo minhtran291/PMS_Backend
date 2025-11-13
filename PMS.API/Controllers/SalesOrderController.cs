@@ -198,7 +198,12 @@ namespace PMS.API.Controllers
             body.CreateBy = userId;
             body.IsDeposited = false;
             body.Status = SalesOrderStatus.Draft;
+
+            body.CustomerDebt ??= new CustomerDebt();
             body.CustomerDebt.CustomerId = userId;
+            body.CustomerDebt.SalesOrderId = 0;
+            body.CustomerDebt.DebtAmount = 0;
+            body.CustomerDebt.status = CustomerDebtStatus.UnPaid;
 
             var result = await _service.CreateDraftFromSalesQuotationAsync(body);
 

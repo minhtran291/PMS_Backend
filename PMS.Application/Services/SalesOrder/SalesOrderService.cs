@@ -149,6 +149,7 @@ namespace PMS.Application.Services.SalesOrder
                     .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.Product)
                     .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.LotProduct)
                     .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.TaxPolicy)
+                    .Include(q => q.RequestSalesQuotation).ThenInclude(rsq => rsq.CustomerProfile)
                     .FirstOrDefaultAsync(q => q.Id == req.SalesQuotationId);
 
                 if (sq == null)
@@ -287,6 +288,7 @@ namespace PMS.Application.Services.SalesOrder
                 return new ServiceResult<object>
                 {
                     StatusCode = 201,
+                    Success = true,
                     Message = "Tạo SalesOrder Draft từ SalesQuotation thành công.",
                     Data = data
                 };
@@ -482,6 +484,7 @@ namespace PMS.Application.Services.SalesOrder
                 return new ServiceResult<IEnumerable<SalesOrderItemDTO>>
                 {
                     StatusCode = 200,
+                    Success = true,
                     Message = "Lấy danh sách đơn hàng thành công.",
                     Data = orders
                 };
@@ -868,6 +871,7 @@ namespace PMS.Application.Services.SalesOrder
                 return new ServiceResult<SalesQuotationResponseDTO>
                 {
                     StatusCode = 200,
+                    Success = true,
                     Message = "OK",
                     Data = dto
                 };
@@ -906,6 +910,7 @@ namespace PMS.Application.Services.SalesOrder
                 return new ServiceResult<IEnumerable<SalesOrderItemDTO>>
                 {
                     StatusCode = 200,
+                    Success = true,
                     Message = "Lấy danh sách đơn hàng thành công.",
                     Data = orders
                 };

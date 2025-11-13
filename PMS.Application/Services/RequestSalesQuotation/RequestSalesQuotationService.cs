@@ -134,11 +134,29 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 var rsq = await _unitOfWork.RequestSalesQuotation.Query()
                     .Include(r => r.RequestSalesQuotationDetails)
                         .ThenInclude(d => d.Product)
+                    .Include(r => r.SalesQuotations)
                     .FirstOrDefaultAsync(r => r.Id == rsqId);
 
                 var validateRsq = ValidateRsqDetails(rsq, customer);
 
                 if (validateRsq != null) return validateRsq;
+
+                var quotations = rsq.SalesQuotations?
+                    .Select(q => new ViewRsqSalesQuotationDTO
+                    {
+                        Id = q.Id,
+                        QuotationCode = q.QuotationCode,
+                        QuotationDate = q.QuotationDate,
+                        ExpiredDate = q.ExpiredDate,
+                        Status = q.Status
+                    })
+                    .OrderByDescending(q => q.QuotationDate ?? DateTime.MinValue)
+                    .ThenByDescending(q => q.Id)
+                    .ToList() ?? [];
+
+                var primaryQuotation = quotations
+                    .FirstOrDefault(q => q.Status != Core.Domain.Enums.SalesQuotationStatus.Draft)
+                    ?? quotations.FirstOrDefault();
 
                 return new ServiceResult<object>
                 {
@@ -154,7 +172,10 @@ namespace PMS.Application.Services.RequestSalesQuotation
                         {
                             ProductId = d.ProductId,
                             ProductName = d.Product.ProductName,
-                        }).ToList()
+                        }).ToList(),
+                        SalesQuotationId = primaryQuotation?.Id,
+                        SalesQuotation = primaryQuotation,
+                        SalesQuotations = quotations
                     }
                 };
             }
