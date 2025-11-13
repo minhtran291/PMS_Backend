@@ -25,5 +25,6 @@ namespace PMS.Core.Domain.Entities
         [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
         [Column(TypeName = "decimal(18,2)")]
         public decimal DebtCeiling { get; private set; }
+
     }
 }
