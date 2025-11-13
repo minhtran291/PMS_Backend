@@ -641,12 +641,10 @@ namespace PMS.Application.Services.SalesQuotation
             }
         }
 
-        public async Task<ServiceResult<List<SalesQuotationDTO>>> SalesQuotationListAsync(string role, string ssId)
+        public async Task<ServiceResult<List<SalesQuotationDTO>>> SalesQuotationListAsync(string role, string? ssId)
         {
             try
             {
-                var staffProfile = await ValidateSalesStaffStringId(ssId);
-
                 var query = _unitOfWork.SalesQuotation.Query()
                     .AsNoTracking()
                     .Include(sq => sq.RequestSalesQuotation)
@@ -658,6 +656,12 @@ namespace PMS.Application.Services.SalesQuotation
                 }
                 else
                 {
+                    if (ssId == null)
+                        return new ServiceResult<List<SalesQuotationDTO>>
+                        {
+                            StatusCode = 401,
+                        };
+                    var staffProfile = await ValidateSalesStaffStringId(ssId);
                     query = query.Where(s => s.SsId == staffProfile.Id);
                 }
 
