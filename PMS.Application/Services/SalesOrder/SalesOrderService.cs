@@ -73,7 +73,7 @@ namespace PMS.Application.Services.SalesOrder
                     }
                     else
                     {
-                        order.CustomerDebts.status = CustomerDebtStatus.OnTime;
+                        order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
                     }
                 }
 
@@ -89,7 +89,7 @@ namespace PMS.Application.Services.SalesOrder
                     }
                     else
                     {
-                        order.CustomerDebts.status = CustomerDebtStatus.OnTime;
+                        order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
                     }
                 }
                 
@@ -146,9 +146,12 @@ namespace PMS.Application.Services.SalesOrder
                     };
 
                 var sq = await _unitOfWork.SalesQuotation.Query()
-                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.Product)
-                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.LotProduct)
-                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.TaxPolicy)
+                    .Include(q => q.SalesQuotaionDetails)
+                        .ThenInclude(d => d.Product)
+                    .Include(q => q.SalesQuotaionDetails)
+                        .ThenInclude(d => d.LotProduct)
+                    .Include(q => q.SalesQuotaionDetails)
+                        .ThenInclude(d => d.TaxPolicy)
                     .FirstOrDefaultAsync(q => q.Id == req.SalesQuotationId);
 
                 if (sq == null)
@@ -168,7 +171,8 @@ namespace PMS.Application.Services.SalesOrder
                     };
 
                 var sqDetailByKey = sq.SalesQuotaionDetails
-                    .ToDictionary(d => (d.ProductId, d.LotId), d => d);
+                    .Where(d => d.LotId.HasValue)
+                    .ToDictionary(d => d.LotId!.Value, d => d);
 
                 foreach (var it in req.Details)
                 {
@@ -176,16 +180,15 @@ namespace PMS.Application.Services.SalesOrder
                         return new ServiceResult<object>
                         {
                             StatusCode = 400,
-                            Message = $"Quantity âm ở ProductId={it.ProductId}.",
+                            Message = $"Quantity âm ở {it.LotId}.",
                             Data = null
                         };
 
-                    var key = (it.ProductId, it.LotId);
-                    if (!sqDetailByKey.ContainsKey(key))
+                    if (!sqDetailByKey.ContainsKey(it.LotId))
                         return new ServiceResult<object>
                         {
                             StatusCode = 400,
-                            Message = $"Dòng không thuộc báo giá: ProductId={it.ProductId}, LotId={it.LotId}.",
+                            Message = $"Dòng không thuộc báo giá: LotId={it.LotId}.",
                             Data = null
                         };
                 }
@@ -213,7 +216,7 @@ namespace PMS.Application.Services.SalesOrder
                 var detailEntities = new List<SalesOrderDetails>();
                 foreach (var it in req.Details)
                 {
-                    var sqd = sqDetailByKey[(it.ProductId, it.LotId)];
+                    var sqd = sqDetailByKey[it.LotId];
 
                     var basePrice = sqd.LotProduct?.SalePrice ?? 0m;
 
@@ -226,7 +229,6 @@ namespace PMS.Application.Services.SalesOrder
                     detailEntities.Add(new SalesOrderDetails
                     {
                         SalesOrderId = order.SalesOrderId,
-                        //ProductId = it.ProductId,
                         LotId = it.LotId,
                         Quantity = it.Quantity,
                         UnitPrice = serverUnitPrice,
@@ -242,16 +244,6 @@ namespace PMS.Application.Services.SalesOrder
 
                 _unitOfWork.SalesOrder.Update(order);
 
-                //Customer dept
-                var debt = new CustomerDebt
-                {
-                    CustomerId = req.CreateBy,
-                    SalesOrderId = order.SalesOrderId,
-                    DebtAmount = order.TotalPrice - order.PaidAmount,
-                    status = CustomerDebtStatus.Maturity
-                };
-                await _unitOfWork.CustomerDebt.AddAsync(debt);
-
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -266,18 +258,9 @@ namespace PMS.Application.Services.SalesOrder
                     order.IsDeposited,
                     order.TotalPrice,
                     order.SalesOrderExpiredDate,
-                    CustomerDebt = new
-                    {
-                        debt.CustomerId,
-                        debt.SalesOrderId,
-                        debt.DebtAmount,
-                        debt.status
-                    },
                     Details = detailEntities.Select(d => new
                     {
-                        //d.ProductId,
                         d.LotId,
-                        //ProductName = sqDetailByKey[(d.ProductId, d.LotId)].Product.ProductName,
                         d.Quantity,
                         d.UnitPrice,
                         d.SubTotalPrice
@@ -556,7 +539,8 @@ namespace PMS.Application.Services.SalesOrder
             {
                 var so = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                        //.ThenInclude(d => d.Product)
+                        .ThenInclude(l => l.LotProduct)
+                            .ThenInclude(p => p.Product)
                     .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (so == null)
@@ -582,17 +566,16 @@ namespace PMS.Application.Services.SalesOrder
                 var warnings = new List<string>();
                 foreach (var d in so.SalesOrderDetails)
                 {
-                    //if (d.ProductId == null) continue;
+                    var lot = d.LotProduct;
+                    if (lot == null) continue;
 
-                    var totalAvailable = await _unitOfWork.LotProduct.Query()
-                        //.Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
-                        .SumAsync(l => (int?)l.LotQuantity) ?? 0;
+                    var totalAvailable = lot.LotQuantity;
 
                     if (d.Quantity > totalAvailable)
                     {
-                        //var prodName = d.Product?.ProductName ?? $"Product {d.ProductId}";
-                        //var missing = d.Quantity - totalAvailable;
-                        //warnings.Add($"{prodName}: thiếu {missing}");
+                        var prodName = lot.Product?.ProductName ?? $"Lô {d.LotId}";
+                        var missing = d.Quantity - totalAvailable;
+                        warnings.Add($"{prodName} (Lô {d.LotId}): thiếu {missing}");
                     }
                 }
 
@@ -600,23 +583,58 @@ namespace PMS.Application.Services.SalesOrder
                 {
                     var msg = string.Join("; ", warnings);
                     await _noti.SendNotificationToRolesAsync(
-                        "system",
+                        "261b6651-7d07-4267-bc71-d70b32bae334",
                         new List<string> { "PURCHASES_STAFF" },
                         "Thiếu hàng khi khách gửi SalesOrder",
                         $"Các mặt hàng thiếu/sắp hết: {msg}",
                         NotificationType.Warning
                     );
+                    await _noti.SendNotificationToRolesAsync(
+                        "261b6651-7d07-4267-bc71-d70b32bae334",
+                        new List<string> { "SALES_STAFF" },
+                        "Thiếu hàng khi khách gửi SalesOrder",
+                        $"Liên hệ nhân viên mua hàng để có thể ra quyết định chấp nhận hoặc từ chối",
+                        NotificationType.Warning
+                    );
                 }
+
+                
+                await _unitOfWork.CommitAsync();
 
                 so.Status = SalesOrderStatus.Send;
                 _unitOfWork.SalesOrder.Update(so);
+
+                if (so.CustomerDebts == null)
+                {
+                    var debt = new CustomerDebt
+                    {
+                        CustomerId = so.CreateBy, 
+                        SalesOrderId = so.SalesOrderId,
+                        DebtAmount = so.TotalPrice - so.PaidAmount,
+                        status = CustomerDebtStatus.UnPaid 
+                    };
+
+                    await _unitOfWork.CustomerDebt.AddAsync(debt);
+                    so.CustomerDebts = debt;
+                }
+
                 await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
                 var data = new
                 {
                     so.SalesOrderId,
                     so.Status,
                     so.TotalPrice,
+                    CustomerDebt = so.CustomerDebts == null
+                    ? null
+                    : new
+                    {
+                        so.CustomerDebts.CustomerId,
+                        so.CustomerDebts.SalesOrderId,
+                        so.CustomerDebts.DebtAmount,
+                        so.CustomerDebts.status
+                    },
                     Warnings = warnings
                 };
 

@@ -53,37 +53,73 @@ namespace PMS.Application.Services.VietQR
                     order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m),
                     0, MidpointRounding.AwayFromZero);
 
-                var payThisTime = req.AmountReceived ??
-                                  ((req.PaymentType?.ToLowerInvariant() == "full") ? order.TotalPrice : depositAmount);
+                var remaining = order.TotalPrice - order.PaidAmount;
+                if (remaining <= 0)
+                    return ServiceResult<bool>.Fail("Đơn đã được thanh toán đủ.", 400);
 
-                if (payThisTime <= 0)
-                    return ServiceResult<bool>.Fail("Số tiền xác nhận không hợp lệ.", 400);
+                var type = req.PaymentType?.Trim().ToLowerInvariant();
+                decimal expectedAmount;
+
+                switch (type)
+                {
+                    case "deposit":
+                        // Không cho đặt cọc thêm nếu đã cọc đủ rồi
+                        if (order.PaidAmount >= depositAmount)
+                            return ServiceResult<bool>.Fail("Đơn đã được đặt cọc trước đó.", 400);
+                        expectedAmount = depositAmount;
+                        break;
+
+                    case "remain":
+                        // Thanh toán phần còn thiếu
+                        expectedAmount = remaining;
+                        break;
+
+                    case "full":
+                        // Nếu chưa thanh toán gì -> full = tổng tiền
+                        // Nếu đã thanh toán (vd: đã cọc) -> full = phần còn lại
+                        expectedAmount = order.PaidAmount == 0 ? order.TotalPrice : remaining;
+                        break;
+
+                    default:
+                        return ServiceResult<bool>.Fail("PaymentType không hợp lệ. (deposit / full / remain)", 400);
+                }
+
+                // Nếu AmountReceived có gửi lên thì phải khớp expectedAmount
+                var payThisTime = req.AmountReceived ?? expectedAmount;
+                if (payThisTime != expectedAmount)
+                    return ServiceResult<bool>.Fail(
+                        $"Số tiền xác nhận không khớp. Yêu cầu: {expectedAmount}, nhận: {payThisTime}.", 400);
+
+                var newPaid = order.PaidAmount + payThisTime;
+                if (newPaid > order.TotalPrice)
+                    return ServiceResult<bool>.Fail("Thanh toán vượt quá số tiền đơn hàng.", 400);
 
                 await using var tx = await _db.Database.BeginTransactionAsync();
 
-                var accumulated = Math.Min(order.PaidAmount + payThisTime, order.TotalPrice);
-                if (accumulated >= order.TotalPrice)
+                order.PaidAmount = newPaid;
+
+                if (order.PaidAmount >= order.TotalPrice)
                 {
                     order.Status = SalesOrderStatus.Paid;
-                    order.PaidAmount = order.TotalPrice;
+                    order.PaidAmount = order.TotalPrice; 
                 }
                 else
                 {
                     order.Status = SalesOrderStatus.Deposited;
-                    order.PaidAmount = accumulated;
                 }
                 order.IsDeposited = order.Status is SalesOrderStatus.Deposited or SalesOrderStatus.Paid;
 
+                // Cập nhật CustomerDebt
                 if (order.CustomerDebts == null)
                 {
                     order.CustomerDebts = new CustomerDebt
                     {
-                        CustomerId = order.CreateBy, // entity của bạn: string
+                        CustomerId = order.CreateBy, 
                         SalesOrderId = order.SalesOrderId,
                         DebtAmount = order.TotalPrice - order.PaidAmount,
                         status = DateTime.Now > order.SalesOrderExpiredDate
                             ? CustomerDebtStatus.BadDebt
-                            : CustomerDebtStatus.OnTime
+                            : CustomerDebtStatus.NoDebt
                     };
                     _db.CustomerDebts.Add(order.CustomerDebts);
                 }
@@ -92,7 +128,7 @@ namespace PMS.Application.Services.VietQR
                     order.CustomerDebts.DebtAmount = order.TotalPrice - order.PaidAmount;
                     order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate
                         ? CustomerDebtStatus.BadDebt
-                        : CustomerDebtStatus.OnTime;
+                        : CustomerDebtStatus.NoDebt;
                 }
 
                 _db.SalesOrders.Update(order);
@@ -123,15 +159,46 @@ namespace PMS.Application.Services.VietQR
                 if (order.Status != SalesOrderStatus.Approved && order.Status != SalesOrderStatus.Deposited)
                     return ServiceResult<VietQrInitResponse>.Fail("Chỉ tạo QR cho đơn Approved/Deposited.", 400);
 
-                var deposit = decimal.Round(
+                var depositAmount = decimal.Round(
                     order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m),
                     0, MidpointRounding.AwayFromZero);
 
-                var amount = (req.PaymentType?.ToLowerInvariant() == "full") ? order.TotalPrice : deposit;
+                var remaining = order.TotalPrice - order.PaidAmount;
+                if (remaining <= 0)
+                    return ServiceResult<VietQrInitResponse>.Fail("Đơn đã được thanh toán đủ.", 400);
+
+                var type = req.PaymentType?.Trim().ToLowerInvariant();
+                decimal amount;
+                string tag;
+
+                switch (type)
+                {
+                    case "deposit":
+                        if (order.PaidAmount >= depositAmount)
+                            return ServiceResult<VietQrInitResponse>.Fail("Đơn đã được đặt cọc trước đó.", 400);
+                        amount = depositAmount;
+                        tag = "DEPO";
+                        break;
+
+                    case "remain":
+                        amount = remaining;
+                        tag = "REMAIN";
+                        break;
+
+                    case "full":
+                        // Nếu chưa thanh toán gì -> full = tổng
+                        // Nếu đã thanh toán (ví dụ đã cọc) -> full = phần còn lại
+                        amount = order.PaidAmount == 0 ? order.TotalPrice : remaining;
+                        tag = "FULL";
+                        break;
+
+                    default:
+                        return ServiceResult<VietQrInitResponse>.Fail("PaymentType không hợp lệ. (deposit / full / remain)", 400);
+                }
+
                 if (amount <= 0)
                     return ServiceResult<VietQrInitResponse>.Fail("Số tiền không hợp lệ.", 400);
 
-                var tag = (req.PaymentType?.ToLowerInvariant() == "full") ? "FULL" : "DEPO";
                 var transferContent = RemoveDiacritics($"SO{order.SalesOrderId}-{tag}").ToUpperInvariant();
 
                 string Encode(string s) => Uri.EscapeDataString(s);

@@ -196,9 +196,9 @@ namespace PMS.API.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
             body.CreateBy = userId;
-            body.IsDeposited = false;
-            body.Status = SalesOrderStatus.Draft;
-            body.CustomerDebt.CustomerId = userId;
+            //body.IsDeposited = false;
+            //body.Status = SalesOrderStatus.Draft;
+            //body.CustomerDebt.CustomerId = userId;
 
             var result = await _service.CreateDraftFromSalesQuotationAsync(body);
 
