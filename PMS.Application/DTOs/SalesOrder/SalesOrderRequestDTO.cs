@@ -14,14 +14,10 @@ namespace PMS.Application.DTOs.SalesOrder
     {
         [Required(ErrorMessage = "SalesQuotationID là bắt buộc!")]
         public int SalesQuotationId { get; set; }
+
         public required string CreateBy { get; set; }
-        //public DateTime CreateAt { get; set; } = DateTime.Now;
-        //public SalesOrderStatus Status { get; set; }
-        //public decimal TotalPrice { get; set; }
-        //public bool IsDeposited { get; set; } = false;
 
         [Required, MinLength(1)]
         public List<SalesOrderDetailsRequestDTO> Details { get; set; } = [];
-        //public CustomerDebt CustomerDebt { get; set; }
     }
 }

@@ -594,7 +594,7 @@ namespace PMS.Application.Services.SalesOrder
                         new List<string> { "SALES_STAFF" },
                         "Thiếu hàng khi khách gửi SalesOrder",
                         $"Liên hệ nhân viên mua hàng để có thể ra quyết định chấp nhận hoặc từ chối",
-                        NotificationType.Warning
+                        NotificationType.Message
                     );
                 }
 

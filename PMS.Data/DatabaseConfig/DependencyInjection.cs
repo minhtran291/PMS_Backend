@@ -45,6 +45,9 @@ using PMS.Data.Repositories.WarehouseLocation;
 using PMS.Data.UnitOfWork;
 using PMS.Data.Repositories.DebtReport;
 using PMS.Data.Repositories.PharmacySecretInfor;
+using PMS.Data.Repositories.InvoiceRepo;
+using PMS.Data.Repositories.InvoiceDetailRepo;
+using PMS.Data.Repositories.PaymentRemainRepo;
 
 namespace PMS.Data.DatabaseConfig
 {
@@ -114,6 +117,10 @@ namespace PMS.Data.DatabaseConfig
             //
             services.AddScoped<IGoodsIssueNoteRepository, GoodsIssueNoteRepository>();
             services.AddScoped<IGoodsIssueNoteDetailsRepository, GoodsIssueNoteDetailsRepository>();
+            //
+            services.AddScoped<IInvoiceRepository, InvoiceRepository>();
+            services.AddScoped<IInvoiceDetailRepository, InvoiceDetailRepository>();
+            services.AddScoped<IPaymentRemainRepository, PaymentRemainRepository>();
 
         }
 

@@ -489,6 +489,91 @@ namespace PMS.Data.Migrations
                     b.ToTable("InventorySessions", (string)null);
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.Invoice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvoiceCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SalesOrderId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("TINYINT");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalDeposit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalPaid")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalRemain")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SalesOrderId")
+                        .IsUnique();
+
+                    b.ToTable("Invoices");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.InvoiceDetail", b =>
+                {
+                    b.Property<int>("InvoiceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("GoodsIssueNoteId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("AllocatedDeposit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("GoodsIssueAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("NoteBalance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("PaidRemain")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TotalPaidForNote")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("InvoiceId", "GoodsIssueNoteId");
+
+                    b.HasIndex("GoodsIssueNoteId")
+                        .IsUnique();
+
+                    b.ToTable("InvoiceDetails");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
                     b.Property<int>("LotID")
@@ -577,6 +662,55 @@ namespace PMS.Data.Migrations
                     b.HasIndex("SenderId");
 
                     b.ToTable("Notifications");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.PaymentRemain", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Gateway")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("GatewayTransactionRef")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("GoodsIssueNoteId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PaidAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte>("PaymentMethod")
+                        .HasColumnType("TINYINT");
+
+                    b.Property<byte>("PaymentType")
+                        .HasColumnType("TINYINT");
+
+                    b.Property<int>("SalesOrderId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("TINYINT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GoodsIssueNoteId")
+                        .IsUnique()
+                        .HasFilter("[GoodsIssueNoteId] IS NOT NULL");
+
+                    b.HasIndex("SalesOrderId");
+
+                    b.ToTable("PaymentRemains");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.PharmacySecretInfor", b =>
@@ -1632,6 +1766,36 @@ namespace PMS.Data.Migrations
                     b.Navigation("LotProduct");
                 });
 
+            modelBuilder.Entity("PMS.Core.Domain.Entities.Invoice", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
+                        .WithOne("Invoice")
+                        .HasForeignKey("PMS.Core.Domain.Entities.Invoice", "SalesOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SalesOrder");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.InvoiceDetail", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.GoodsIssueNote", "GoodsIssueNote")
+                        .WithOne("InvoiceDetail")
+                        .HasForeignKey("PMS.Core.Domain.Entities.InvoiceDetail", "GoodsIssueNoteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("PMS.Core.Domain.Entities.Invoice", "Invoice")
+                        .WithMany("InvoiceDetails")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GoodsIssueNote");
+
+                    b.Navigation("Invoice");
+                });
+
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Entities.Product", "Product")
@@ -1676,6 +1840,24 @@ namespace PMS.Data.Migrations
                     b.Navigation("Receiver");
 
                     b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.PaymentRemain", b =>
+                {
+                    b.HasOne("PMS.Core.Domain.Entities.GoodsIssueNote", "GoodsIssueNote")
+                        .WithOne("PaymentRemain")
+                        .HasForeignKey("PMS.Core.Domain.Entities.PaymentRemain", "GoodsIssueNoteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
+                        .WithMany("PaymentRemains")
+                        .HasForeignKey("SalesOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GoodsIssueNote");
+
+                    b.Navigation("SalesOrder");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Product", b =>
@@ -2014,11 +2196,20 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.GoodsIssueNote", b =>
                 {
                     b.Navigation("GoodsIssueNoteDetails");
+
+                    b.Navigation("InvoiceDetail");
+
+                    b.Navigation("PaymentRemain");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.InventorySession", b =>
                 {
                     b.Navigation("InventoryHistories");
+                });
+
+            modelBuilder.Entity("PMS.Core.Domain.Entities.Invoice", b =>
+                {
+                    b.Navigation("InvoiceDetails");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>
@@ -2080,6 +2271,10 @@ namespace PMS.Data.Migrations
                 {
                     b.Navigation("CustomerDebts")
                         .IsRequired();
+
+                    b.Navigation("Invoice");
+
+                    b.Navigation("PaymentRemains");
 
                     b.Navigation("SalesOrderDetails");
 

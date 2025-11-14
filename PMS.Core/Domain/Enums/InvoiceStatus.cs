@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PMS.Application.DTOs.SalesOrder
+namespace PMS.Core.Domain.Enums
 {
-    public class SalesOrderDetailsResponseDTO
+    public enum InvoiceStatus : byte
     {
+        Issued = 1,
+        Cancelled = 2
     }
 }
