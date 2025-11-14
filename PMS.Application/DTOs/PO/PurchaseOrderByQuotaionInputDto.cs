@@ -19,5 +19,6 @@ namespace PMS.Application.DTOs.PO
         [Required(ErrorMessage = "Thiếu trạng thái đơn hàng")]
         public  PurchasingOrderStatus Status { get; set; }
 
+
     }
 }

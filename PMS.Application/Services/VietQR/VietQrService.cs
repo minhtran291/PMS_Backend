@@ -82,7 +82,7 @@ namespace PMS.Application.Services.VietQR
                         SalesOrderId = order.SalesOrderId,
                         DebtAmount = order.TotalPrice - order.PaidAmount,
                         status = DateTime.Now > order.SalesOrderExpiredDate
-                            ? CustomerDebtStatus.OverTime
+                            ? CustomerDebtStatus.BadDebt
                             : CustomerDebtStatus.OnTime
                     };
                     _db.CustomerDebts.Add(order.CustomerDebts);
@@ -91,7 +91,7 @@ namespace PMS.Application.Services.VietQR
                 {
                     order.CustomerDebts.DebtAmount = order.TotalPrice - order.PaidAmount;
                     order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate
-                        ? CustomerDebtStatus.OverTime
+                        ? CustomerDebtStatus.BadDebt
                         : CustomerDebtStatus.OnTime;
                 }
 

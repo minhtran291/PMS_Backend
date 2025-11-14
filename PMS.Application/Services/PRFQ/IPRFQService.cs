@@ -31,6 +31,8 @@ namespace PMS.API.Services.PRFQService
         PurchaseOrderByQuotaionInputDto input);
 
         Task<ServiceResult<bool>> CountinueEditPurchasingOrderAsync(int poid, string userid, PurchaseOrderByQuotaionInputDto input);
+
+        Task<ServiceResult<IEnumerable<PreviewProductDto>>> PreviewExcelProductsByExcitedQuotationAsync(int QID);
     }
 
 

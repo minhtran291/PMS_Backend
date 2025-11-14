@@ -5,9 +5,11 @@ using Microsoft.Extensions.Options;
 using PMS.Application.DTOs.VNPay;
 using QRCoder;
 using System.Globalization;
+using System.Web;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace PMS.API.Helpers.VnPay
 {
@@ -16,6 +18,7 @@ namespace PMS.API.Helpers.VnPay
 
         private readonly VNPayConfig _opt;
         private readonly ILogger<VnPayGateway> _logger;
+
         public VnPayGateway(IOptions<VNPayConfig> opt, ILogger<VnPayGateway> logger)
         {
             _opt = new VNPayConfig
@@ -29,21 +32,77 @@ namespace PMS.API.Helpers.VnPay
             _logger = logger;
         }
 
-        public async Task<(string url, string qrBase64, string txnRef)> BuildPaymentAsync(int salesOrderId, decimal amount, string orderInfo, string? bankCode, string? locale, string clientIp)
+        // VNPay encoder: UrlEncode(UTF8) => spaces "+" => HEX uppercase
+        private static string VnPayEnc(string? value)
         {
-            // VNPay yêu cầu VND *100
+            var s = HttpUtility.UrlEncode(value ?? string.Empty, Encoding.UTF8) ?? string.Empty;
+            if (s.Length == 0) return string.Empty;
+
+            // Theo sample VNPay: dùng "+" cho space
+            s = s.Replace("%20", "+");
+
+            var sb = new StringBuilder(s.Length);
+            for (int i = 0; i < s.Length; i++)
+            {
+                var c = s[i];
+                if (c == '%' && i + 2 < s.Length)
+                {
+                    sb.Append('%');
+                    sb.Append(char.ToUpperInvariant(s[i + 1]));
+                    sb.Append(char.ToUpperInvariant(s[i + 2]));
+                    i += 2;
+                }
+                else sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// BỎ DẤU + chỉ giữ A-Z, a-z, 0-9 và space
+        /// để đáp ứng yêu cầu: vnp_OrderInfo Alphanumeric, không dấu, không ký tự đặc biệt.
+        /// </summary>
+        private static string SanitizeOrderInfo(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+            // 1. Bỏ dấu tiếng Việt
+            string formD = input.Normalize(NormalizationForm.FormD);
+            var sb = new StringBuilder();
+
+            foreach (var ch in formD)
+            {
+                var uc = CharUnicodeInfo.GetUnicodeCategory(ch);
+                if (uc != UnicodeCategory.NonSpacingMark)
+                {
+                    sb.Append(ch);
+                }
+            }
+
+            var noDiacritics = sb.ToString().Normalize(NormalizationForm.FormC);
+
+            // 2. Chỉ giữ A-Z, a-z, 0-9 và khoảng trắng
+            var clean = Regex.Replace(noDiacritics, @"[^A-Za-z0-9 ]", string.Empty);
+
+            // 3. Gộp space thừa
+            return Regex.Replace(clean, @"\s+", " ").Trim();
+        }
+
+        public async Task<(string url, string qrBase64, string txnRef)> BuildPaymentAsync(
+            int salesOrderId, decimal amount, string orderInfo, string? bankCode, string? locale, string clientIp)
+        {
             var amountVnp = ((long)(amount * 100m)).ToString(CultureInfo.InvariantCulture);
 
-            // Giờ Việt Nam (UTC+7) cho Create/Expire
-            var tzId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                ? "SE Asia Standard Time"
-                : "Asia/Ho_Chi_Minh";
+            var tzId = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh";
             var nowVn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById(tzId));
 
-            // TxnRef phải duy nhất
             var txnRef = $"{salesOrderId}-{nowVn:yyyyMMddHHmmssfff}";
 
-            // Gom params (chỉ add param có giá trị)
+            var ip = string.IsNullOrWhiteSpace(clientIp) ? "127.0.0.1" : clientIp;
+            if (ip == "::1") ip = "127.0.0.1";
+
+            // ✅ SỬA: OrderInfo gửi lên VNPay phải được sanitize
+            var safeOrderInfo = SanitizeOrderInfo(orderInfo);
+
             var p = new SortedDictionary<string, string>
             {
                 ["vnp_Version"] = "2.1.0",
@@ -52,28 +111,42 @@ namespace PMS.API.Helpers.VnPay
                 ["vnp_Amount"] = amountVnp,
                 ["vnp_CurrCode"] = "VND",
                 ["vnp_TxnRef"] = txnRef,
-                ["vnp_OrderInfo"] = orderInfo,
+                ["vnp_OrderInfo"] = safeOrderInfo,   // ✅ DÙNG safeOrderInfo
                 ["vnp_OrderType"] = "billpayment",
                 ["vnp_ReturnUrl"] = _opt.ReturnUrl,
-                ["vnp_IpAddr"] = string.IsNullOrWhiteSpace(clientIp) ? "127.0.0.1" : clientIp,
+                ["vnp_IpAddr"] = ip,
                 ["vnp_CreateDate"] = nowVn.ToString("yyyyMMddHHmmss"),
                 ["vnp_ExpireDate"] = nowVn.AddMinutes(15).ToString("yyyyMMddHHmmss")
             };
-            if (!string.IsNullOrWhiteSpace(locale)) p["vnp_Locale"] = locale!.Trim();
-            if (!string.IsNullOrWhiteSpace(bankCode)) p["vnp_BankCode"] = bankCode!.Trim();
 
-            // Encode giá trị thống nhất cho cả ký & URL
-            static string Enc(string s) => Uri.EscapeDataString(s);
+            if (!string.IsNullOrWhiteSpace(locale) && !string.Equals(locale, "null", StringComparison.OrdinalIgnoreCase))
+                p["vnp_Locale"] = locale.Trim();
 
-            // Raw string để KÝ (không gồm vnp_SecureHash/_Type)
-            var rawForHash = string.Join("&", p.Select(kv => $"{kv.Key}={Enc(kv.Value)}"));
+            // ✅ SỬA: BankCode chỉ chấp nhận [A-Z0-9]+, không được là "null"
+            //if (!string.IsNullOrWhiteSpace(bankCode) &&
+            //    !string.Equals(bankCode, "null", StringComparison.OrdinalIgnoreCase))
+            //{
+            //    var bc = bankCode.Trim().ToUpperInvariant();
 
-            var secureHash = HmacSHA512(_opt.HashSecret, rawForHash);
+            //    // BankCode chuẩn VNPay là alphanumeric, không space
+            //    if (Regex.IsMatch(bc, "^[A-Z0-9]+$"))
+            //    {
+            //        p["vnp_BankCode"] = bc;
+            //    }
+            //    else
+            //    {
+            //        // Nếu sai format (ví dụ "test vnpay", "abc 123") thì bỏ luôn, không gửi lên
+            //        _logger.LogWarning("VNPay: BankCode '{bankCode}' không hợp lệ, bỏ qua không gửi.", bankCode);
+            //    }
+            //}
 
-            // Build URL cuối
+            // ✅ Chuỗi hashData: SORT ALPHABET + URL ENCODE (VnPayEnc)
+            var rawForHash = string.Join("&", p.Select(kv => $"{kv.Key}={VnPayEnc(kv.Value)}"));
+            var secureHash = HmacSHA512(_opt.HashSecret, rawForHash).ToLowerInvariant();
+
+            // Không thêm vnp_SecureHashType (optional, và không nằm trong chuỗi ký)
             var payUrl = $"{_opt.VnpUrl}?{rawForHash}&vnp_SecureHash={secureHash}";
 
-            // Sinh QR từ payment URL (tuỳ chọn)
             string qrBase64;
             using (var qrGen = new QRCodeGenerator())
             using (var data = qrGen.CreateQrCode(payUrl, QRCodeGenerator.ECCLevel.M))
@@ -83,16 +156,16 @@ namespace PMS.API.Helpers.VnPay
                 qrBase64 = "data:image/png;base64," + Convert.ToBase64String(bytes);
             }
 
-            // Log để tự kiểm tra khi cần
-            _logger.LogInformation("VNPay RAW = {raw}", rawForHash);
-            _logger.LogInformation("VNPay HASH = {hash}", secureHash);
+            _logger.LogInformation("VNPay REQUEST RAW = {raw}", rawForHash);
+            _logger.LogInformation("VNPay REQUEST HASH = {hash}", secureHash);
 
             return (payUrl, qrBase64, txnRef);
         }
 
-        public string? GetQueryValue(IQueryCollection query, string key) => query.TryGetValue(key, out var val) ? val.ToString() : null;
+        public string? GetQueryValue(IQueryCollection query, string key)
+            => query.TryGetValue(key, out var val) ? val.ToString() : null;
 
-        private static string HmacSHA512(string key, string data)
+        private static string HmacSHA512(string? key, string? data)
         {
             var keyBytes = Encoding.UTF8.GetBytes(key ?? "");
             var dataBytes = Encoding.UTF8.GetBytes(data ?? "");
@@ -101,31 +174,35 @@ namespace PMS.API.Helpers.VnPay
             return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
         }
 
-
         public bool ValidateSignature(IQueryCollection query)
         {
             var input = new SortedDictionary<string, string>();
             foreach (var kv in query)
             {
-                var key = kv.Key;
-                if (key.StartsWith("vnp_", StringComparison.OrdinalIgnoreCase) &&
-                    !key.Equals("vnp_SecureHash", StringComparison.OrdinalIgnoreCase) &&
-                    !key.Equals("vnp_SecureHashType", StringComparison.OrdinalIgnoreCase))
+                var k = kv.Key;
+                if (k.StartsWith("vnp_", StringComparison.OrdinalIgnoreCase) &&
+                    !k.Equals("vnp_SecureHash", StringComparison.OrdinalIgnoreCase) &&
+                    !k.Equals("vnp_SecureHashType", StringComparison.OrdinalIgnoreCase))
                 {
-                    input[key] = kv.Value.ToString();
+                    var val = kv.Value.ToString();
+                    if (!string.IsNullOrWhiteSpace(val) && !string.Equals(val, "null", StringComparison.OrdinalIgnoreCase))
+                        input[k] = val;
                 }
             }
 
-            static string Enc(string s) => Uri.EscapeDataString(s);
-            var raw = string.Join("&", input.Select(kv => $"{kv.Key}={Enc(kv.Value)}"));
-            var myHash = HmacSHA512(_opt.HashSecret, raw);
+            // ✅ Hash lại y chang rule build request:
+            // sort alphab + VnPayEnc (UrlEncode UTF8 + "+" cho space + HEX uppercase)
+            var raw = string.Join("&", input.Select(kv => $"{kv.Key}={VnPayEnc(kv.Value)}"));
+            var myHash = HmacSHA512(_opt.HashSecret, raw).ToLowerInvariant();
             var vnpHash = query["vnp_SecureHash"].ToString();
+
+            _logger.LogInformation("VNPay RETURN/IPN RAW = {raw}", raw);
+            _logger.LogInformation("VNPay RETURN/IPN MYHASH = {hash}, VNP_HASH = {vnp}", myHash, vnpHash);
 
             var ok = string.Equals(myHash, vnpHash, StringComparison.OrdinalIgnoreCase);
             if (!ok)
-            {
-                _logger.LogWarning("VNPay signature invalid. RAW={raw}, MY={my}, VNP={vnp}", raw, myHash, vnpHash);
-            }
+                _logger.LogWarning("VNPay signature invalid.");
+
             return ok;
         }
     }

@@ -69,7 +69,7 @@ namespace PMS.Application.Services.SalesOrder
                     order.CustomerDebts.DebtAmount = order.TotalPrice - depositAmount;
                     if (DateTime.Now > order.SalesOrderExpiredDate)
                     {
-                        order.CustomerDebts.status = CustomerDebtStatus.OverTime;
+                        order.CustomerDebts.status = CustomerDebtStatus.BadDebt;
                     }
                     else
                     {
@@ -85,7 +85,7 @@ namespace PMS.Application.Services.SalesOrder
                     order.CustomerDebts.DebtAmount = 0;
                     if (DateTime.Now > order.SalesOrderExpiredDate)
                     {
-                        order.CustomerDebts.status = CustomerDebtStatus.OverTime;
+                        order.CustomerDebts.status = CustomerDebtStatus.BadDebt;
                     }
                     else
                     {
@@ -248,7 +248,7 @@ namespace PMS.Application.Services.SalesOrder
                     CustomerId = req.CreateBy,
                     SalesOrderId = order.SalesOrderId,
                     DebtAmount = order.TotalPrice - order.PaidAmount,
-                    status = CustomerDebtStatus.UnPaid
+                    status = CustomerDebtStatus.Maturity
                 };
                 await _unitOfWork.CustomerDebt.AddAsync(debt);
 
