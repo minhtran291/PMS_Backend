@@ -30,6 +30,9 @@ using PMS.Application.Services.GoodsIssueNote;
 using System.ComponentModel.Design;
 using PMS.API.Helpers.VnPay;
 using PMS.Application.Services.VietQR;
+using Microsoft.AspNetCore.Routing;
+using PMS.Application.Hub;
+using Microsoft.AspNetCore.Builder;
 
 namespace PMS.Application.DIConfig
 {
@@ -84,6 +87,11 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IPdfService, PdfService>();
             services.AddSingleton<IConverter, SynchronizedConverter>(_ => new SynchronizedConverter(new PdfTools()));
+        }
+
+        public static void MapHubs(this IEndpointRouteBuilder app)
+        {
+            app.MapHub<SalesQuotationHub>("/salesQuotationHub");
         }
     }
 }
