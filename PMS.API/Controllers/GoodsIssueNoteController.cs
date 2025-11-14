@@ -90,5 +90,41 @@ namespace PMS.API.Controllers
                 data = result.Data,
             });
         }
+
+        [HttpPatch, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Route("update-goods-issue-note")]
+        public async Task<IActionResult> Update(UpdateGoodsIssueNoteDTO dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _goodsIssueNoteService.UpdateAsync(dto, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data,
+            });
+        }
+
+        [HttpDelete, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Route("delete-goods-issue-note")]
+        public async Task<IActionResult> Delete(int ginId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _goodsIssueNoteService.DeleteAsync(ginId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data,
+            });
+        }
     }
 }
