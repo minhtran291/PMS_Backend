@@ -32,7 +32,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// https://localhost:7213/api/PO/DepositedPurchaseOrder/{id}
+        /// https://localhost:7213/api/PO/DepositedPurchaseOrder/{poid}
         /// ghi nhận tiền gửi
         /// </summary>
         /// <param name="id"></param>
@@ -159,6 +159,8 @@ namespace PMS.API.Controllers
             return Ok(result.Data["PartiallyReceived"]);
         }
 
+
+
         /// <summary>
         /// https://localhost:7213/api/PO/not-received
         /// Lấy danh sách PO chưa nhập hàng nào
@@ -183,5 +185,49 @@ namespace PMS.API.Controllers
             var result = await _poService.DeletePOWithDraftStatus(poid);
             return HandleServiceResult(result);
         }
+
+
+
+        /// <summary>
+        /// https://localhost:7213/api/PO/GetPharmacySecretInfor
+        /// lay thong tin kinh doanh 
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("GetPharmacySecretInfor")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> GetPharmacySecretInfor()
+        {
+            var result= await _poService.PharmacySecretInfor();
+            return HandleServiceResult(result);
+        }
+
+
+
+        /// <summary>
+        /// https://localhost:7213/api/PO/GetAllDebtReport
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("GetAllDebtReport")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> GetAllDebtReport()
+        {
+            var result = await _poService.GetAllDebtReport();
+            return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
+        /// https://localhost:7213/api/PO/GetDetailDebtReport/{dbid}
+        /// </summary>
+        /// <param name="dbid"></param>
+        /// <returns></returns>
+        [HttpGet("GetDetailDebtReport/{dbid}")]
+        //[Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> GetDetailDebtReport(int dbid)
+        {
+            var result = await _poService.GetDebtReportDetail(dbid);
+            return HandleServiceResult(result);
+        }
+
     }
 }

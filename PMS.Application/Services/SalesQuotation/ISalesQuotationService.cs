@@ -14,7 +14,7 @@ namespace PMS.Application.Services.SalesQuotation
         Task<ServiceResult<object>> CreateSalesQuotationAsync(CreateSalesQuotationDTO dto, string ssId);
         Task<ServiceResult<object>> UpdateSalesQuotationAsync(UpdateSalesQuotationDTO dto, string ssId);
         Task<ServiceResult<object>> DeleteSalesQuotationAsync(int sqId, string ssId);
-        Task<ServiceResult<List<SalesQuotationDTO>>> SalesQuotationListAsync(string role, string ssId);
+        Task<ServiceResult<List<SalesQuotationDTO>>> SalesQuotationListAsync(string role, string? ssId);
         Task<ServiceResult<object>> SendSalesQuotationAsync(int sqId, string ssId);
         Task<ServiceResult<object>> AddSalesQuotationComment(AddSalesQuotationCommentDTO dto, string userId);
         Task<ServiceResult<object>> SalesQuotaionDetailsAsync(int sqId, string userId);

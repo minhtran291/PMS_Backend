@@ -88,5 +88,39 @@ namespace PMS.API.Controllers
                 data = result.Data,
             });
         }
+
+        [HttpPatch, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("update-stock-export-order")]
+        public async Task<IActionResult> Update(UpdateStockExportOrderDTO dto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _stockExportOderService.UpdateAsync(dto, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+            });
+        }
+
+        [HttpDelete, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("delete-stock-export-order")]
+        public async Task<IActionResult> Delete(int seoId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _stockExportOderService.DeleteAsync(seoId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+            });
+        }
     }
 }
