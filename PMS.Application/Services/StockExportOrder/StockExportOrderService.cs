@@ -346,6 +346,73 @@ namespace PMS.Application.Services.StockExportOrder
             }
         }
 
+        public async Task<ServiceResult<object>> GenerateForm(int soId)
+        {
+            try
+            {
+                var salesOrder = await _unitOfWork.SalesOrder.Query()
+                    .Include(s => s.SalesOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.Product)
+                    .FirstOrDefaultAsync(s => s.SalesOrderId == soId);
+
+                if (salesOrder == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Không tìm thấy đơn hàng"
+                    };
+
+                var stockExportOrder = await _unitOfWork.StockExportOrder.Query()
+                    .Where(s => s.SalesOrderId == soId)
+                    .ToListAsync();
+
+                var exportedQuantities = stockExportOrder
+                    .SelectMany(s => s.StockExportOrderDetails)
+                    .GroupBy(g => g.LotId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
+
+                var listOrder = new List<FormDataDTO>();
+
+                foreach(var detail in salesOrder.SalesOrderDetails)
+                {
+                    var lotId = detail.LotId;
+
+                    var quantity = detail.Quantity;
+
+                    var alreadyExported = exportedQuantities.ContainsKey(lotId) ? exportedQuantities[lotId] : 0;
+
+                    var availableToExport = detail.Quantity - alreadyExported;
+
+                    var order = new FormDataDTO
+                    {
+                        LotId = lotId,
+                        ProductName = detail.LotProduct.Product.ProductName,
+                        ExpiredDate = detail.LotProduct.ExpiredDate,
+                        Avaiable = availableToExport,
+                    };
+
+                    listOrder.Add(order);
+                }
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = listOrder
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
+
         public async Task<ServiceResult<object>> ListAsync(string userId)
         {
             try
