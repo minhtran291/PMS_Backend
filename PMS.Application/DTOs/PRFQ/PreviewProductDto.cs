@@ -20,5 +20,10 @@ namespace PMS.Application.DTOs.PRFQ
         public int MinQuantity { get; set; }
         public int MaxQuantity { get; set; }
         public int SuggestedQuantity { get; set; }
+
+        public static implicit operator PreviewProductDto(List<PreviewProductDto> v)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
