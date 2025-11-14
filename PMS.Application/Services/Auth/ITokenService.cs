@@ -7,7 +7,7 @@ namespace PMS.Application.Services.Auth
     public interface ITokenService
     {
         List<Claim> CreateClaimForAccessToken(Core.Domain.Identity.User user, IList<string> roles);
-        string GenerateToken(IEnumerable<Claim> authClaims, double expiryInMinutes);
+        string GenerateToken(IEnumerable<Claim> authClaims);
         string GenerateRefreshToken();
         ClaimsPrincipal GetPrincipalFromToken(string token, bool validateLifeTime);
         Task<ServiceResult<TokenResponse>> RefreshAccessToken(TokenRequest tokenRequest, string refreshToken);

@@ -55,14 +55,14 @@ namespace PMS.Application.Services.Auth
             return authClaims;
         }
 
-        public string GenerateToken(IEnumerable<Claim> authClaims, double expiryInMinutes)
+        public string GenerateToken(IEnumerable<Claim> authClaims)
         {
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtConfig.SecretKey));
 
             var token = new JwtSecurityToken(
                 issuer: _jwtConfig.Issuer,
                 audience: _jwtConfig.Audience,
-                expires: DateTime.Now.AddMinutes(expiryInMinutes),
+                expires: DateTime.Now.AddMinutes(_jwtConfig.ExpireInMinutes),
                 claims: authClaims,
                 signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256));
 
@@ -187,7 +187,7 @@ namespace PMS.Application.Services.Auth
 
                 var claims = CreateClaimForAccessToken(user, roles); // tao lai de tao moi ca jti cho an toan
 
-                var newAccessToken = GenerateToken(claims, 5);
+                var newAccessToken = GenerateToken(claims);
 
                 var newRefreshToken = GenerateRefreshToken();
 

@@ -87,7 +87,10 @@ namespace PMS.Application.Services.RequestSalesQuotation
             {
                 var customer = await GetUserProifleAsync(userId);
 
-                var query = _unitOfWork.RequestSalesQuotation.Query();
+                var query = _unitOfWork.RequestSalesQuotation.Query()
+                    .Include(r => r.CustomerProfile)
+                        .ThenInclude(c => c.User)
+                    .AsQueryable();
 
                 if (customer != null)
                 {
@@ -101,6 +104,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 var list = await query.Select(r => new ViewRsqDTO
                 {
                     Id = r.Id,
+                    CustomerName = r.CustomerProfile.User.FullName ?? "",
                     RequestCode = r.RequestCode,
                     RequestDate = r.RequestDate,
                     Status = r.Status,
@@ -134,6 +138,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 var rsq = await _unitOfWork.RequestSalesQuotation.Query()
                     .Include(r => r.RequestSalesQuotationDetails)
                         .ThenInclude(d => d.Product)
+                    .Include(r => r.CustomerProfile.User)
                     .FirstOrDefaultAsync(r => r.Id == rsqId);
 
                 var validateRsq = ValidateRsqDetails(rsq, customer);
@@ -147,6 +152,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                     Data = new ViewRsqDTO
                     {
                         Id = rsq.Id,
+                        CustomerName = rsq.CustomerProfile.User.FullName ?? "",
                         RequestCode = rsq.RequestCode,
                         RequestDate = rsq.RequestDate,
                         Status = rsq.Status,
