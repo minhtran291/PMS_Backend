@@ -1566,5 +1566,111 @@ namespace PMS.API.Services.PRFQService
             }
         }
 
+
+        public async Task<ServiceResult<IEnumerable<PreviewProductDto>>> PreviewExcelProductsByExcitedQuotationAsync(int QID)
+        {
+            try
+            {
+                var products = new List<PreviewProductDto>();
+
+                var exQ = await _unitOfWork.Quotation.Query()
+                    .Include(q => q.QuotationDetails)
+                    .FirstOrDefaultAsync(q => q.QID == QID);
+
+                if (exQ == null)
+                    return new ServiceResult<IEnumerable<PreviewProductDto>> { Success = false, Data = null, Message = "Không tồn tại báo giá", StatusCode = 404 };
+
+                if (DateTime.Now > exQ.QuotationExpiredDate)
+                    return new ServiceResult<IEnumerable<PreviewProductDto>> { Success = false, Data = null, Message = "báo giá hết hạn", StatusCode = 404 };
+
+                var supplier = await _unitOfWork.Supplier.Query()
+                    .FirstOrDefaultAsync(s => s.Id == exQ.SupplierID);
+
+                if (supplier == null)
+                    return new ServiceResult<IEnumerable<PreviewProductDto>> { Success = false, Data = null, Message = "Không tồn NCC", StatusCode = 404 };
+
+                // Danh sách sản phẩm trong báo giá
+                var quotationProducts = exQ.QuotationDetails
+                    .Select(q => new
+                    {
+                        q.ProductID,
+                        q.ProductName,
+                        q.ProductDescription,
+                        q.ProductUnit,
+                        q.UnitPrice,
+                        q.ProductDate
+                    }).ToList();
+
+                var productIds = quotationProducts.Select(x => x.ProductID).ToList();
+
+                // Lấy thông tin sản phẩm trong hệ thống
+                var productInfoDict = await _unitOfWork.Product.Query()
+                    .Where(p => productIds.Contains(p.ProductID))
+                    .Select(p => new
+                    {
+                        p.ProductID,
+                        p.ProductName,
+                        p.MinQuantity,
+                        p.MaxQuantity,
+                        p.TotalCurrentQuantity
+                    })
+                    .ToDictionaryAsync(x => x.ProductID, x => x);
+
+                // Lấy tổng số lượng đã được phê duyệt
+                var approvedOrderedQuantities = await _unitOfWork.PurchasingOrderDetail.Query()
+                    .Include(pod => pod.PurchasingOrder)
+                    .Where(pod => productIds.Contains(pod.ProductID)
+                        && pod.PurchasingOrder.Status == PurchasingOrderStatus.approved)
+                    .GroupBy(pod => pod.ProductID)
+                    .Select(g => new
+                    {
+                        ProductID = g.Key,
+                        TotalApprovedOrderedQuantity = g.Sum(x => x.Quantity)
+                    })
+                    .ToDictionaryAsync(x => x.ProductID, x => x.TotalApprovedOrderedQuantity);
+                int stt = 1;
+                foreach (var qProd in quotationProducts)
+                {
+                    approvedOrderedQuantities.TryGetValue(qProd.ProductID, out int approvedQty);
+                    productInfoDict.TryGetValue(qProd.ProductID, out var info);
+
+                    int suggestedQty = 0;
+
+                    if (info != null)
+                    {
+                        suggestedQty = Math.Max(
+                            0,
+                            info.MaxQuantity - (info.TotalCurrentQuantity + approvedQty)
+                        );
+                    }
+                    products.Add(new PreviewProductDto
+                    {
+                        STT= stt++,
+                        ProductID = qProd.ProductID,
+                        ProductName = qProd.ProductName,
+                        Description = qProd.ProductDescription,
+                        DVT = qProd.ProductUnit,
+                        UnitPrice = qProd.UnitPrice,
+                        ExpiredDateDisplay = qProd.ProductDate.ToString("dd/MM/yyyy"),
+                        CurrentQuantity = info?.TotalCurrentQuantity ?? 0,
+                        MinQuantity = info?.MinQuantity ?? 0,
+                        MaxQuantity = info?.MaxQuantity ?? 0,
+                        SuggestedQuantity = suggestedQty
+                    });
+                }
+                return new ServiceResult<IEnumerable<PreviewProductDto>>
+                {
+                    Data = products,
+                    StatusCode=200,
+                    Message="Thành công",
+                    Success=true,
+                };
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in PreviewExcelProductsByExcitedQuotationAsync: {ex.Message}");
+                throw new Exception("Đã xảy ra lỗi trong quá trình xem trước dữ liệu báo giá.", ex);
+            }
+        }
     }
 }
