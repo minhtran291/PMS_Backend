@@ -8,8 +8,8 @@ namespace PMS.Core.Domain.Enums
 {
     public enum CustomerDebtStatus : byte
     {
-        UnPaid = 0,
-        OnTime = 1,
-        OverTime = 2
+        Maturity = 1, // đáo hạn
+        BadDebt = 2, // nợ xấu
+        OnTime = 3, // đúng hạn
     }
 }

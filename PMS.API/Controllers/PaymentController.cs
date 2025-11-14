@@ -74,5 +74,24 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
+
+        //[HttpGet("vnpay/ipn")]
+        //public async Task<IActionResult> VnPayIpn()
+        //{
+        //    var (ok, code, msg) = await _vnPay.HandleVnPayIpnAsync(Request.Query)
+        //        .ContinueWith(t =>
+        //        {
+        //            var r = t.Result;
+        //            // Map sang code VNPay:
+        //            // 00 = nhận thành công; 97 = chữ ký sai; 04 = đã xác nhận; 99 = lỗi khác
+        //            if (!r.Success && r.StatusCode == 400 && r.Message.Contains("Chữ ký")) return (false, "97", "Invalid signature");
+        //            if (!r.Success && r.StatusCode == 400) return (false, "99", r.Message);
+        //            if (!r.Success && r.StatusCode == 404) return (false, "01", r.Message);
+        //            return (true, "00", "Confirm Success");
+        //        });
+
+        //    return Content($"RspCode={code}&Message={msg}", "text/plain");
+        //}
+
     }
 }
