@@ -15,6 +15,7 @@ using PMS.Application.Services.ExternalService;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
+using PMS.Core.Domain.Identity;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.Application.Services.Warehouse
@@ -657,7 +658,7 @@ namespace PMS.Application.Services.Warehouse
                 session.CreatedBy = userId;
                 _unitOfWork.InventorySession.Update(session);
 
-                
+
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
                 return ServiceResult<int>.SuccessResult(session.InventorySessionID, "Hoàn tất phiên kiểm kê thành công.");
@@ -673,14 +674,18 @@ namespace PMS.Application.Services.Warehouse
         public async Task<ServiceResult<IEnumerable<InventoryHistoryDTO>>> GetHistoriesBySessionIdAsync(int sessionId)
         {
             var histories = await _unitOfWork.InventoryHistory.Query()
-        .Include(h => h.LotProduct)
-            .ThenInclude(lp => lp.Product)
-        .Where(h => h.InventorySessionID == sessionId)
-        .ToListAsync();
+                .Include(h => h.LotProduct)
+                    .ThenInclude(lp => lp.Product)
+                .Where(h => h.InventorySessionID == sessionId)
+                .ToListAsync();
 
             if (!histories.Any())
                 return ServiceResult<IEnumerable<InventoryHistoryDTO>>.Fail("Không tìm thấy lịch sử kiểm kê nào cho phiên này.");
-
+            var userIds = histories.Select(h => h.InventoryBy).Distinct().ToList();           
+            var users = await _unitOfWork.Users.Query()
+              .Where(u => userIds.Contains(u.Id))
+              .Select(u => new { u.Id, u.FullName })
+              .ToListAsync();
             var result = histories.Select(h => new InventoryHistoryDTO
             {
                 InventoryHistoryID = h.InventoryHistoryID,
@@ -689,10 +694,9 @@ namespace PMS.Application.Services.Warehouse
                 SystemQuantity = h.SystemQuantity,
                 ActualQuantity = h.ActualQuantity,
                 Note = h.Note,
-                InventoryBy = h.InventoryBy,
+                InventoryBy = users.FirstOrDefault(u => u.Id == h.InventoryBy)?.FullName ?? "",
                 LastUpdated = h.LastUpdated
             });
-
             return ServiceResult<IEnumerable<InventoryHistoryDTO>>.SuccessResult(result);
         }
 

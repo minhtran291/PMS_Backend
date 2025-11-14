@@ -205,7 +205,7 @@ namespace PMS.API.Controllers
         /// <param name="sessionId"></param>
         /// <returns></returns>
         [HttpGet("session/{sessionId}/histories")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        //[Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> GetHistoriesBySessionId(int sessionId)
         {
             var result = await _warehouseService.GetHistoriesBySessionIdAsync(sessionId);

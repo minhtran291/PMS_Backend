@@ -75,128 +75,6 @@ namespace PMS.API.Services.POService
             };
         }
 
-        //public async Task<ServiceResult<POPaidViewDTO>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
-        //{
-        //    await _unitOfWork.BeginTransactionAsync();
-        //    try
-        //    {
-        //        var existingPO = await _unitOfWork.PurchasingOrder.Query()
-        //            .Include(po => po.Quotations)
-        //            .FirstOrDefaultAsync(po => po.POID == poid);
-
-        //        if (existingPO == null)
-        //        {
-        //            return new ServiceResult<POPaidViewDTO>
-        //            {
-        //                StatusCode = 404,
-        //                Message = $"Không tìm thấy đơn hàng với POID = {poid}",
-        //                Data = null
-        //            };
-        //        }
-
-        //        if (pOUpdateDTO.paid > existingPO.Total)
-        //        {
-        //            return new ServiceResult<POPaidViewDTO>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Thanh toán vượt quá tổng giá trị đơn hàng",
-        //                Data = null
-        //            };
-        //        }
-
-        //        existingPO.Status = Core.Domain.Enums.PurchasingOrderStatus.deposited;
-        //        existingPO.Deposit = pOUpdateDTO.paid;
-        //        existingPO.Debt = existingPO.Total - pOUpdateDTO.paid;
-        //        existingPO.PaymentDate = DateTime.Now;
-        //        existingPO.PaymentBy = userId;
-
-
-
-        //        _unitOfWork.PurchasingOrder.Update(existingPO);
-        //        await _unitOfWork.CommitAsync();
-        //        var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy);
-        //        if (user == null)
-        //        {
-        //            throw new Exception("Lỗi khi ghi nhận tiền gửi");
-        //        }
-        //        var paymentName = user.UserName;
-
-        //        var resultDto = new POPaidViewDTO
-        //        {
-        //            PaymentBy = paymentName,
-        //            PaymentDate = existingPO.PaymentDate,
-        //            Status = existingPO.Status,
-        //            Debt = existingPO.Debt,
-        //        };
-        //        var QuotationSup = await _unitOfWork.Quotation.Query().FirstOrDefaultAsync(q => q.QID == existingPO.QID);
-        //        if (QuotationSup == null)
-        //        {
-        //            throw new Exception($"Lỗi hệ thống khi tìm kiếm báo giá theo đơn hàng: {existingPO.POID}");
-        //        }
-        //        var debtReport = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(x => x.EntityType == DebtEntityType.Supplier && x.EntityID == QuotationSup.SupplierID);
-
-        //        // data tổng
-        //        var pharmacySecretInfor = await _unitOfWork.PharmacySecretInfor.Query().FirstOrDefaultAsync(x => x.PMSID == 1);
-        //        if(pharmacySecretInfor == null) { throw new Exception("Lỗi khi tìm kiếm thông tin quan trọng"); }
-        //        // nếu tồn tại nợ với nhà cc cụ thể thì update
-        //        if (debtReport != null)
-        //        {
-
-        //            debtReport.Payday = existingPO.PaymentDate;
-        //            debtReport.Payables += existingPO.Debt;
-        //            if (debtReport.Payables > pharmacySecretInfor.DebtCeiling)
-        //            {
-        //                // neu no phai tra (Payables) > nợ trần (DebtCeiling) thì trạng thái debtReport.Status
-        //                debtReport.Status = DebtStatus.BadDebt; // nợ xấu
-        //                // dư nợ (CurrentDebt) = DebtCeiling.DebtCeiling - debtReport.Payables;
-
-        //                debtReport.CurrentDebt = pharmacySecretInfor.DebtCeiling - debtReport.Payables;
-        //            }
-        //            _unitOfWork.DebtReport.Update(debtReport);
-        //            await _unitOfWork.CommitAsync();
-        //            pharmacySecretInfor.TotalPaid = pOUpdateDTO.paid;
-        //            _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
-        //            await _unitOfWork.CommitAsync();
-        //        }
-        //        else
-        //        {
-        //            // nếu chưa thì tạo mới nợ với ncc
-        //            var newdebtreport = new DebtReport
-        //            {
-        //                EntityID = QuotationSup.SupplierID,
-        //                CreatedDate = existingPO.PaymentDate,
-        //                Payables = existingPO.Debt,
-        //                EntityType = DebtEntityType.Supplier,
-        //                Status = DebtStatus.Apart,
-        //                Payday = existingPO.PaymentDate
-        //            };
-        //            _unitOfWork.DebtReport.Update(newdebtreport);
-        //            await _unitOfWork.CommitAsync();
-        //            pharmacySecretInfor.TotalPaid = pOUpdateDTO.paid;
-        //            _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
-        //            await _unitOfWork.CommitAsync();
-        //        }
-        //        await _unitOfWork.CommitTransactionAsync();
-
-        //        return new ServiceResult<POPaidViewDTO>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Xác nhận tiền cọc thành công.",
-        //            Data = resultDto
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await _unitOfWork.RollbackTransactionAsync();
-        //        return new ServiceResult<POPaidViewDTO>
-        //        {
-        //            StatusCode = 500,
-        //            Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
-        //            Data = null
-        //        };
-        //    }
-        //}
-        //DueDate = existingPO.PaymentDate.AddDays(existingPO.PaymentDueDate),
         public async Task<ServiceResult<POViewDTO>> ViewDetailPObyID(int poid)
         {
             try
@@ -275,94 +153,6 @@ namespace PMS.API.Services.POService
             }
         }
 
-        //public async Task<ServiceResult<POPaidViewDTO>> DebtAccountantPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
-        //{
-        //    await _unitOfWork.BeginTransactionAsync();
-        //    try
-        //    {
-        //        var existingPO = await _unitOfWork.PurchasingOrder.Query()
-        //            .FirstOrDefaultAsync(po => po.POID == poid);
-
-        //        if (existingPO == null)
-        //        {
-        //            return new ServiceResult<POPaidViewDTO>
-        //            {
-        //                StatusCode = 404,
-        //                Message = $"Không tìm thấy đơn hàng với POID = {poid}",
-        //                Data = null
-        //            };
-        //        }
-
-
-        //        if (pOUpdateDTO.paid > existingPO.Debt)
-        //        {
-        //            return new ServiceResult<POPaidViewDTO>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Thanh toán vượt quá số nợ còn lại.",
-        //                Data = null
-        //            };
-        //        }
-
-
-        //        existingPO.Deposit += pOUpdateDTO.paid;
-        //        existingPO.Debt = existingPO.Total - existingPO.Deposit;
-
-
-        //        if (existingPO.Debt == 0)
-        //        {
-        //            existingPO.Status = PurchasingOrderStatus.compeleted;
-        //        }
-        //        else
-        //        {
-        //            existingPO.Status = PurchasingOrderStatus.paid;
-        //        }
-
-        //        existingPO.PaymentDate = DateTime.Now;
-        //        existingPO.PaymentBy = userId;
-
-        //        _unitOfWork.PurchasingOrder.Update(existingPO);
-        //        await _unitOfWork.CommitAsync();
-
-
-        //        var user = await _unitOfWork.Users.UserManager.FindByIdAsync(existingPO.PaymentBy);
-        //        if (user == null)
-        //        {
-        //            throw new Exception("Không tìm thấy thông tin người xác nhận thanh toán.");
-        //        }
-
-        //        var paymentName = user.UserName;
-
-
-        //        var resultDto = new POPaidViewDTO
-        //        {
-        //            PaymentBy = paymentName,
-        //            PaymentDate = existingPO.PaymentDate,
-        //            Status = existingPO.Status,
-        //            Debt = existingPO.Debt
-        //        };
-
-        //        await _unitOfWork.CommitTransactionAsync();
-
-        //        return new ServiceResult<POPaidViewDTO>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Cập nhật thanh toán thành công.",
-        //            Data = resultDto
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await _unitOfWork.RollbackTransactionAsync();
-
-        //        return new ServiceResult<POPaidViewDTO>
-        //        {
-        //            StatusCode = 500,
-        //            Message = $"Lỗi khi cập nhật đơn hàng: {ex.Message}",
-        //            Data = null
-        //        };
-        //    }
-        //}
 
         public async Task<ServiceResult<bool>> ChangeStatusAsync(string userId, int poid, PurchasingOrderStatus newStatus)
         {
@@ -723,7 +513,7 @@ namespace PMS.API.Services.POService
                     }
                 }
 
-                var dto = new POQuantityStatus { POID = po.POID, Status=po.Status };
+                var dto = new POQuantityStatus { POID = po.POID, Status = po.Status };
 
                 if (!anyReceived)
                     notReceived.Add(dto);
@@ -788,7 +578,8 @@ namespace PMS.API.Services.POService
             }
         }
 
-
+        //Luật Doanh nghiệp 2020 và Nghị định 01/2021/NĐ-CP
+        //Luật Dược số 105/2016/QH13, cùng Nghị định 54/2017/NĐ-CP (và Nghị định 155/2018/NĐ-CP sửa đổi), ngành bán buôn thuốc là ngành nghề kinh doanh có điều kiện. nợ trần : ko quá 3 lần equity
         public async Task<ServiceResult<POPaidViewDTO>> DepositedPOAsync(string userId, int poid, POUpdateDTO pOUpdateDTO)
         {
             await _unitOfWork.BeginTransactionAsync();
@@ -847,9 +638,10 @@ namespace PMS.API.Services.POService
                         Payables = existingPO.Debt,
                         Payday = existingPO.PaymentDate,
                         CreatedDate = DateTime.Now,
-                        Status = DebtStatus.OnTime
+                        Status = DebtStatus.Apart
                     };
                     await _unitOfWork.DebtReport.AddAsync(debtReport);
+                    await _unitOfWork.CommitAsync();
                 }
                 else
                 {
@@ -857,27 +649,25 @@ namespace PMS.API.Services.POService
                     debtReport.Payables += existingPO.Debt;
                     debtReport.Payday = existingPO.PaymentDate;
                 }
-
-                //Kiểm tra và cập nhật trạng thái nợ theo nợ trần
+                // cap nhat lai tong chi
+                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
+                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
+                await _unitOfWork.CommitAsync();
+                //
                 var debtCeiling = pharmacySecretInfor.DebtCeiling;
-                var currentDebt = debtCeiling - debtReport.Payables; //  âm nếu vượt trần
+                var currentDebt = debtCeiling - debtReport.Payables;
 
                 if (debtReport.Payables > debtCeiling)
                 {
-                    debtReport.Status = DebtStatus.BadDebt;
+                    debtReport.Status = DebtStatus.BadDebt;//2
                 }
                 else
                 {
-                    debtReport.Status = DebtStatus.OnTime;
+                    debtReport.Status = DebtStatus.Apart;//4
                 }
 
-                debtReport.CurrentDebt = currentDebt; // lưu cả âm nếu vượt trần
+                debtReport.CurrentDebt = currentDebt;
                 _unitOfWork.DebtReport.Update(debtReport);
-
-                // Cập nhật lại thông tin chi phí của doanh nghiệp
-                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
-                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
-
 
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
@@ -945,48 +735,51 @@ namespace PMS.API.Services.POService
 
                 if (debtReport == null)
                 {
-                    // Trường hợp không có nợ  là PO trước đã được thanh toán hết 
+                    // Trường hợp không có nợ  là PO trước đã được thanh toán hết (Hơi vô lý nhưng thôi vẫn xử lý)
                     debtReport = new DebtReport
                     {
                         EntityID = quotation.SupplierID,
                         EntityType = DebtEntityType.Supplier,
                         Payables = 0,
                         CurrentDebt = pharmacySecretInfor.DebtCeiling,
-                        Status = DebtStatus.OnTime,
+                        Status = DebtStatus.Apart,
                         CreatedDate = DateTime.Now,
                         Payday = existingPO.PaymentDate
                     };
                     await _unitOfWork.DebtReport.AddAsync(debtReport);
+                    await _unitOfWork.CommitAsync();
                 }
                 else
                 {
-                    // Cập nhật giảm nợ (thanh toán)
+                    // Cập nhật giảm nợ (thanh toán) 
                     debtReport.Payables -= pOUpdateDTO.paid;
                     if (debtReport.Payables < 0) debtReport.Payables = 0;
                     debtReport.Payday = existingPO.PaymentDate;
+                    _unitOfWork.DebtReport.Update(debtReport);
+                    await _unitOfWork.CommitAsync();
                 }
+                // tinh lai tong chi
+                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
+                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
+                await _unitOfWork.CommitAsync();
 
                 // Tính lại nợ trần và trạng thái
                 var debtCeiling = pharmacySecretInfor.DebtCeiling;
                 debtReport.CurrentDebt = debtCeiling - debtReport.Payables;
-
-
+                _unitOfWork.DebtReport.Update(debtReport);
+                await _unitOfWork.CommitAsync();
                 // Mốc ngày bắt đầu tính hạn = DepositDate của đợt 1
                 var depositDate = existingPO.DepositDate;
                 var dueDate = depositDate.AddDays(existingPO.PaymentDueDate);
                 if (debtReport.Payables > debtCeiling || DateTime.Now > dueDate)
-                    debtReport.Status = DebtStatus.BadDebt;
+                    debtReport.Status = DebtStatus.overTime;
+                else if (debtReport.Payables > 0)
+                    debtReport.Status = DebtStatus.Apart;//4
                 else if (debtReport.Payables == 0)
-                    debtReport.Status = DebtStatus.Maturity;
-                else
-                    debtReport.Status = DebtStatus.OnTime;
-
+                    debtReport.Status = DebtStatus.NoDebt;//5
+                else if (debtReport.Payables > debtReport.CurrentDebt)
+                    debtReport.Status = DebtStatus.BadDebt;//2
                 _unitOfWork.DebtReport.Update(debtReport);
-
-                //Cập nhật tổng chi 
-                pharmacySecretInfor.TotalPaid += pOUpdateDTO.paid;
-                _unitOfWork.PharmacySecretInfor.Update(pharmacySecretInfor);
-
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -1008,6 +801,91 @@ namespace PMS.API.Services.POService
             }
         }
 
+        public async Task<ServiceResult<List<PharmacySecretInfor>>> PharmacySecretInfor()
+        {
+            try
+            {
+                var pharmacy = await _unitOfWork.PharmacySecretInfor.Query().ToListAsync();
+                if (pharmacy == null)
+                {
+                    return new ServiceResult<List<PharmacySecretInfor>>
+                    {
+                        Success = false,
+                        Data = null,
+                        Message = "Lấy thông tin kinh doanh của công ty thất bại ",
+                        StatusCode = 400,
+                    };
+                }
+                return new ServiceResult<List<PharmacySecretInfor>>
+                {
+                    Success = true,
+                    Data = pharmacy,
+                    Message = "Lấy dữ liệu thành công",
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<PharmacySecretInfor>>.Fail($"Lỗi khi lấy thông tin kinh doanh thất bại: {ex.Message}", 500);
+            }
+        }
 
+        public async Task<ServiceResult<List<DebtReport>>> GetAllDebtReport()
+        {
+            try
+            {
+                var pharmacy = await _unitOfWork.DebtReport.Query().ToListAsync();
+                if (pharmacy == null)
+                {
+                    return new ServiceResult<List<DebtReport>>
+                    {
+                        Success = false,
+                        Data = null,
+                        Message = "Lấy thông tin tài chính của công ty thất bại ",
+                        StatusCode = 400,
+                    };
+                }
+                return new ServiceResult<List<DebtReport>>
+                {
+                    Success = true,
+                    Data = pharmacy,
+                    Message = "Lấy dữ liệu thành công",
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<DebtReport>>.Fail($"Lỗi khi lấy thông tin tài chính thất bại: {ex.Message}", 500);
+            }
+        }
+
+        public async Task<ServiceResult<DebtReport>> GetDebtReportDetail(int dbid)
+        {
+            try
+            {
+                var pharmacy = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(db=>db.ReportID ==dbid);
+                if (pharmacy == null)
+                {
+                    return new ServiceResult<DebtReport>
+                    {
+                        Success = false,
+                        Data = null,
+                        Message = "Lấy thông tin tài chính của công ty thất bại ",
+                        StatusCode = 400,
+                    };
+                }
+                return new ServiceResult<DebtReport>
+                {
+                    Success = true,
+                    Data = pharmacy,
+                    Message = "Lấy dữ liệu thành công",
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<DebtReport>.Fail($"Lỗi khi lấy thông tin tài chính thất bại: {ex.Message}", 500);
+            }
+        }
     }
 }

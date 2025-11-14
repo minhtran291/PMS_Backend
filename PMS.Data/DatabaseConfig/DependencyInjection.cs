@@ -111,7 +111,7 @@ namespace PMS.Data.DatabaseConfig
             services.AddScoped<IDebtReportRepository, DebtReportRepository>();
             //
             services.AddScoped<IPharmacySecretInforRepository, PharmacySecretInforRepository>();
-
+            //
             services.AddScoped<IGoodsIssueNoteRepository, GoodsIssueNoteRepository>();
             services.AddScoped<IGoodsIssueNoteDetailsRepository, GoodsIssueNoteDetailsRepository>();
 

@@ -96,7 +96,7 @@ namespace PMS.API.Controllers
 
             var salesStaffId = User.FindFirstValue("staff_id");
 
-            if (string.IsNullOrEmpty(salesStaffId) || string.IsNullOrEmpty(role))
+            if (string.IsNullOrEmpty(role))
                 return Unauthorized();
 
             var result = await _salesQuotationService.SalesQuotationListAsync(role, salesStaffId);
