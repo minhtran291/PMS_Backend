@@ -998,7 +998,10 @@ namespace PMS.Application.Services.SalesQuotation
                 var salesQuotation = await _unitOfWork.SalesQuotation.Query()
                     .AsNoTracking()
                     .Include(sq => sq.SalesQuotationComments)
+                        .ThenInclude(c => c.User)
                     .Include(sq => sq.RequestSalesQuotation)
+                        .ThenInclude(r => r.CustomerProfile)
+                            .ThenInclude(c => c.User)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.LotProduct)
                     .Include(sq => sq.SalesQuotaionDetails)
@@ -1154,6 +1157,14 @@ namespace PMS.Application.Services.SalesQuotation
                     subTotal = subTotal,
                     taxTotal = taxTotal,
                     grandTotal = grandTotal,
+                    PharmacyName = "BBPharmacy",
+                    Email = "trananhtestter@gmail.com",
+                    SenderAddress = "Hà Nội",
+                    SenderPhone = "0915054117",
+                    SenderName = salesQuotation.StaffProfile.User.FullName ?? "",
+                    ReceiverPhone = salesQuotation.RequestSalesQuotation.CustomerProfile.User.PhoneNumber ?? "",
+                    ReceiverMst = salesQuotation.RequestSalesQuotation.CustomerProfile.Mst,
+                    ReceiverAddress = salesQuotation.RequestSalesQuotation.CustomerProfile.User.Address,
                     note = $@"Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá.
 Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế.
 Tạm ứng {salesQuotation.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {salesQuotation.DepositDueDays} ngày kể từ khi ký hợp đồng"
