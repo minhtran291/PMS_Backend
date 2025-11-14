@@ -1,7 +1,9 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.SalesQuotation;
+using PMS.Application.Hub;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.Notification;
@@ -22,12 +24,14 @@ namespace PMS.Application.Services.SalesQuotation
         ILogger<SalesQuotationService> logger,
         IPdfService pdfService,
         IEmailService emailService,
-        INotificationService notificationService) : Service(unitOfWork, mapper), ISalesQuotationService
+        INotificationService notificationService,
+        IHubContext<SalesQuotationHub> hubContext) : Service(unitOfWork, mapper), ISalesQuotationService
     {
         private readonly ILogger<SalesQuotationService> _logger = logger;
         private readonly IPdfService _pdfService = pdfService;
         private readonly IEmailService _emailService = emailService;
         private readonly INotificationService _notificationService = notificationService;
+        private IHubContext<SalesQuotationHub> _hubContext = hubContext;
 
         public async Task<ServiceResult<object>> GenerateFormAsync(int rsqId)
         {
@@ -954,6 +958,14 @@ namespace PMS.Application.Services.SalesQuotation
 
                 await _unitOfWork.CommitAsync();
 
+                await _hubContext.Clients.Groups(dto.SqId.ToString())
+                    .SendAsync("ReceiveSalesQuotationComment", new
+                    {
+                        SqId = dto.SqId,
+                        UserId = user.FullName,
+                        Content = dto.Content?.Trim(),
+                    });
+
                 await _notificationService.SendNotificationToCustomerAsync(
                     user.Id,
                     role == true ? salesQuotation.StaffProfile.User.Id : salesQuotation.RequestSalesQuotation.CustomerProfile.User.Id,
@@ -1056,7 +1068,7 @@ namespace PMS.Application.Services.SalesQuotation
 
                 foreach (var item in salesQuotation.SalesQuotaionDetails)
                 {
-                    if(item.LotProduct != null && item.TaxPolicy != null)
+                    if (item.LotProduct != null && item.TaxPolicy != null)
                     {
                         decimal taxRate = item.TaxPolicy.Rate;
 

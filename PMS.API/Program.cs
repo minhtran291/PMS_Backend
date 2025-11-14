@@ -136,6 +136,8 @@ namespace PMS.API
             //maphub
             app.MapHub<NotificationHub>("/notificationHub");
 
+            app.MapHubs();
+
             app.MapControllers();
 
             app.Run();
