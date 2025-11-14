@@ -116,8 +116,11 @@ namespace PMS.Application.Services.VNpay
                     return ServiceResult<bool>.Fail("Thiếu mã tham chiếu giao dịch.", 400);
                 if (tmnCode == null || !tmnCode.Equals(_opt.TmnCode, StringComparison.OrdinalIgnoreCase))
                     return ServiceResult<bool>.Fail("TmnCode không khớp.", 400);
-                if (!string.Equals(currCode, "VND", StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(currCode) &&
+                    !string.Equals(currCode, "VND", StringComparison.OrdinalIgnoreCase))
+                {
                     return ServiceResult<bool>.Fail("Tiền tệ không hợp lệ.", 400);
+                }
                 if (!long.TryParse(amountStr, out var amountVnp))
                     return ServiceResult<bool>.Fail("Số tiền không hợp lệ.", 400);
 
