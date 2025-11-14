@@ -944,7 +944,7 @@ namespace PMS.Data.DatabaseConfig
 
             builder.Entity<SalesOrderDetails>(entity =>
             {
-                entity.HasKey(sod => new { sod.SalesOrderId, sod.ProductId });
+                entity.HasKey(sod => new { sod.SalesOrderId, sod.LotId });
 
                 entity.Property(sod => sod.Quantity)
                     .IsRequired();
@@ -962,10 +962,10 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(d => d.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(d => d.Product)
-                    .WithMany(p => p.SalesOrderDetails)
-                    .HasForeignKey(d => d.ProductId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                //entity.HasOne(d => d.Product)
+                //    .WithMany(p => p.SalesOrderDetails)
+                //    .HasForeignKey(d => d.ProductId)
+                //    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(d => d.LotProduct)
                     .WithMany(lp => lp.SalesOrderDetails)
