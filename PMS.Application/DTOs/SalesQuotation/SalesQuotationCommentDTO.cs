@@ -8,7 +8,7 @@ namespace PMS.Application.DTOs.SalesQuotation
 {
     public class SalesQuotationCommentDTO
     {
-        public string UserId { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
         public string? Content { get; set; }
     }
 }
