@@ -11,6 +11,7 @@ namespace PMS.Application.DTOs.RequestSalesQuotation
     public class ViewRsqDTO
     {
         public int Id {  get; set; }
+        public string CustomerName { get; set; } = string.Empty;
         public string RequestCode { get; set; } = null!;
         public DateTime? RequestDate { get; set; }
         public RequestSalesQuotationStatus Status { get; set; }

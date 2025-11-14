@@ -98,6 +98,63 @@ namespace PMS.Application.Services.GoodsIssueNote
             }
         }
 
+        public async Task<ServiceResult<object>> DeleteAsync(int ginId, string userId)
+        {
+            try
+            {
+                var goodsIssueNote = await _unitOfWork.GoodsIssueNote.Query()
+                    .Include(g => g.GoodsIssueNoteDetails)
+                    .FirstOrDefaultAsync(g => g.Id == ginId);
+
+                if (goodsIssueNote == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Phiếu xuất kho không tồn tại"
+                    };
+
+                if (goodsIssueNote.CreateBy != userId)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền xóa phiếu xuất này"
+                    };
+
+                if (goodsIssueNote.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Sent)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Phiếu xuất đã được gửi không thể xóa"
+                    };
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                _unitOfWork.GoodsIssueNote.Remove(goodsIssueNote);
+
+                await _unitOfWork.CommitAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Xóa thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                await _unitOfWork.RollbackTransactionAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
+
         public async Task<ServiceResult<object>> DetailsAsync(int ginId, string userId)
         {
             try
@@ -207,7 +264,7 @@ namespace PMS.Application.Services.GoodsIssueNote
             try
             {
                 var goodsIssueNote = await _unitOfWork.GoodsIssueNote.Query()
-                .FirstOrDefaultAsync(g => g.Id == ginId);
+                    .FirstOrDefaultAsync(g => g.Id == ginId);
 
                 if (goodsIssueNote == null)
                     return new ServiceResult<object>
@@ -253,6 +310,60 @@ namespace PMS.Application.Services.GoodsIssueNote
                 };
             }
             catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
+
+        public async Task<ServiceResult<object>> UpdateAsync(UpdateGoodsIssueNoteDTO dto, string userId)
+        {
+            try
+            {
+                var goodsIssueNote = await _unitOfWork.GoodsIssueNote.Query()
+                    .FirstOrDefaultAsync(g => g.Id == dto.GoodsIssueNoteId);
+
+                if (goodsIssueNote == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Phiếu xuất kho không tồn tại"
+                    };
+
+                if (goodsIssueNote.CreateBy != userId)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền cập nhập phiếu xuất này"
+                    };
+
+                if (goodsIssueNote.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Sent)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Phiếu xuất đã được gửi không thể cập nhập"
+                    };
+
+                if (!string.IsNullOrEmpty(dto.Note))
+                    goodsIssueNote.Note = dto.Note;
+
+                _unitOfWork.GoodsIssueNote.Update(goodsIssueNote);
+
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật thành công"
+                };
+
+            }
+            catch(Exception ex)
             {
                 _logger.LogError(ex, "Loi");
 

@@ -296,5 +296,17 @@ namespace PMS.API.Controllers
             return HandleServiceResult(serviceResult);
         }
 
+
+        /// <summary>
+        /// https://localhost:7213/api/PRFQ/preview2/{QID}
+        /// Lấy xem trước sản phẩm theo báo giá đã chọn
+        /// </summary>
+        [HttpGet("preview2/{QID}")]
+        public async Task<IActionResult> PreviewProductsFromQuotation(int QID)
+        {
+            var result = await _iPRFQService.PreviewExcelProductsByExcitedQuotationAsync(QID);
+            return HandleServiceResult(result);
+        }
+
     }
 }

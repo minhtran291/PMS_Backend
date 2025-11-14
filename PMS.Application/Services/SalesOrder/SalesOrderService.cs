@@ -226,7 +226,7 @@ namespace PMS.Application.Services.SalesOrder
                     detailEntities.Add(new SalesOrderDetails
                     {
                         SalesOrderId = order.SalesOrderId,
-                        ProductId = it.ProductId,
+                        //ProductId = it.ProductId,
                         LotId = it.LotId,
                         Quantity = it.Quantity,
                         UnitPrice = serverUnitPrice,
@@ -275,9 +275,9 @@ namespace PMS.Application.Services.SalesOrder
                     },
                     Details = detailEntities.Select(d => new
                     {
-                        d.ProductId,
+                        //d.ProductId,
                         d.LotId,
-                        ProductName = sqDetailByKey[(d.ProductId, d.LotId)].Product.ProductName,
+                        //ProductName = sqDetailByKey[(d.ProductId, d.LotId)].Product.ProductName,
                         d.Quantity,
                         d.UnitPrice,
                         d.SubTotalPrice
@@ -369,7 +369,7 @@ namespace PMS.Application.Services.SalesOrder
             {
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                        .ThenInclude(d => d.Product)
+                        //.ThenInclude(d => d.Product)
                     .Include(o => o.SalesOrderDetails)
                         .ThenInclude(d => d.LotProduct)
 
@@ -400,9 +400,9 @@ namespace PMS.Application.Services.SalesOrder
                 var orderDetailsDto = order.SalesOrderDetails.Select(d => new
                 {
                     d.SalesOrderId,
-                    d.ProductId,
+                    //d.ProductId,
                     d.LotId,
-                    ProductName = d.Product?.ProductName,
+                    //ProductName = d.Product?.ProductName,
                     d.Quantity,
                     d.UnitPrice,
                     d.SubTotalPrice,
@@ -556,7 +556,7 @@ namespace PMS.Application.Services.SalesOrder
             {
                 var so = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                        .ThenInclude(d => d.Product)
+                        //.ThenInclude(d => d.Product)
                     .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (so == null)
@@ -582,17 +582,17 @@ namespace PMS.Application.Services.SalesOrder
                 var warnings = new List<string>();
                 foreach (var d in so.SalesOrderDetails)
                 {
-                    if (d.ProductId == null) continue;
+                    //if (d.ProductId == null) continue;
 
                     var totalAvailable = await _unitOfWork.LotProduct.Query()
-                        .Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
+                        //.Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
                         .SumAsync(l => (int?)l.LotQuantity) ?? 0;
 
                     if (d.Quantity > totalAvailable)
                     {
-                        var prodName = d.Product?.ProductName ?? $"Product {d.ProductId}";
-                        var missing = d.Quantity - totalAvailable;
-                        warnings.Add($"{prodName}: thiếu {missing}");
+                        //var prodName = d.Product?.ProductName ?? $"Product {d.ProductId}";
+                        //var missing = d.Quantity - totalAvailable;
+                        //warnings.Add($"{prodName}: thiếu {missing}");
                     }
                 }
 
@@ -713,34 +713,34 @@ namespace PMS.Application.Services.SalesOrder
                         Data = null
                     };
 
-                var orderDetailByKey = order.SalesOrderDetails
-                    .ToDictionary(d => (d.ProductId, d.LotId), d => d);
+                var orderDetailByKey = order.SalesOrderDetails;
+                    //.ToDictionary(d => (d.ProductId, d.LotId), d => d);
 
                 foreach (var it in upd.Details)
                 {
                     var key = (it.ProductId, it.LotId);
-                    if (!orderDetailByKey.ContainsKey(key))
-                    {
-                        return new ServiceResult<object>
-                        {
-                            StatusCode = 400,
-                            Message = $"Dòng không thuộc đơn hàng: ProductId={it.ProductId}, LotId={it.LotId}.",
-                            Data = null
-                        };
-                    }
+                    //if (!orderDetailByKey.ContainsKey(key))
+                    //{
+                    //    return new ServiceResult<object>
+                    //    {
+                    //        StatusCode = 400,
+                    //        Message = $"Dòng không thuộc đơn hàng: ProductId={it.ProductId}, LotId={it.LotId}.",
+                    //        Data = null
+                    //    };
+                    //}
                 }
 
                 await _unitOfWork.BeginTransactionAsync();
 
                 foreach (var it in upd.Details)
                 {
-                    var d = orderDetailByKey[(it.ProductId, it.LotId)];
-                    d.Quantity = it.Quantity;
+                    //var d = orderDetailByKey[(it.ProductId, it.LotId)];
+                    //d.Quantity = it.Quantity;
 
-                    var sub = (it.Quantity > 0) ? decimal.Round(d.UnitPrice * it.Quantity, 2) : 0m;
-                    d.SubTotalPrice = sub;
+                    //var sub = (it.Quantity > 0) ? decimal.Round(d.UnitPrice * it.Quantity, 2) : 0m;
+                    //d.SubTotalPrice = sub;
 
-                    _unitOfWork.SalesOrderDetails.Update(d);
+                    //_unitOfWork.SalesOrderDetails.Update(d);
                 }
 
                 order.TotalPrice = order.SalesOrderDetails.Sum(x => x.SubTotalPrice);
@@ -781,7 +781,7 @@ namespace PMS.Application.Services.SalesOrder
                     },
                     Details = order.SalesOrderDetails.Select(d => new
                     {
-                        d.ProductId,
+                        //d.ProductId,
                         d.LotId,
                         d.Quantity,
                         d.UnitPrice,
