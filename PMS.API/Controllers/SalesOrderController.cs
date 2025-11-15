@@ -63,7 +63,7 @@ namespace PMS.API.Controllers
         /// <param name="salesOrderId"></param>
         /// <returns></returns>
         [HttpPost("approve/{salesOrderId}")]
-        //[Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Authorize(Roles = UserRoles.SALES_STAFF)]
         public async Task<IActionResult> ApproveOrder(int salesOrderId)
         {
             var result = await _service.ApproveSalesOrderAsync(salesOrderId);
@@ -82,7 +82,7 @@ namespace PMS.API.Controllers
         /// <param name="salesOrderId"></param>
         /// <returns></returns>
         [HttpPost("reject/{salesOrderId}")]
-        //[Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Authorize(Roles = UserRoles.SALES_STAFF)]
         public async Task<IActionResult> RejectOrder(int salesOrderId)
         {
             var result = await _service.RejectSalesOrderAsync(salesOrderId);
@@ -101,7 +101,7 @@ namespace PMS.API.Controllers
         /// (Xác nhận THỦ CÔNG) đổi trạng thái Pending -> Deposited/Paid (Deposited = 4,Paid = 5,).
         /// </summary>
         [HttpPost("confirm-payment")]
-        //[Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.SALES_STAFF)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> ConfirmPaymentManual(int orderId, SalesOrderStatus status)
         {
             var result = await _service.ConfirmPaymentAsync(orderId, status);
@@ -118,7 +118,7 @@ namespace PMS.API.Controllers
         /// Lấy chi tiết sales order
         /// </summary>
         [HttpGet("details/{orderId}")]
-        //[Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
+        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF + "," + UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> GetDetails(int orderId)
         {
             var result = await _service.GetOrderDetailsAsync(orderId);
@@ -136,7 +136,7 @@ namespace PMS.API.Controllers
         /// Trả về danh sách SalesOrder theo user hiện tại (customer chỉ thấy đơn của mình).
         /// </summary>
         [HttpGet("my-list-sales-order")]
-        //[Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> ListMySalesOrders()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "";
@@ -154,7 +154,7 @@ namespace PMS.API.Controllers
         /// Trả về danh sách SalesOrder theo user hiện tại (customer chỉ thấy đơn của mình).
         /// </summary>
         [HttpGet("list-sales-order")]
-        //[Authorize]
+        [Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> ListSalesOrders()
         {
             var result = await _service.ListSalesOrdersAsync();
@@ -171,7 +171,7 @@ namespace PMS.API.Controllers
         /// Customer đánh dấu hoàn tất đơn (chỉ khi đã thanh toán và nhận được hàng).
         /// </summary>
         [HttpPost("complete/{orderId}")]
-        //[Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> MarkComplete(int orderId)
         {
             var result = await _service.MarkCompleteAsync(orderId);
@@ -188,7 +188,7 @@ namespace PMS.API.Controllers
         /// Tạo SalesOrder trạng thái Draft từ SalesQuotation.
         /// </summary>
         [HttpPost("draft/create")]
-        //[Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> CreateDraftFromSalesQuotation([FromBody] SalesOrderRequestDTO body)
         {
             if (!ModelState.IsValid)
@@ -196,9 +196,6 @@ namespace PMS.API.Controllers
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
             body.CreateBy = userId;
-            //body.IsDeposited = false;
-            //body.Status = SalesOrderStatus.Draft;
-            //body.CustomerDebt.CustomerId = userId;
 
             var result = await _service.CreateDraftFromSalesQuotationAsync(body);
 
@@ -215,7 +212,7 @@ namespace PMS.API.Controllers
         /// Cập nhật số lượng từng sản phẩm trong Draft (chỉ thay đổi Quantity).
         /// </summary>
         [HttpPut("draft/{orderId}/quantities")]
-        //[Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> UpdateDraftQuantities([FromBody] SalesOrderUpdateDTO items)
         {
             var result = await _service.UpdateDraftQuantitiesAsync(items);
@@ -232,10 +229,29 @@ namespace PMS.API.Controllers
         /// Xoá SalesOrder khi còn ở trạng thái Draft.
         /// </summary>
         [HttpDelete("draft/{orderId}")]
-        //[Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> DeleteDraft(int orderId)
         {
             var result = await _service.DeleteDraftAsync(orderId);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// POST: https://localhost:7213/api/SalesOrder/total-receipt
+        /// </summary>
+        /// 
+        /// <returns></returns>
+        [HttpPost("total-receipt")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> RecalculateTotalReceive()
+        {
+            var result = await _service.RecalculateTotalReceiveAsync();
+
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,

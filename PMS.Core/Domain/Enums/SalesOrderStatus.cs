@@ -14,6 +14,8 @@ namespace PMS.Core.Domain.Enums
         Rejected = 3,
         Deposited = 4,
         Paid = 5,
-        Complete = 6
+        Complete = 6,
+        NotComplete = 7,
+
     }
 }

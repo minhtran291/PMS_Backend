@@ -151,9 +151,9 @@ namespace PMS.Data.UnitOfWork
         public IGoodsIssueNoteDetailsRepository GoodsIssueNoteDetails { get; private set; } = goodsIssueNoteDetails;
 
         // Invoice
-        public IInvoiceRepository Invoices { get; private set; }
-        public IInvoiceDetailRepository InvoicesDetails { get; private set; }
-        public IPaymentRemainRepository PaymentRemains { get; private set; }
+        public IInvoiceRepository Invoices { get; private set; } = invoices;
+        public IInvoiceDetailRepository InvoicesDetails { get; private set; } = invoiceDetails;
+        public IPaymentRemainRepository PaymentRemains { get; private set; } = paymentRemains;
 
 
         public async Task<int> CommitAsync()

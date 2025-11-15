@@ -1088,5 +1088,60 @@ namespace PMS.Application.Services.SalesOrder
                 };
             }
         }
+
+        public async Task<ServiceResult<bool>> RecalculateTotalReceiveAsync()
+        {
+            try
+            {
+                // 1) Tổng PaidAmount của tất cả SalesOrder
+                var totalPaidFromOrders = await _unitOfWork.SalesOrder.Query()
+                    .SumAsync(o => (decimal?)o.PaidAmount) ?? 0m;
+
+                // 2) Lấy bản ghi PharmacySecretInfor (PMSID = 1)
+                var info = await _unitOfWork.PharmacySecretInfor.Query()
+                    .FirstOrDefaultAsync(x => x.PMSID == 1);
+
+                if (info == null)
+                {
+                    // Nếu chưa có thì tạo mới
+                    info = new PharmacySecretInfor
+                    {
+                        PMSID = 1,
+                        Equity = 0m,
+                        TotalRecieve = totalPaidFromOrders,
+                        TotalPaid = 0m
+                    };
+
+                    await _unitOfWork.PharmacySecretInfor.AddAsync(info);
+                }
+                else
+                {
+                    // Nếu đã có thì cập nhật
+                    info.TotalRecieve = totalPaidFromOrders;
+                    _unitOfWork.PharmacySecretInfor.Update(info);
+                }
+
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật TotalRecieve từ PaidAmount của SalesOrder thành công.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Lỗi RecalculateTotalReceiveAsync khi tính TotalRecieve từ SalesOrder.PaidAmount");
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi cập nhật TotalRecieve.",
+                    Data = false
+                };
+            }
+        }
     }
 }

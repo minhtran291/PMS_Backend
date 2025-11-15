@@ -31,6 +31,8 @@ namespace PMS.Application.Services.SalesOrder
         //View Sales Orders
         Task<ServiceResult<object>> GetOrderDetailsAsync(int salesOrderId);
 
+        //Get total customer paid order to report
+        Task<ServiceResult<bool>> RecalculateTotalReceiveAsync();
 
         //Sales Staff
         Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListSalesOrdersAsync();

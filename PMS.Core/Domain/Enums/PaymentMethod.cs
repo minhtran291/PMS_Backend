@@ -8,6 +8,7 @@ namespace PMS.Core.Domain.Enums
 {
     public enum PaymentMethod : byte
     {
+        None = 0,
         VnPay = 1,
         Cash= 2,
         BankTransfer = 3 // có thể trong trường hợp VietQR
