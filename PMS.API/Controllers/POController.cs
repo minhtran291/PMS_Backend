@@ -94,7 +94,7 @@ namespace PMS.API.Controllers
         /// https://localhost:7213/api/PO/GetPoDetailByPoId2/poid
         /// </summary>
         [HttpGet("GetPoDetailByPoId2/{poid}")]
-        //[Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF}")]
+        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF}")]
         public async Task<IActionResult> GetPurchaseOrderDetail2(int poid)
         {
             var result = await _poService.ViewDetailPObyID2(poid);
