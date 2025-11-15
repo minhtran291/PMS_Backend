@@ -8,7 +8,7 @@ namespace PMS.API.Services.GRNService
     {
         Task<ServiceResult<int>> CreateGoodReceiptNoteFromPOAsync(string userId, int poId, int WarehouseLocationID);
 
-        Task<ServiceResult<bool>> CreateGRNByManually(string userId, int poId, GRNManuallyDTO GRNManuallyDTO);
+        Task<ServiceResult<object>> CreateGRNByManually(string userId, int poId, GRNManuallyDTO dto);
 
         Task<ServiceResult<List<GRNViewDTO>>> GetAllGRN();
 

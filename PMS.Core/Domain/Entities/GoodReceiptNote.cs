@@ -27,7 +27,7 @@ namespace PMS.Core.Domain.Entities
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters.")]
         public string? Description { get; set; }
 
-        public int? warehouseID { get; set; }
+        public int warehouseID { get; set; }
 
         [ForeignKey("PurchasingOrder")]
         public int POID { get; set; }

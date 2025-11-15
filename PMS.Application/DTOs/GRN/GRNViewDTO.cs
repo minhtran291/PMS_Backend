@@ -20,8 +20,12 @@ namespace PMS.Application.DTOs.GRN
         public required string CreateBy { get; set; }
 
         public string? Description { get; set; }
+        public string WarehouseName { get; set; }
+        public string warehouse { get; set; }
+
 
         public int POID { get; set; }
+
 
         public virtual ICollection<GRNDetailViewDTO> GRNDetailViewDTO { get; set; } = new List<GRNDetailViewDTO>();
 

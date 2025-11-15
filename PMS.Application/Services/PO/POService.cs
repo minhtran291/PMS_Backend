@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualBasic;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using PMS.Application.DTOs.GRN;
 using PMS.Application.DTOs.PO;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
@@ -153,7 +154,100 @@ namespace PMS.API.Services.POService
             }
         }
 
+        public async Task<ServiceResult<POViewDTO2>> ViewDetailPObyID2(int poid)
+        {
+            try
+            {
+                // Lấy PO cùng chi tiết
+                var po = await _unitOfWork.PurchasingOrder.Query()
+                    .Include(po => po.User)
+                    .Include(po => po.PurchasingOrderDetails)
+                    .FirstOrDefaultAsync(po => po.POID == poid);
 
+                if (po == null)
+                {
+                    return new ServiceResult<POViewDTO2>
+                    {
+                        Data = null,
+                        StatusCode = 404,
+                        Message = "Không tìm thấy PO với ID này."
+                    };
+                }
+
+                // Lấy tên người thanh toán
+                var paymentUserName = await _unitOfWork.Users.Query()
+                    .Where(u => u.Id == po.PaymentBy)
+                    .Select(u => u.FullName)
+                    .FirstOrDefaultAsync();
+
+                // Lấy tên người tạo PO
+                var createdByName = po.User?.FullName
+                    ?? await _unitOfWork.Users.Query()
+                        .Where(u => u.Id == po.UserId)
+                        .Select(u => u.FullName)
+                        .FirstOrDefaultAsync();
+
+                // Lấy danh sách GRNDetails đã nhập cho PO này
+                var grnDetails = await _unitOfWork.GoodReceiptNoteDetail.Query()
+                    .Include(d => d.GoodReceiptNote)
+                    .Where(d => d.GoodReceiptNote.POID == poid)
+                    .ToListAsync();
+
+                // Build DTO chi tiết PO
+                var dto = new POViewDTO2
+                {
+                    POID = po.POID,
+                    Total = po.Total,
+                    OrderDate = po.OrderDate,
+                    QID = po.QID,
+                    Debt = po.Debt,
+                    Deposit = po.Deposit,
+                    PaymentBy = paymentUserName ?? "Unknown",
+                    UserName = createdByName,
+                    PaymentDate = po.PaymentDate,
+                    Status = po.Status,
+                    Details = po.PurchasingOrderDetails?.Select(d =>
+                    {
+                        // Tính số lượng đã nhập trước đó
+                        var totalReceived = grnDetails
+                            .Where(g => g.ProductID == d.ProductID)
+                            .Sum(g => g.Quantity);
+
+                        var remainingQty = d.Quantity - totalReceived;
+
+                        return new PMS.Application.DTOs.GRN.PODetailViewDTO
+                        {
+                            PODID = d.PODID,
+                            ProductID = d.ProductID,
+                            ProductName = d.ProductName,
+                            DVT = d.DVT,
+                            Quantity = d.Quantity,
+                            UnitPrice = d.UnitPrice,
+                            UnitPriceTotal = d.UnitPriceTotal,
+                            Description = d.Description,
+                            ExpiredDate = d.ExpiredDate,
+                            RemainingQty = remainingQty > 0 ? remainingQty : 0
+                        };
+                    }).ToList()
+                };
+
+                return new ServiceResult<POViewDTO2>
+                {
+                    Data = dto,
+                    StatusCode = 200,
+                    Message = "Lấy chi tiết PO thành công."
+                };
+            }
+            catch (Exception)
+            {
+                return new ServiceResult<POViewDTO2>
+                {
+                    Data = null,
+                    StatusCode = 500,
+                    Message = "Lỗi hệ thống"
+                };
+            }
+        }
         public async Task<ServiceResult<bool>> ChangeStatusAsync(string userId, int poid, PurchasingOrderStatus newStatus)
         {
             var senderUser = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
