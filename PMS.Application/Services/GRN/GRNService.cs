@@ -187,7 +187,8 @@ namespace PMS.API.Services.GRNService
 
         public async Task<ServiceResult<List<GRNViewDTO>>> GetAllGRN()
         {
-            var listGRN = await _unitOfWork.GoodReceiptNote.Query().ToListAsync();
+            var listGRN = await _unitOfWork.GoodReceiptNote.Query()
+                .ToListAsync();
 
             if (listGRN == null || !listGRN.Any())
             {
@@ -201,29 +202,51 @@ namespace PMS.API.Services.GRNService
             }
 
 
-            var supplierList = await _unitOfWork.Users.Query()
-                .Select(s => new { s.Id, s.FullName })
-                .ToListAsync();
+            var warehouseIds = listGRN
+                .Select(x => x.warehouseID)
+                .Distinct()
+                .ToList();
 
-            var result = new List<GRNViewDTO>();
+            var warehouseDict = await _unitOfWork.WarehouseLocation.Query()
+            .Include(w => w.Warehouse) 
+            .Where(w => warehouseIds.Contains(w.Id))
+            .ToDictionaryAsync(
+                w => w.Id,
+                w => new { LocationName = w.LocationName, WarehouseName = w.Warehouse.Name }
+                );
 
-            foreach (var item in listGRN)
+            var userIds = listGRN
+                .Select(x => x.CreateBy)
+                .Distinct()
+                .ToList();
+
+            var userDict = await _unitOfWork.Users.Query()
+                .Where(u => userIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName);
+
+
+            var result = listGRN.Select(item => new GRNViewDTO
             {
+                GRNID = item.GRNID,
+                Source = item.Source ?? "Không xác định",
+                CreateDate = item.CreateDate,
+                Total = item.Total,
+                Description = item.Description,
+                POID = item.POID,
 
-                var createby = supplierList
-                    .FirstOrDefault(s => s.Id == item.CreateBy)?.FullName;
+                CreateBy = userDict.ContainsKey(item.CreateBy)
+                    ? userDict[item.CreateBy]
+                    : "Không xác định",
 
-                result.Add(new GRNViewDTO
-                {
-                    GRNID = item.GRNID,
-                    Source = item.Source ?? "Không xác định",
-                    CreateDate = item.CreateDate,
-                    Total = item.Total,
-                    CreateBy = createby ?? "Không xác định",
-                    Description = item.Description,
-                    POID = item.POID,
-                });
-            }
+                WarehouseName = warehouseDict.ContainsKey(item.warehouseID)
+                ? warehouseDict[item.warehouseID].LocationName
+                : "Không xác định",
+
+                            warehouse = warehouseDict.ContainsKey(item.warehouseID)
+                ? warehouseDict[item.warehouseID].WarehouseName
+                : "Không xác định",
+            })
+            .ToList();
 
             return new ServiceResult<List<GRNViewDTO>>
             {
@@ -235,11 +258,9 @@ namespace PMS.API.Services.GRNService
 
         public async Task<ServiceResult<GRNViewDTO>> GetGRNDetailAsync(int grnId)
         {
-
             var grn = await _unitOfWork.GoodReceiptNote.Query()
                 .Include(g => g.GoodReceiptNoteDetails)
                 .FirstOrDefaultAsync(g => g.GRNID == grnId);
-
 
             if (grn == null)
             {
@@ -252,7 +273,6 @@ namespace PMS.API.Services.GRNService
                 };
             }
 
-
             var productIds = grn.GoodReceiptNoteDetails
                 .Select(d => d.ProductID)
                 .Distinct()
@@ -261,11 +281,29 @@ namespace PMS.API.Services.GRNService
 
             var products = await _unitOfWork.Product.Query()
                 .Where(p => productIds.Contains(p.ProductID))
-                .ToListAsync();
+                .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
 
 
             var user = await _unitOfWork.Users.Query()
                 .FirstOrDefaultAsync(u => u.Id == grn.CreateBy);
+
+
+            var warehouse = await _unitOfWork.WarehouseLocation.Query().Include(w=>w.Warehouse)
+                .FirstOrDefaultAsync(w => w.Id == grn.warehouseID);
+
+
+            var detailDtos = grn.GoodReceiptNoteDetails
+                .Select(d => new GRNDetailViewDTO
+                {
+                    GRNDID = d.GRNDID,
+                    ProductID = d.ProductID,
+                    UnitPrice = d.UnitPrice,
+                    Quantity = d.Quantity,
+                    ProductName = products.ContainsKey(d.ProductID)
+                        ? products[d.ProductID]
+                        : "Không xác định"
+                })
+                .ToList();
 
 
             var grnDto = new GRNViewDTO
@@ -275,21 +313,11 @@ namespace PMS.API.Services.GRNService
                 CreateDate = grn.CreateDate,
                 Total = grn.Total,
                 CreateBy = user?.FullName ?? "Không xác định",
+                WarehouseName = warehouse?.LocationName ?? "Không xác định",
+                warehouse= warehouse?.Warehouse.Name ?? "Không xác định",
                 Description = grn.Description,
                 POID = grn.POID,
-                GRNDetailViewDTO = grn.GoodReceiptNoteDetails.Select(d =>
-                {
-                    var product = products.FirstOrDefault(p => p.ProductID == d.ProductID);
-
-                    return new GRNDetailViewDTO
-                    {
-                        GRNDID = d.GRNDID,
-                        ProductID = d.ProductID,
-                        UnitPrice = d.UnitPrice,
-                        Quantity = d.Quantity,
-                        ProductName = product?.ProductName ?? "Không xác định"
-                    };
-                }).ToList()
+                GRNDetailViewDTO = detailDtos
             };
 
             return new ServiceResult<GRNViewDTO>
@@ -300,6 +328,7 @@ namespace PMS.API.Services.GRNService
                 Message = "Lấy chi tiết phiếu nhập kho thành công"
             };
         }
+
 
 
         public async Task<byte[]> GeneratePDFGRNAsync(int grnId)
