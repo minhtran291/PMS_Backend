@@ -1,10 +1,11 @@
-﻿using AutoMapper;
+﻿using System.Linq;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using PMS.Application.DTOs.Product;
 using PMS.Application.Services.Base;
 using PMS.Core.Domain.Constant;
-using PMS.Application.DTOs.Product;
 using PMS.Data.UnitOfWork;
-using Microsoft.Extensions.Configuration;
 
 namespace PMS.Application.Services.Product
 {
@@ -422,6 +423,41 @@ namespace PMS.Application.Services.Product
                 Message = "Thành công",
                 StatusCode = 200
             };
+        }
+
+        public async Task<ServiceResult<List<LotProductDTO2>>> GetLotProductByProductId(int productId)
+        {
+            try
+            {
+                var products = await _unitOfWork.LotProduct.Query()
+                    .Where(p => p.ProductID == productId)
+                    .Include(p => p.Product)
+                    .ToListAsync();
+
+                if (!products.Any())
+                    return ServiceResult<List<LotProductDTO2>>.Fail("Không tìm thấy lô hàng nào cho sản phẩm này.");
+
+                var result = products.Select(p => new LotProductDTO2
+                {
+                    LotID = p.LotID,
+                    InputDate = p.InputDate,
+                    SalePrice = p.SalePrice,
+                    InputPrice = p.InputPrice,
+                    ProductName = p.Product?.ProductName ?? "Unknown",
+                    ExpiredDate = p.ExpiredDate,
+                    LotQuantity = p.LotQuantity,
+                    SupplierID = p.SupplierID,
+                    ProductID = p.ProductID,
+                    WarehouselocationID = p.WarehouselocationID,
+                    LastCheckedDate = p.LastCheckedDate
+                }).ToList();
+
+                return ServiceResult<List<LotProductDTO2>>.SuccessResult(result, "Lấy danh sách lô hàng thành công.");
+            }
+            catch (Exception ex)
+            {
+                return ServiceResult<List<LotProductDTO2>>.Fail($"Lỗi khi lấy lô sản phẩm: {ex.Message}");
+            }
         }
     }
 }

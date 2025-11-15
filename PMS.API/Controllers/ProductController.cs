@@ -158,6 +158,25 @@ namespace PMS.API.Controllers
 
             return Ok(result);
         }
+
+
+        /// <summary>
+        /// https://localhost:7213/api/Product/SearchLotProductByproductId/{poid}
+        /// </summary>
+        /// <param name="poid"></param>
+        /// <returns></returns>
+        [HttpGet("SearchLotProductByproductId/{poid}")]
+        public async Task<IActionResult> SearchLotProductByproductId(int poid)
+        {
+            var result = await _productService.GetLotProductByProductId(poid);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
     }
 }
 
