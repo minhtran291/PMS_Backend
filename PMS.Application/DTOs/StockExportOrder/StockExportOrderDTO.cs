@@ -10,6 +10,7 @@ namespace PMS.Application.DTOs.StockExportOrder
     {
         public int SalesOrderId { get; set; }
         public DateTime DueDate { get; set; }
+        public int Status {  get; set; }
         public List<StockExportOrderDetailsDTO> Details { get; set; } = [];
     }
 }
