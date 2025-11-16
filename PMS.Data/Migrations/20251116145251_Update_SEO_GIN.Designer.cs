@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PMS.Data.DatabaseConfig;
 
@@ -11,9 +12,11 @@ using PMS.Data.DatabaseConfig;
 namespace PMS.Data.Migrations
 {
     [DbContext(typeof(PMSContext))]
-    partial class PMSContextModelSnapshot : ModelSnapshot
+    [Migration("20251116145251_Update_SEO_GIN")]
+    partial class Update_SEO_GIN
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -395,16 +398,11 @@ namespace PMS.Data.Migrations
                     b.Property<int>("StockExportOrderId")
                         .HasColumnType("int");
 
-                    b.Property<int>("WarehouseId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("CreateBy");
 
                     b.HasIndex("StockExportOrderId");
-
-                    b.HasIndex("WarehouseId");
 
                     b.ToTable("GoodsIssueNotes");
                 });
@@ -1603,15 +1601,7 @@ namespace PMS.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PMS.Core.Domain.Entities.Warehouse", "Warehouse")
-                        .WithMany("GoodsIssueNotes")
-                        .HasForeignKey("WarehouseId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("StockExportOrder");
-
-                    b.Navigation("Warehouse");
 
                     b.Navigation("WarehouseStaff");
                 });
@@ -2148,8 +2138,6 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.Warehouse", b =>
                 {
-                    b.Navigation("GoodsIssueNotes");
-
                     b.Navigation("WarehouseLocations");
                 });
 

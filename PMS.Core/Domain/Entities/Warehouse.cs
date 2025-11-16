@@ -14,5 +14,6 @@ namespace PMS.Core.Domain.Entities
         public bool Status { get; set; }
 
         public virtual ICollection<WarehouseLocation> WarehouseLocations { get; set; } = [];
+        public virtual ICollection<GoodsIssueNote> GoodsIssueNotes { get; set; } = [];
     }
 }

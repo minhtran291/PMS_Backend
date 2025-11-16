@@ -188,6 +188,7 @@ namespace PMS.Application.Services.StockExportOrder
                 var newExport = new Core.Domain.Entities.StockExportOrder
                 {
                     SalesOrderId = dto.SalesOrderId,
+                    StockExportOrderCode = GenerateStockExportOrderCode(),
                     CreateBy = userId,
                     DueDate = dto.DueDate,
                     Status = StockExportOrderStatus.Draft,
@@ -342,7 +343,7 @@ namespace PMS.Application.Services.StockExportOrder
                 }
                 else
                 {
-                    if (stockExportOrder.Status != StockExportOrderStatus.Sent)
+                    if (stockExportOrder.Status == StockExportOrderStatus.Draft)
                         return new ServiceResult<object>
                         {
                             StatusCode = 400,
@@ -491,7 +492,7 @@ namespace PMS.Application.Services.StockExportOrder
                 if (isSales)
                     query = query.Where(seo => seo.CreateBy == userId);
                 else
-                    query = query.Where(seo => seo.Status == StockExportOrderStatus.Sent);
+                    query = query.Where(seo => seo.Status != StockExportOrderStatus.Draft);
 
                 var list = await query.ToListAsync();
 
@@ -899,6 +900,12 @@ namespace PMS.Application.Services.StockExportOrder
             }
 
             return null;
+        }
+
+        private static string GenerateStockExportOrderCode()
+        {
+            var randomPart = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
+            return $"SEO-{randomPart}";
         }
     }
 }
