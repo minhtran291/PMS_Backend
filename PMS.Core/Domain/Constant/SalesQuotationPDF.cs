@@ -162,8 +162,8 @@ namespace PMS.Core.Domain.Constant
         <div class=""sender"">
             <div class=""header-title"">BÊN GỬI</div>
             <div class=""info-row"">
-                <span class=""label"">Tên NCC:</span>
-                <span class=""value"">PMS COMPANY</span>
+                <span class=""label"">Tên nhà thuốc:</span>
+                <span class=""value"">BB Pharmacy</span>
             </div>
             <div class=""info-row"">
                 <span class=""label"">Email:</span>
@@ -250,8 +250,6 @@ namespace PMS.Core.Domain.Constant
         <div>Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế</div>
         <div>Tạm ứng {sq.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {sq.DepositDueDays} ngày kể từ khi ký hợp đồng</div>
     </div>
-
-    <p style=""white-space: pre-line;"">{HttpUtility.HtmlEncode(sq.SalesQuotationNote?.Content ?? "")}</p>
 
     <div class=""footer"">
         <p>Cảm ơn quý khách đã quan tâm đến sản phẩm của chúng tôi.</p>

@@ -450,7 +450,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                     return new ServiceResult<object>
                     {
                         StatusCode = 403,
-                        Message = "Bạn không có quyền xem yêu cầu báo giá này",
+                        Message = "Báo giá chưa được gửi không thể xem",
                     };
             }
 
