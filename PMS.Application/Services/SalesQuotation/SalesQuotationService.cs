@@ -78,32 +78,30 @@ namespace PMS.Application.Services.SalesQuotation
                 {
                     if (lotLookup.TryGetValue(detail.ProductId, out var lots))
                     {
-                        lotDtos.AddRange(_mapper.Map<List<LotDTO>>(lots));
+                        var groupedLots = lots.GroupBy(l => new
+                        {
+                            l.SalePrice,
+                            l.InputPrice,
+                            l.ExpiredDate,
+                            l.SupplierID,
+                            l.ProductID,
+                        });
+
+                        var selectedLots = new List<LotProduct>();
+
+                        foreach(var group in groupedLots)
+                        {
+                            var selected = group
+                                .OrderBy(l => l.WarehouselocationID)
+                                .First();
+
+                            selectedLots.Add(selected);
+                        }
+
+                        lotDtos.AddRange(_mapper.Map<List<LotDTO>>(selectedLots));
                     }
                     else
                     {
-                        //var latestLot = await _unitOfWork.LotProduct.Query()
-                        //    .Include(lp => lp.Product)
-                        //    .AsNoTracking()
-                        //    .Where(lp => lp.ProductID == detail.ProductId)
-                        //    .OrderByDescending(lp => lp.InputDate)
-                        //    .FirstOrDefaultAsync();
-
-                        //if (latestLot != null)
-                        //{
-                        //    lotDtos.Add(_mapper.Map<LotDTO>(latestLot));
-                        //}
-                        //else
-                        //{
-                        //    lotDtos.Add(new LotDTO
-                        //    {
-                        //        ProductID = detail.ProductId,
-                        //        ProductName = detail.Product.ProductName,
-                        //        Unit = detail.Product.Unit,
-                        //        Note = "Chưa có lô hàng nào"
-                        //    });
-                        //}
-
                         lotDtos.Add(new LotDTO
                         {
                             ProductID = detail.ProductId,
@@ -177,6 +175,40 @@ namespace PMS.Application.Services.SalesQuotation
                         StatusCode = 400,
                         Message = "Ngày hết hạn không hợp lệ"
                     };
+
+                var lotIdsInDto = dto.Details
+                    .Where(d => d.LotId != null)
+                    .Select(d => d.LotId!.Value)
+                    .ToList();
+
+                if (lotIdsInDto.Any())
+                {
+                    var lotEntities = await _unitOfWork.LotProduct.Query()
+                        .Where(l => lotIdsInDto.Contains(l.LotID))
+                        .ToListAsync();
+
+                    var groupedLots = lotEntities
+                        .GroupBy(l => new
+                        {
+                            l.SalePrice,
+                            l.InputPrice,
+                            l.ExpiredDate,
+                            l.SupplierID,
+                            l.ProductID
+                        });
+
+                    var selectedLots = new List<LotProduct>();
+
+                    foreach(var group in groupedLots)
+                    {
+                        var selected = group.OrderBy(l => l.WarehouselocationID).First();
+                        selectedLots.Add(selected);
+                    }
+
+                    dto.Details = dto.Details
+                        .Where(d => selectedLots.Any(sl => sl.LotID == d.LotId))
+                        .ToList();
+                }
 
                 await _unitOfWork.BeginTransactionAsync();
 
@@ -489,6 +521,40 @@ namespace PMS.Application.Services.SalesQuotation
                         Message = "Ngày hết hạn không hợp lệ"
                     };
 
+                var lotIdsInDto = dto.Details
+                    .Where(d => d.LotId != null)
+                    .Select(d => d.LotId!.Value)
+                    .ToList();
+
+                if (lotIdsInDto.Any())
+                {
+                    var lotEntities = await _unitOfWork.LotProduct.Query()
+                        .Where(l => lotIdsInDto.Contains(l.LotID))
+                        .ToListAsync();
+
+                    var groupedLots = lotEntities
+                        .GroupBy(l => new
+                        {
+                            l.SalePrice,
+                            l.InputPrice,
+                            l.ExpiredDate,
+                            l.SupplierID,
+                            l.ProductID
+                        });
+
+                    var selectedLots = new List<LotProduct>();
+
+                    foreach (var group in groupedLots)
+                    {
+                        var selected = group.OrderBy(l => l.WarehouselocationID).First();
+                        selectedLots.Add(selected);
+                    }
+
+                    dto.Details = dto.Details
+                        .Where(d => selectedLots.Any(sl => sl.LotID == d.LotId))
+                        .ToList();
+                }
+
                 await _unitOfWork.BeginTransactionAsync();
 
                 salesQuotation.SqnId = dto.SqnId;
@@ -498,18 +564,6 @@ namespace PMS.Application.Services.SalesQuotation
                 salesQuotation.DepositPercent = dto.DepositPercent;
 
                 salesQuotation.DepositDueDays = dto.DepositDueDays;
-
-                //foreach (var detailDto in dto.Details)
-                //{
-                //    var record = salesQuotation.SalesQuotaionDetails
-                //        .FirstOrDefault(d => d.Id == detailDto.SqdId);
-
-                //    if (record != null)
-                //    {
-                //        record.TaxId = detailDto.TaxId;
-                //        record.Note = detailDto.Note;
-                //    }
-                //}
 
                 var oldDetails = salesQuotation.SalesQuotaionDetails.ToList();
 
@@ -600,50 +654,6 @@ namespace PMS.Application.Services.SalesQuotation
             return null;
         }
 
-        //private static ServiceResult<object>? ValidateDetailsUpdate(List<SalesQuotaionDetails> list, List<UpdateSalesQuotationDetailsDTO> details)
-        //{
-        //    var sqdIds = details.Select(d => d.SqdId).ToList();
-
-        //    if (sqdIds.Distinct().Count() != sqdIds.Count)
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 400,
-        //            Message = "Có báo giá chi tiết bị trùng lặp"
-        //        };
-
-        //    var sqdId = list
-        //        .Where(d => sqdIds.Contains(d.Id))
-        //        .ToList();
-
-        //    if (sqdIds.Count != sqdId.Count)
-        //        return new ServiceResult<object>
-        //        {
-        //            StatusCode = 400,
-        //            Message = "Có chi tiết báo giá không thuộc phạm vi báo giá"
-        //        };
-
-        //    foreach (var dto in details)
-        //    {
-        //        var entity = sqdId.Find(d => d.Id == dto.SqdId);
-
-        //        if (entity.LotId == null && dto.TaxId != null)
-        //            return new ServiceResult<object>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Sản phẩm đã hết hàng không thể áp thuế"
-        //            };
-
-        //        if (entity.LotId != null && dto.TaxId == null)
-        //            return new ServiceResult<object>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Thuế không được để chống với các sản phẩm còn hàng"
-        //            };
-        //    }
-
-        //    return null;
-        //}
-
         public async Task<ServiceResult<object>> DeleteSalesQuotationAsync(int sqId, string ssId)
         {
             try
@@ -694,7 +704,7 @@ namespace PMS.Application.Services.SalesQuotation
             }
         }
 
-        public async Task<ServiceResult<List<SalesQuotationDTO>>> SalesQuotationListAsync(string role, string? ssId)
+        public async Task<ServiceResult<List<SalesQuotationDTO>>> SalesQuotationListAsync(string role, string? ssId, string? customerId)
         {
             try
             {
@@ -705,7 +715,10 @@ namespace PMS.Application.Services.SalesQuotation
 
                 if (role.Equals("CUSTOMER"))
                 {
-                    query = query.Where(s => s.Status != Core.Domain.Enums.SalesQuotationStatus.Draft);
+                    if (!int.TryParse(customerId, out var intId))
+                        throw new Exception("Try parse customer id loi");
+
+                    query = query.Where(s => s.Status != Core.Domain.Enums.SalesQuotationStatus.Draft && s.RequestSalesQuotation.CustomerId == intId);
                 }
                 else
                 {
