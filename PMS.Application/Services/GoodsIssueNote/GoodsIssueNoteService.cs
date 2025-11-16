@@ -17,7 +17,7 @@ namespace PMS.Application.Services.GoodsIssueNote
 {
     public class GoodsIssueNoteService(IUnitOfWork unitOfWork,
         IMapper mapper,
-        ILogger<GoodsIssueNoteService> logger, 
+        ILogger<GoodsIssueNoteService> logger,
         INotificationService notificationService) : Service(unitOfWork, mapper), IGoodsIssueNoteService
     {
         private readonly ILogger<GoodsIssueNoteService> _logger = logger;
@@ -29,6 +29,12 @@ namespace PMS.Application.Services.GoodsIssueNote
             {
                 var seo = await _unitOfWork.StockExportOrder.Query()
                     .Include(s => s.StockExportOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(l => l.WarehouseLocation)
+                                .ThenInclude(w => w.Warehouse)
+                    .Include(s => s.StockExportOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.Product)
                     .FirstOrDefaultAsync(s => s.Id == dto.StockExportOrderId);
 
                 if (seo == null)
@@ -55,28 +61,125 @@ namespace PMS.Application.Services.GoodsIssueNote
                         Message = "Lệnh xuất kho này đã có phiếu xuất"
                     };
 
+                var allLots = await _unitOfWork.LotProduct.Query()
+                    .Include(l => l.WarehouseLocation)
+                        .ThenInclude(wl => wl.Warehouse)
+                    .ToListAsync();
+
+                var lotExportMap = new Dictionary<int, int>();
+
+                var warehouseMap = new Dictionary<int, List<GoodsIssueNoteDetails>>();
+
+                foreach (var item in seo.StockExportOrderDetails)
+                {
+                    var groups = allLots.Where(l => l.SalePrice == item.LotProduct.SalePrice
+                                                && l.InputPrice == item.LotProduct.InputPrice
+                                                && l.ExpiredDate == item.LotProduct.ExpiredDate
+                                                && l.SupplierID == item.LotProduct.SupplierID
+                                                && l.ProductID == item.LotProduct.ProductID)
+                        .OrderBy(l => l.WarehouselocationID)
+                        .ToList();
+
+                    var requiredQuantity = item.Quantity;
+
+                    foreach (var group in groups)
+                    {
+                        if (requiredQuantity <= 0)
+                            break;
+
+                        var export = Math.Min(requiredQuantity, group.LotQuantity);
+
+                        requiredQuantity -= export;
+
+                        if (!lotExportMap.ContainsKey(group.LotID))
+                            lotExportMap[group.LotID] = 0;
+
+                        lotExportMap[group.LotID] += export;
+
+                        int warehouseId = group.WarehouseLocation.Warehouse.Id;
+
+                        if (!warehouseMap.ContainsKey(warehouseId))
+                            warehouseMap[warehouseId] = new List<GoodsIssueNoteDetails>();
+
+                        warehouseMap[warehouseId].Add(new GoodsIssueNoteDetails
+                        {
+                            LotId = group.LotID,
+                            Quantity = export,
+                        });
+                    }
+
+                    if (requiredQuantity > 0)
+                    {
+                        {
+                            return new ServiceResult<object>
+                            {
+                                StatusCode = 400,
+                                Message = $"Không đủ hàng cho sản phẩm {item.LotProduct.Product.ProductName}"
+                            };
+                        }
+                    }
+                }
+
+                var lotsToUpdate = allLots
+                    .Where(l => lotExportMap.ContainsKey(l.LotID))
+                    .ToList();
+
+                foreach (var lot in lotsToUpdate)
+                {
+                    var totalExport = lotExportMap[lot.LotID];
+
+                    if (lot.LotQuantity < totalExport)
+                    {
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"Lô {lot.LotID} không đủ số lượng"
+                        };
+                    }
+
+                    lot.LotQuantity -= totalExport;
+                }
+
+                var listGoodsIssueNote = new List<Core.Domain.Entities.GoodsIssueNote>();
+
+                foreach (var wh in warehouseMap)
+                {
+                    var gin = new Core.Domain.Entities.GoodsIssueNote
+                    {
+                        StockExportOrderId = seo.Id,
+                        GoodsIssueNoteCode = GenerateGoodsIssueNoteCode(),
+                        CreateBy = userId,
+                        WarehouseId = wh.Key,
+                        CreateAt = DateTime.Now,
+                        ExportedAt = DateTime.Now,
+                        DeliveryDate = seo.DueDate,
+                        Note = dto.Note,
+                        Status = Core.Domain.Enums.GoodsIssueNoteStatus.Sent,
+                        GoodsIssueNoteDetails = wh.Value
+                    };
+
+                    listGoodsIssueNote.Add(gin);
+                }
+
+                seo.Status = Core.Domain.Enums.StockExportOrderStatus.Exported;
+
                 await _unitOfWork.BeginTransactionAsync();
 
-                var gin = new Core.Domain.Entities.GoodsIssueNote
-                {
-                    StockExportOrderId = seo.Id,
-                    CreateBy = userId,
-                    CreateAt = DateTime.Now,
-                    DeliveryDate = seo.DueDate,
-                    Note = dto.Note,
-                    Status = Core.Domain.Enums.GoodsIssueNoteStatus.Draft,
-                    GoodsIssueNoteDetails = seo.StockExportOrderDetails.Select(d => new GoodsIssueNoteDetails
-                    {
-                        LotId = d.LotId,
-                        Quantity = d.Quantity,
-                    }).ToList(),
-                };
+                await _unitOfWork.GoodsIssueNote.AddRangeAsync(listGoodsIssueNote);
 
-                await _unitOfWork.GoodsIssueNote.AddAsync(gin);
+                _unitOfWork.StockExportOrder.Update(seo);
 
                 await _unitOfWork.CommitAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
+
+                await _notificationService.SendNotificationToRolesAsync(
+                    userId,
+                    [UserRoles.ACCOUNTANT],
+                    "Bạn nhận được 1 thông báo mới",
+                    "Có phiếu xuất kho mới vui lòng tạo hóa đơn cho phiếu xuất kho",
+                    Core.Domain.Enums.NotificationType.Message
+                    );
 
                 return new ServiceResult<object>
                 {
@@ -172,7 +275,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                             .ThenInclude(lp => lp.Product)
                     .FirstOrDefaultAsync(g => g.Id == ginId);
 
-                if(goodsIssueNote == null)
+                if (goodsIssueNote == null)
                     return new ServiceResult<object>
                     {
                         StatusCode = 404,
@@ -181,7 +284,7 @@ namespace PMS.Application.Services.GoodsIssueNote
 
                 if (isWarehouseStaff)
                 {
-                    if(goodsIssueNote.CreateBy != user.Id)
+                    if (goodsIssueNote.CreateBy != user.Id)
                         return new ServiceResult<object>
                         {
                             StatusCode = 403,
@@ -190,7 +293,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                 }
                 else
                 {
-                    if(goodsIssueNote.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Draft)
+                    if (goodsIssueNote.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Draft)
                         return new ServiceResult<object>
                         {
                             StatusCode = 404,
@@ -206,7 +309,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                     Data = result,
                 };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Loi");
 
@@ -247,7 +350,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                     Data = result,
                 };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Loi");
 
@@ -280,7 +383,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                         Message = "Bạn không có quyền gửi phiếu xuất này"
                     };
 
-                if(goodsIssueNote.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Sent)
+                if (goodsIssueNote.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Sent)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
@@ -363,7 +466,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                 };
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Loi");
 
@@ -373,6 +476,12 @@ namespace PMS.Application.Services.GoodsIssueNote
                     Message = "Lỗi"
                 };
             }
+        }
+
+        private static string GenerateGoodsIssueNoteCode()
+        {
+            var randomPart = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
+            return $"GIN-{randomPart}";
         }
     }
 }

@@ -12,7 +12,9 @@ namespace PMS.Core.Domain.Entities
     {
         public int Id { get; set; }
         public int StockExportOrderId { get; set; }
+        public required string GoodsIssueNoteCode { get; set; }
         public required string CreateBy { get; set; }
+        public int WarehouseId {  get; set; }
         public DateTime CreateAt { get; set; }
         public DateTime? ExportedAt { get; set; }
         public DateTime DeliveryDate { get; set; }
@@ -22,5 +24,6 @@ namespace PMS.Core.Domain.Entities
         public virtual StockExportOrder StockExportOrder { get; set; } = null!;
         public virtual User WarehouseStaff { get; set; } = null!;
         public virtual ICollection<GoodsIssueNoteDetails> GoodsIssueNoteDetails { get; set; } = [];
+        public virtual Warehouse Warehouse {  get; set; } = null!;
     }
 }
