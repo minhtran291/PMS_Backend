@@ -12,10 +12,9 @@ namespace PMS.Core.Domain.Enums
         Send = 1,
         Approved =2,
         Rejected = 3,
-        Deposited = 4,
-        Paid = 5,
-        Complete = 6,
-        NotComplete = 7,
+        Delivered = 4,
+        Complete = 5,
+        NotComplete = 6,
 
     }
 }

@@ -15,7 +15,8 @@ namespace PMS.Core.Domain.Entities
         public int SalesQuotationId { get; set; }
         public required string CreateBy { get; set; }
         public DateTime CreateAt { get; set; }
-        public SalesOrderStatus Status { get; set; }
+        public SalesOrderStatus SalesOrderStatus { get; set; }
+        public PaymentStatus PaymentStatus { get; set; }
         public decimal TotalPrice { get; set; }
         public bool IsDeposited { get; set; }
         public required DateTime SalesOrderExpiredDate { get; set; }

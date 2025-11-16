@@ -9,8 +9,10 @@ namespace PMS.Core.Domain.Enums
     public enum PaymentStatus : byte
     {
         Pending = 0,
-        Success = 1,
-        Failed = 2,
-        Refunded = 3
+        Deposited = 1,
+        Paid = 2,
+        Success = 3,
+        Failed = 4,
+        Refunded = 5
     }
 }

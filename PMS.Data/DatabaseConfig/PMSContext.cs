@@ -916,7 +916,12 @@ namespace PMS.Data.DatabaseConfig
                     .HasPrecision(18, 2)
                     .IsRequired();
 
-                entity.Property(so => so.Status)
+                entity.Property(so => so.SalesOrderStatus)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(so => so.PaymentStatus)
                     .HasConversion<byte>()
                     .HasColumnType("TINYINT")
                     .IsRequired();

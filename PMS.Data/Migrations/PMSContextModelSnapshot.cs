@@ -1095,6 +1095,9 @@ namespace PMS.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<byte>("PaymentStatus")
+                        .HasColumnType("TINYINT");
+
                     b.Property<string>("SalesOrderCode")
                         .IsRequired()
                         .HasMaxLength(70)
@@ -1103,11 +1106,11 @@ namespace PMS.Data.Migrations
                     b.Property<DateTime>("SalesOrderExpiredDate")
                         .HasColumnType("date");
 
+                    b.Property<byte>("SalesOrderStatus")
+                        .HasColumnType("TINYINT");
+
                     b.Property<int>("SalesQuotationId")
                         .HasColumnType("int");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("TINYINT");
 
                     b.Property<decimal>("TotalPrice")
                         .HasPrecision(18, 2)
