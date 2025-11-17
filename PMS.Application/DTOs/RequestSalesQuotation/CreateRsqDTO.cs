@@ -9,7 +9,7 @@ namespace PMS.Application.DTOs.RequestSalesQuotation
 {
     public class CreateRsqDTO
     {
-        //public List<CreateRsqDetailsDTO> RsqDetails { get; set; } = new List<CreateRsqDetailsDTO>();
         public List<int> ProductIdList { get; set; } = [];
+        public int Status {  get; set; }
     }
 }

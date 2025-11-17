@@ -33,6 +33,7 @@ using PMS.Application.Services.VietQR;
 using Microsoft.AspNetCore.Routing;
 using PMS.Application.Hub;
 using Microsoft.AspNetCore.Builder;
+using PMS.Application.Services.TaxPolicy;
 
 namespace PMS.Application.DIConfig
 {
@@ -68,6 +69,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IVietQrService, VietQrService>();
             services.AddScoped<IStockExportOderService, StockExportOrderService>();
             services.AddScoped<IGoodsIssueNoteService, GoodsIssueNoteService>();
+            services.AddScoped<ITaxPolicySerivce, TaxPolicyService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)

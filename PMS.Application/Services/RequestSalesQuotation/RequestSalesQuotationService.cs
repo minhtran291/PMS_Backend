@@ -6,6 +6,7 @@ using PMS.Application.Services.Base;
 using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
+using PMS.Core.Domain.Identity;
 using PMS.Data.UnitOfWork;
 
 namespace PMS.Application.Services.RequestSalesQuotation
@@ -36,24 +37,29 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 {
                     CustomerId = profile.Id,
                     RequestCode = GenerateRequestCode(),
-                    Status = Core.Domain.Enums.RequestSalesQuotationStatus.Draft
+                    RequestDate = dto.Status == 1 ? DateTime.Now : null,
+                    Status = dto.Status == 1 ? Core.Domain.Enums.RequestSalesQuotationStatus.Sent : Core.Domain.Enums.RequestSalesQuotationStatus.Draft,
+                    RequestSalesQuotationDetails = productIds.Select(id => new RequestSalesQuotationDetails
+                    {
+                        ProductId = id,
+                    }).ToList()
                 };
 
                 await _unitOfWork.RequestSalesQuotation.AddAsync(requestSalesQuotation);
+
                 await _unitOfWork.CommitAsync();
 
-                foreach (var productId in productIds)
+                if(dto.Status == 1)
                 {
-                    var details = new RequestSalesQuotationDetails
-                    {
-                        RequestSalesQuotationId = requestSalesQuotation.Id,
-                        ProductId = productId,
-                    };
-
-                    await _unitOfWork.RequestSalesQuotationDetails.AddAsync(details);
+                    await _notificationService.SendNotificationToRolesAsync(
+                    profile.UserId,
+                    [UserRoles.SALES_STAFF],
+                    "Bạn nhận được 1 thông báo mới",
+                    "Yêu cầu báo giá",
+                    Core.Domain.Enums.NotificationType.Message
+                    );
                 }
 
-                await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
                 return new ServiceResult<object>
@@ -65,7 +71,9 @@ namespace PMS.Application.Services.RequestSalesQuotation
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Loi");
+
                 await _unitOfWork.RollbackTransactionAsync();
+
                 return new ServiceResult<object>
                 {
                     StatusCode = 500,
