@@ -1193,7 +1193,7 @@ namespace PMS.Application.Services.SalesOrder
                 var salesOrders = await _unitOfWork.SalesOrder.Query()
                     .Include(so => so.SalesOrderDetails)
                     .Include(so => so.StockExportOrders)
-                        .ThenInclude(seo => seo.GoodsIssueNote)
+                        .ThenInclude(seo => seo.GoodsIssueNotes)
                             .ThenInclude(gi => gi.GoodsIssueNoteDetails)
                     .ToListAsync();
 
@@ -1216,8 +1216,8 @@ namespace PMS.Application.Services.SalesOrder
 
                     // Lấy tất cả GoodsIssueNote liên quan đến SalesOrder này qua StockExportOrder
                     var goodsIssueNotes = order.StockExportOrders
-                        .Where(seo => seo.GoodsIssueNote != null)
-                        .Select(seo => seo.GoodsIssueNote!)
+                        .Where(seo => seo.GoodsIssueNotes != null)
+                        .SelectMany(seo => seo.GoodsIssueNotes!)
                         .ToList();
 
                     if (!goodsIssueNotes.Any())
