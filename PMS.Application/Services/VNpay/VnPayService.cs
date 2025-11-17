@@ -51,10 +51,37 @@ namespace PMS.Application.Services.VNpay
             return await ConfirmAsync(query, "return");
         }
 
+        /// <summary>
+        /// INIT VNPay:
+        /// - deposit/full: theo SalesOrder
+        /// - remain: theo PaymentRemain
+        /// </summary>
         public async Task<ServiceResult<VnPayInitResponseDTO>> InitVnPayAsync(VnPayInitRequestDTO req, string clientIp)
         {
             try
             {
+                var type = req.PaymentType?.Trim().ToLowerInvariant();
+
+                // ========================================================
+                // CASE REMAIN – dùng PaymentRemain.Id + Amount
+                // ========================================================
+                if (type == "remain")
+                {
+                    if (!req.PaymentRemainId.HasValue)
+                    {
+                        return ServiceResult<VnPayInitResponseDTO>.Fail(
+                            "Thiếu PaymentRemainId cho kiểu thanh toán 'remain'.", 400);
+                    }
+
+                    return await InitVnPayForPaymentRemainInternalAsync(
+                        req.PaymentRemainId.Value,
+                        clientIp,
+                        req.Locale);
+                }
+
+                // ========================================================
+                // CASE DEPOSIT / FULL – logic cũ theo SalesOrder
+                // ========================================================
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesQuotation)
                     .Include(o => o.CustomerDebts)
@@ -63,23 +90,50 @@ namespace PMS.Application.Services.VNpay
                 if (order == null)
                     return ServiceResult<VnPayInitResponseDTO>.Fail("Không tìm thấy đơn hàng.", 404);
 
-                if (order.Status != SalesOrderStatus.Approved && order.Status != SalesOrderStatus.Deposited)
+                if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.PaymentStatus != PaymentStatus.Deposited)
                     return ServiceResult<VnPayInitResponseDTO>.Fail("Chỉ khởi tạo thanh toán cho đơn ở trạng thái Approved hoặc Deposited.", 400);
 
                 var depositAmount = decimal.Round(order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m), 0, MidpointRounding.AwayFromZero);
-                var amount = (req.PaymentType?.ToLowerInvariant() == "full") ? order.TotalPrice : depositAmount;
+                var remaining = order.TotalPrice - order.PaidAmount;
+
+                if (remaining <= 0)
+                    return ServiceResult<VnPayInitResponseDTO>.Fail("Đơn đã được thanh toán đủ.", 400);
+
+                decimal amount;
+                string info;
+
+                switch (type)
+                {
+                    case "deposit":
+                        amount = depositAmount;
+                        info = $"Dat coc {order.SalesOrderCode} ({order.SalesOrderId})";
+                        break;
+
+                    case "full":
+                        // Nếu chưa thanh toán gì, full = tổng tiền
+                        // Nếu đã có thanh toán (ví dụ nhầm trước đó), cho full = phần còn lại
+                        amount = order.PaidAmount == 0 ? order.TotalPrice : remaining;
+                        info = $"Thanh toan toan bo {order.SalesOrderCode} ({order.SalesOrderId})";
+                        break;
+
+                    default:
+                        return ServiceResult<VnPayInitResponseDTO>.Fail("PaymentType không hợp lệ. (deposit / full / remain)", 400);
+                }
 
                 if (amount <= 0)
                     return ServiceResult<VnPayInitResponseDTO>.Fail("Số tiền thanh toán không hợp lệ.", 400);
 
-                var info = req.PaymentType?.ToLowerInvariant() == "full"
-                    ? $"Thanh toan toan bo {order.SalesOrderCode} ({order.SalesOrderId})"
-                    : $"Dat coc {order.SalesOrderCode} ({order.SalesOrderId})";
+                var (url, qr, txnRef) = await _gateway.BuildPaymentAsync(order.SalesOrderId, amount, info, req.Locale, clientIp);
 
+                var data = new VnPayInitResponseDTO
+                {
+                    PaymentUrl = url,
+                    QrBase64 = qr,
+                    Amount = amount,
+                    PaymentType = type ?? string.Empty,
+                    TxnRef = txnRef
+                };
 
-                var (url, qr, txnRef) = await _gateway.BuildPaymentAsync(order.SalesOrderId, amount, info, req.BankCode, req.Locale, clientIp);
-
-                var data = new VnPayInitResponseDTO { PaymentUrl = url, QrBase64 = qr, Amount = amount, TxnRef = txnRef };
                 return ServiceResult<VnPayInitResponseDTO>.SuccessResult(data, "Khởi tạo VNPay thành công.", 200);
             }
             catch (Exception ex)
@@ -89,7 +143,7 @@ namespace PMS.Application.Services.VNpay
             }
         }
 
-        // Core xác nhận thanh toán + cập nhật đơn & công nợ (theo form bạn gửi)
+        //Core xác nhận thanh toán + cập nhật đơn & công nợ(theo form bạn gửi)
         private async Task<ServiceResult<bool>> ConfirmAsync(IQueryCollection query, string source)
         {
             try
@@ -131,6 +185,23 @@ namespace PMS.Application.Services.VNpay
 
                 var paidAmount = (decimal)amountVnp / 100m;
 
+                // ======================================================
+                // NEW: ƯU TIÊN TÌM PaymentRemain THEO GatewayTransactionRef
+                // ======================================================
+                var paymentRemain = await _unitOfWork.PaymentRemains.Query()
+                    .Include(p => p.SalesOrder)
+                        .ThenInclude(o => o.SalesQuotation)
+                    .Include(p => p.SalesOrder.CustomerDebts)
+                    .FirstOrDefaultAsync(p => p.GatewayTransactionRef == txnRef);
+
+                if (paymentRemain != null)
+                {
+                    return await HandlePaymentRemainSuccessAsync(
+                        paymentRemain,
+                        paidAmount,
+                        source);
+                }
+
                 // 4) Nạp đơn
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesQuotation)
@@ -140,69 +211,95 @@ namespace PMS.Application.Services.VNpay
                 if (order == null)
                     return ServiceResult<bool>.Fail("Không tìm thấy đơn hàng.", 404);
 
-                if (order.Status != SalesOrderStatus.Approved && order.Status != SalesOrderStatus.Deposited)
-                    return ServiceResult<bool>.Fail("Chỉ xác nhận thanh toán cho đơn ở trạng thái Approved hoặc Deposited.", 400);
+                if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.PaymentStatus != PaymentStatus.Deposited)
+                    return ServiceResult<bool>.Fail("Chỉ xác nhận thanh toán cho đơn ở trạng thái Approved và trạng thái thanh toán là Deposited.", 400);
 
-                // 5) Ràng buộc số tiền hợp lệ (chống chỉnh sửa số tiền phía client)
-                var depositAmount = decimal.Round(order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m), 0, MidpointRounding.AwayFromZero);
-                var remaining = order.TotalPrice - order.PaidAmount;
-
-                // Dựa vào OrderInfo nếu có "dat coc" / "toan bo"
-                var isDepositHint = orderInfo?.Contains("dat coc") == true;
-                var isFullHint = orderInfo?.Contains("toan bo") == true;
-
-                bool amountOk =
-                    (isFullHint && paidAmount == order.TotalPrice) ||
-                    (isDepositHint && paidAmount == depositAmount) ||
-                    (!isFullHint && !isDepositHint && paidAmount > 0 && paidAmount <= remaining);
-                if (!amountOk)
-                    return ServiceResult<bool>.Fail("Số tiền thanh toán không khớp quy tắc.", 400);
-
-                // 6) Idempotency cơ bản: nếu đã đủ tiền rồi thì bỏ qua (hoặc TODO: kiểm tra bảng PaymentTxn)
+                // Đã thanh toán đủ rồi thì bỏ qua (idempotent)
                 if (order.PaidAmount >= order.TotalPrice)
                     return ServiceResult<bool>.SuccessResult(true, "Giao dịch đã được ghi nhận trước đó.", 200);
 
-                // 7) Cập nhật PaidAmount/Status
-                SalesOrderStatus newStatus;
-                decimal newPaid;
+                // 5) Tính số tiền chuẩn theo loại thanh toán
+                var depositAmount = decimal.Round(order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m), 0, MidpointRounding.AwayFromZero);
+                var remaining = order.TotalPrice - order.PaidAmount;
 
-                if (paidAmount >= order.TotalPrice)
+                if (remaining <= 0)
+                    return ServiceResult<bool>.Fail("Đơn đã được thanh toán đủ.", 400);
+
+                var info = orderInfo ?? string.Empty;
+
+                bool isDeposit = info.Contains("dat coc");
+                bool isFull = info.Contains("thanh toan toan bo");
+                bool isRemain = info.Contains("thanh toan phan con thieu");
+
+                if (!(isDeposit || isFull || isRemain))
+                    return ServiceResult<bool>.Fail("Không xác định được loại thanh toán (deposit/full/remain).", 400);
+
+                // Không cho đặt cọc lại nếu đã cọc rồi
+                if (isDeposit && order.PaidAmount >= depositAmount)
+                    return ServiceResult<bool>.Fail("Đơn đã được đặt cọc trước đó.", 400);
+
+                decimal expectedAmount;
+
+                if (isDeposit)
                 {
-                    newStatus = SalesOrderStatus.Paid;
-                    newPaid = order.TotalPrice;
+                    expectedAmount = depositAmount;
                 }
-                else if (paidAmount == depositAmount || order.Status == SalesOrderStatus.Deposited)
+                else if (isRemain)
                 {
-                    var accumulated = Math.Min(order.PaidAmount + paidAmount, order.TotalPrice);
-                    newPaid = accumulated;
-                    newStatus = accumulated >= order.TotalPrice ? SalesOrderStatus.Paid : SalesOrderStatus.Deposited;
+                    expectedAmount = remaining; // thanh toán phần còn lại
+                }
+                else // isFull
+                {
+                    // Nếu chưa thanh toán gì: full = toàn bộ
+                    // Nếu đã thanh toán (ví dụ đã cọc): full = phần còn lại
+                    expectedAmount = order.PaidAmount == 0 ? order.TotalPrice : remaining;
+                }
+
+                if (paidAmount != expectedAmount)
+                    return ServiceResult<bool>.Fail($"Số tiền thanh toán không khớp. Yêu cầu: {expectedAmount}, VNPay gửi: {paidAmount}.", 400);
+
+                // 6) Cập nhật PaidAmount & Status
+                var newPaid = order.PaidAmount + paidAmount;
+
+                if (newPaid > order.TotalPrice)
+                    return ServiceResult<bool>.Fail("Thanh toán vượt quá số tiền đơn hàng.", 400);
+
+                order.PaidAmount = newPaid;
+
+                PaymentStatus newStatus;
+                if (order.PaidAmount >= order.TotalPrice)
+                {
+                    newStatus = PaymentStatus.Paid;
                 }
                 else
                 {
-                    newPaid = Math.Min(order.PaidAmount + paidAmount, order.TotalPrice);
-                    newStatus = newPaid >= order.TotalPrice ? SalesOrderStatus.Paid : SalesOrderStatus.Deposited;
+                    // Đã có một phần tiền → coi là Deposited
+                    newStatus = PaymentStatus.Deposited;
                 }
 
-                order.PaidAmount = newPaid;
-                order.IsDeposited = newStatus is SalesOrderStatus.Deposited or SalesOrderStatus.Paid;
-                order.Status = newStatus;
+                order.PaymentStatus = newStatus;
+                order.IsDeposited = (newStatus == PaymentStatus.Deposited || newStatus == PaymentStatus.Paid);
 
-                // 8) Cập nhật công nợ (lưu ý: nếu quan hệ là 1-n, bạn nên tạo CustomerDebt mới thay vì gán 1 object)
+                // 7) Cập nhật CustomerDebt
                 if (order.CustomerDebts == null)
                 {
                     order.CustomerDebts = new CustomerDebt
                     {
-                        CustomerId = order.CreateBy, // string userId
+                        CustomerId = order.CreateBy,
                         SalesOrderId = order.SalesOrderId,
                         DebtAmount = order.TotalPrice - order.PaidAmount,
-                        status = DateTime.Now > order.SalesOrderExpiredDate ? CustomerDebtStatus.BadDebt : CustomerDebtStatus.OnTime
+                        status = DateTime.Now > order.SalesOrderExpiredDate
+                            ? CustomerDebtStatus.BadDebt
+                            : CustomerDebtStatus.NoDebt
                     };
                     await _unitOfWork.CustomerDebt.AddAsync(order.CustomerDebts);
                 }
                 else
                 {
                     order.CustomerDebts.DebtAmount = order.TotalPrice - order.PaidAmount;
-                    order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate ? CustomerDebtStatus.BadDebt : CustomerDebtStatus.OnTime;
+                    order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate
+                        ? CustomerDebtStatus.BadDebt
+                        : CustomerDebtStatus.NoDebt;
                 }
 
                 _unitOfWork.SalesOrder.Update(order);
@@ -215,6 +312,177 @@ namespace PMS.Application.Services.VNpay
                 _logger.LogError(ex, "VNPay confirm error ({source})", source);
                 return ServiceResult<bool>.Fail("Lỗi xử lý kết quả VNPay.", 500);
             }
+        }
+
+        /// <summary>
+        /// NEW: Khởi tạo VNPay cho PaymentRemain (thanh toán phần còn lại 1 phiếu xuất)
+        /// </summary>
+        private async Task<ServiceResult<VnPayInitResponseDTO>> InitVnPayForPaymentRemainInternalAsync(
+            int paymentRemainId,
+            string clientIp,
+            string? locale)
+        {
+            try
+            {
+                var payment = await _unitOfWork.PaymentRemains.Query()
+                    .Include(p => p.SalesOrder)
+                        .ThenInclude(o => o.SalesQuotation)
+                    .Include(p => p.SalesOrder.CustomerDebts)
+                    .Include(p => p.GoodsIssueNote)
+                    .FirstOrDefaultAsync(p => p.Id == paymentRemainId);
+
+                if (payment == null)
+                    return ServiceResult<VnPayInitResponseDTO>.Fail(
+                        "Không tìm thấy PaymentRemain.", 404);
+
+                if (payment.Status != PaymentStatus.Pending)
+                    return ServiceResult<VnPayInitResponseDTO>.Fail(
+                        "Chỉ khởi tạo VNPay cho PaymentRemain ở trạng thái Pending.", 400);
+
+                if (payment.Amount <= 0)
+                    return ServiceResult<VnPayInitResponseDTO>.Fail(
+                        "Số tiền thanh toán không hợp lệ.", 400);
+
+                var order = payment.SalesOrder;
+                if (order == null)
+                    return ServiceResult<VnPayInitResponseDTO>.Fail(
+                        "PaymentRemain không gắn với SalesOrder.", 400);
+
+                // Info + để Confirm nhận biết đây là remain
+                var info = $"Thanh toan phan con thieu SO{order.SalesOrderCode} (PR{payment.Id})";
+
+                // TxnRef: dùng PaymentRemain.Id để gắn chặt giao dịch với PaymentRemain
+                var (url, qr, txnRef) = await _gateway.BuildPaymentAsync(
+                    payment.Id,          // CHANGED: dùng PaymentRemain.Id
+                    payment.Amount,
+                    info,
+                    locale,
+                    clientIp);
+
+                // Ghi lại thông tin gateway vào PaymentRemain
+                payment.PaymentMethod = PaymentMethod.VnPay;
+                payment.Gateway = "VNPay";
+                payment.GatewayTransactionRef = txnRef;
+                // (Tuỳ bạn) Có thể chỉ set PaidAt khi Success
+                payment.PaidAt = DateTime.Now;
+
+                _unitOfWork.PaymentRemains.Update(payment);
+                await _unitOfWork.CommitAsync();
+
+                var data = new VnPayInitResponseDTO
+                {
+                    PaymentUrl = url,
+                    QrBase64 = qr,
+                    Amount = payment.Amount,
+                    PaymentType = "remain",
+                    TxnRef = txnRef
+                };
+
+                return ServiceResult<VnPayInitResponseDTO>.SuccessResult(
+                    data,
+                    "Khởi tạo VNPay cho PaymentRemain thành công.",
+                    200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Init VNPay for PaymentRemain error ({PaymentRemainId})",
+                    paymentRemainId);
+
+                return ServiceResult<VnPayInitResponseDTO>.Fail(
+                    "Lỗi khởi tạo thanh toán cho PaymentRemain.", 500);
+            }
+        }
+
+        /// <summary>
+        /// NEW: Xử lý thành công cho PaymentRemain (remain theo phiếu xuất)
+        /// </summary>
+        private async Task<ServiceResult<bool>> HandlePaymentRemainSuccessAsync(
+            PaymentRemain payment,
+            decimal paidAmount,
+            string source)
+        {
+            var order = payment.SalesOrder;
+
+            if (order == null)
+                return ServiceResult<bool>.Fail(
+                    "PaymentRemain không gắn với đơn hàng.", 400);
+
+            // Idempotent
+            if (payment.Status == PaymentStatus.Success)
+            {
+                return ServiceResult<bool>.SuccessResult(
+                    true,
+                    "Giao dịch PaymentRemain đã được ghi nhận trước đó.",
+                    200);
+            }
+
+            if (payment.Status != PaymentStatus.Pending)
+            {
+                return ServiceResult<bool>.Fail(
+                    "Trạng thái PaymentRemain không hợp lệ để xác nhận.", 400);
+            }
+
+            if (payment.Amount != paidAmount)
+            {
+                return ServiceResult<bool>.Fail(
+                    $"Số tiền thanh toán không khớp. Yêu cầu: {payment.Amount}, VNPay gửi: {paidAmount}.",
+                    400);
+            }
+
+            var newPaid = order.PaidAmount + paidAmount;
+            if (newPaid > order.TotalPrice)
+            {
+                return ServiceResult<bool>.Fail(
+                    "Thanh toán vượt quá số tiền đơn hàng.", 400);
+            }
+
+            order.PaidAmount = newPaid;
+
+            if (order.PaidAmount >= order.TotalPrice)
+                order.PaymentStatus = PaymentStatus.Paid;
+            else
+                order.PaymentStatus = PaymentStatus.Deposited;
+
+            order.IsDeposited = (order.PaymentStatus == PaymentStatus.Deposited
+                              || order.PaymentStatus == PaymentStatus.Paid);
+
+            // TODO: chỉnh theo enum CustomerDebtStatus thực tế
+            if (order.CustomerDebts == null)
+            {
+                order.CustomerDebts = new CustomerDebt
+                {
+                    CustomerId = order.CreateBy,
+                    SalesOrderId = order.SalesOrderId,
+                    DebtAmount = order.TotalPrice - order.PaidAmount,
+                    status = DateTime.Now > order.SalesOrderExpiredDate
+                        ? CustomerDebtStatus.BadDebt
+                        : CustomerDebtStatus.NoDebt
+                };
+                await _unitOfWork.CustomerDebt.AddAsync(order.CustomerDebts);
+            }
+            else
+            {
+                order.CustomerDebts.DebtAmount = order.TotalPrice - order.PaidAmount;
+                order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate
+                    ? CustomerDebtStatus.BadDebt
+                    : CustomerDebtStatus.NoDebt;
+            }
+
+            // Cập nhật PaymentRemain
+            payment.Status = PaymentStatus.Success;
+            payment.PaymentMethod = PaymentMethod.VnPay;
+            payment.Gateway = "VNPay";
+            payment.PaidAt = DateTime.Now;
+
+            _unitOfWork.PaymentRemains.Update(payment);
+            _unitOfWork.SalesOrder.Update(order);
+            await _unitOfWork.CommitAsync();
+
+            return ServiceResult<bool>.SuccessResult(
+                true,
+                $"Xác nhận thanh toán phần còn lại thành công qua {source}.",
+                200);
         }
 
     }

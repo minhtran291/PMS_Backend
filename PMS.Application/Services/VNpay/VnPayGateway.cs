@@ -88,7 +88,7 @@ namespace PMS.API.Helpers.VnPay
         }
 
         public async Task<(string url, string qrBase64, string txnRef)> BuildPaymentAsync(
-            int salesOrderId, decimal amount, string orderInfo, string? bankCode, string? locale, string clientIp)
+            int salesOrderId, decimal amount, string orderInfo, string? locale, string clientIp)
         {
             var amountVnp = ((long)(amount * 100m)).ToString(CultureInfo.InvariantCulture);
 
@@ -122,25 +122,7 @@ namespace PMS.API.Helpers.VnPay
             if (!string.IsNullOrWhiteSpace(locale) && !string.Equals(locale, "null", StringComparison.OrdinalIgnoreCase))
                 p["vnp_Locale"] = locale.Trim();
 
-            // ✅ SỬA: BankCode chỉ chấp nhận [A-Z0-9]+, không được là "null"
-            //if (!string.IsNullOrWhiteSpace(bankCode) &&
-            //    !string.Equals(bankCode, "null", StringComparison.OrdinalIgnoreCase))
-            //{
-            //    var bc = bankCode.Trim().ToUpperInvariant();
-
-            //    // BankCode chuẩn VNPay là alphanumeric, không space
-            //    if (Regex.IsMatch(bc, "^[A-Z0-9]+$"))
-            //    {
-            //        p["vnp_BankCode"] = bc;
-            //    }
-            //    else
-            //    {
-            //        // Nếu sai format (ví dụ "test vnpay", "abc 123") thì bỏ luôn, không gửi lên
-            //        _logger.LogWarning("VNPay: BankCode '{bankCode}' không hợp lệ, bỏ qua không gửi.", bankCode);
-            //    }
-            //}
-
-            // ✅ Chuỗi hashData: SORT ALPHABET + URL ENCODE (VnPayEnc)
+            // HashData string: SORT ALPHABET + URL ENCODE (VnPayEnc)
             var rawForHash = string.Join("&", p.Select(kv => $"{kv.Key}={VnPayEnc(kv.Value)}"));
             var secureHash = HmacSHA512(_opt.HashSecret, rawForHash).ToLowerInvariant();
 

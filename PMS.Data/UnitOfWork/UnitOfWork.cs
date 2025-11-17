@@ -15,8 +15,11 @@ using PMS.Data.Repositories.GoodsIssueNote;
 using PMS.Data.Repositories.GoodsIssueNoteDetails;
 using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
+using PMS.Data.Repositories.InvoiceDetailRepo;
+using PMS.Data.Repositories.InvoiceRepo;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
+using PMS.Data.Repositories.PaymentRemainRepo;
 using PMS.Data.Repositories.PharmacySecretInfor;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
@@ -82,7 +85,10 @@ namespace PMS.Data.UnitOfWork
         IDebtReportRepository debtReport,
         IPharmacySecretInforRepository pharmacySecretInfor,
         IGoodsIssueNoteRepository goodsIssueNote, 
-        IGoodsIssueNoteDetailsRepository goodsIssueNoteDetails) : IUnitOfWork
+        IGoodsIssueNoteDetailsRepository goodsIssueNoteDetails,
+        IInvoiceRepository invoices,
+        IInvoiceDetailRepository invoiceDetails,
+        IPaymentRemainRepository paymentRemains) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -143,6 +149,13 @@ namespace PMS.Data.UnitOfWork
         //GoodsIssueNote
         public IGoodsIssueNoteRepository GoodsIssueNote { get; private set; } = goodsIssueNote;
         public IGoodsIssueNoteDetailsRepository GoodsIssueNoteDetails { get; private set; } = goodsIssueNoteDetails;
+
+        // Invoice
+        public IInvoiceRepository Invoices { get; private set; } = invoices;
+        public IInvoiceDetailRepository InvoicesDetails { get; private set; } = invoiceDetails;
+        public IPaymentRemainRepository PaymentRemains { get; private set; } = paymentRemains;
+
+
         public async Task<int> CommitAsync()
         {
             return await _context.SaveChangesAsync();

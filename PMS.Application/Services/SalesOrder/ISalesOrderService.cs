@@ -31,11 +31,20 @@ namespace PMS.Application.Services.SalesOrder
         //View Sales Orders
         Task<ServiceResult<object>> GetOrderDetailsAsync(int salesOrderId);
 
+        //Get total customer paid order to report
+        Task<ServiceResult<bool>> RecalculateTotalReceiveAsync();
 
         //Sales Staff
         Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListSalesOrdersAsync();
         Task<ServiceResult<bool>> ApproveSalesOrderAsync(int salesOrderId);
         Task<ServiceResult<bool>> RejectSalesOrderAsync(int  salesOrderId);
-        Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, SalesOrderStatus status); // When Sales Order is approveed and cannot payment auto then manualy
+        Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, PaymentStatus status); // When Sales Order is approveed and cannot payment auto then manualy
+
+
+        //
+        Task<ServiceResult<bool>> CheckAndUpdateDeliveredStatusAsync();
+
+        //Lấy ra toàn bộ SalesOrder chưa lấy hết hàng
+        Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListSaleOrderNotDeliveredAsync();
     }
 }
