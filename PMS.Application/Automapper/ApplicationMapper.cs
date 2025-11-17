@@ -3,6 +3,7 @@ using PMS.Application.DTOs.GoodsIssueNote;
 using PMS.Application.DTOs.Profile;
 using PMS.Application.DTOs.SalesQuotation;
 using PMS.Application.DTOs.StockExportOrder;
+using PMS.Application.DTOs.TaxPolicy;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Core.Domain.Entities;
@@ -32,7 +33,7 @@ namespace PMS.Application.Automapper
                 .ForMember(dest => dest.ProductID, opt => opt.MapFrom(src => src.Product.ProductID))
                 .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => src.Product.Unit));
 
-            CreateMap<TaxPolicy, TaxPolicyDTO>();
+            CreateMap<TaxPolicy, DTOs.SalesQuotation.TaxPolicyDTO>();
 
             CreateMap<SalesQuotation, SalesQuotationDTO>()
                 .ForMember(dest => dest.RequestCode, opt => opt.MapFrom(src => src.RequestSalesQuotation.RequestCode));
@@ -86,6 +87,8 @@ namespace PMS.Application.Automapper
             CreateMap<GoodsIssueNote, GoodsIssueNoteWithDetailsDTO>()
                 .IncludeBase<GoodsIssueNote, GoodsIssueNoteListDTO>()
                 .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.GoodsIssueNoteDetails));
+
+            CreateMap<TaxPolicy, DTOs.TaxPolicy.TaxPolicyDTO>();
         }
     }
 }

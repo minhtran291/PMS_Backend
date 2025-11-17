@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Castle.Core.Resource;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Data.UnitOfWork;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -218,8 +220,9 @@ namespace PMS.Application.Services.SalesQuotation
                     SsId = staffProfile.Id,
                     SqnId = dto.NoteId,
                     QuotationCode = GenerateQuotationCode(),
+                    QuotationDate = dto.Status == 1 ? DateTime.Now : null,
                     ExpiredDate = dto.ExpiredDate.Date.AddDays(1).AddTicks(-1),
-                    Status = Core.Domain.Enums.SalesQuotationStatus.Draft,
+                    Status = dto.Status == 1 ? Core.Domain.Enums.SalesQuotationStatus.Sent : Core.Domain.Enums.SalesQuotationStatus.Draft,
                     DepositPercent = dto.DepositPercent,
                     DepositDueDays = dto.DepositDueDays,
                     SalesQuotaionDetails = dto.Details.Select(item => new SalesQuotaionDetails
@@ -234,6 +237,47 @@ namespace PMS.Application.Services.SalesQuotation
                 await _unitOfWork.SalesQuotation.AddAsync(salesQuotation);
 
                 await _unitOfWork.CommitAsync();
+
+                if(dto.Status == 1)
+                {
+                    var salesQuotationData = await _unitOfWork.SalesQuotation.Query()
+                    .Include(sq => sq.RequestSalesQuotation)
+                        .ThenInclude(rsq => rsq.CustomerProfile)
+                            .ThenInclude(cp => cp.User)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(sqd => sqd.TaxPolicy)
+                    .Include(sq => sq.SalesQuotationNote)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(sqd => sqd.LotProduct)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(sqd => sqd.Product)
+                    .Include(sq => sq.StaffProfile)
+                        .ThenInclude(sp => sp.User)
+                    .FirstOrDefaultAsync(sq => sq.Id == salesQuotation.Id);
+
+                    rsq.Status = Core.Domain.Enums.RequestSalesQuotationStatus.Quoted;
+
+                    _unitOfWork.RequestSalesQuotation.Update(rsq);
+
+                    await _unitOfWork.CommitAsync();
+
+                    var customer = salesQuotation.RequestSalesQuotation.CustomerProfile.User;
+
+                    var staff = salesQuotation.StaffProfile.User;
+
+                    var html = QuotationTemplate.GenerateQuotationHtml(salesQuotation);
+
+                    var pdfBytes = _pdfService.GeneratePdfFromHtml(html);
+
+                    await SendSalesQuotationEmailAsync(pdfBytes, "Báo giá.pdf", customer.Email);
+
+                    await _notificationService.SendNotificationToCustomerAsync(
+                    staff.Id,
+                    customer.Id,
+                    "Bạn nhận được 1 thông báo mới",
+                    "Báo giá mới",
+                    Core.Domain.Enums.NotificationType.Message);
+                }
 
                 await _unitOfWork.CommitTransactionAsync();
 
