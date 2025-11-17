@@ -8,7 +8,8 @@ namespace PMS.Core.Domain.Enums
 {
     public enum InvoiceStatus : byte
     {
-        Issued = 1,
+        Draft = 0,
+        Send = 1,
         Cancelled = 2
     }
 }

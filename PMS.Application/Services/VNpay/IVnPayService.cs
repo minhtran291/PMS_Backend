@@ -11,8 +11,8 @@ namespace PMS.Application.Services.VNpay
 {
     public interface IVnPayService
     {
-        //Task<ServiceResult<VnPayInitResponseDTO>> InitVnPayAsync(VnPayInitRequestDTO req, string clientIp);
-        //Task<ServiceResult<bool>> HandleVnPayReturnAsync(IQueryCollection query);
-        //Task<ServiceResult<bool>> HandleVnPayIpnAsync(IQueryCollection query);
+        Task<ServiceResult<VnPayInitResponseDTO>> InitVnPayAsync(VnPayInitRequestDTO req, string clientIp);
+        Task<ServiceResult<bool>> HandleVnPayReturnAsync(IQueryCollection query);
+        Task<ServiceResult<bool>> HandleVnPayIpnAsync(IQueryCollection query);
     }
 }

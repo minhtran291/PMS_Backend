@@ -27,71 +27,59 @@ namespace PMS.API.Controllers
         /// Post: https://localhost:7213/api/Payment/init
         /// Khởi tạo thanh toán VNPay (deposit/full). Trả về link và QR.
         /// </summary>
-        //[HttpPost("init")]
-        //[ProducesResponseType(typeof(ServiceResult<VnPayInitResponseDTO>), StatusCodes.Status200OK)]
-        //public async Task<IActionResult> Init([FromBody] VnPayInitRequestDTO req)
-        //{
-        //    var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-        //    var result = await _vnPay.InitVnPayAsync(req, clientIp);
-        //    return StatusCode(result.StatusCode, new
-        //    {
-        //        success = result.Success,
-        //        message = result.Message,
-        //        data = result.Data
-        //    });
-        //}
+        [HttpPost("init")]
+        [ProducesResponseType(typeof(ServiceResult<VnPayInitResponseDTO>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> Init([FromBody] VnPayInitRequestDTO req)
+        {
+            var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+            var result = await _vnPay.InitVnPayAsync(req, clientIp);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
 
         /// <summary>
         /// Get: https://localhost:7213/api/Payment/return
         /// ReturnUrl cho web (VNPay redirect sau khi thanh toán).
         /// </summary>
-        //[HttpGet("return")]
-        //public async Task<IActionResult> Return()
-        //{
-        //    var result = await _vnPay.HandleVnPayReturnAsync(Request.Query);
-        //    // return Redirect($"https://your-frontend.com/payment/result?success={rs.Data}");
-        //    return StatusCode(result.StatusCode, new
-        //    {
-        //        success = result.Success,
-        //        message = result.Message,
-        //        data = result.Data
-        //    });
-        //}
+        [HttpGet("return")]
+        public async Task<IActionResult> Return()
+        {
+            var result = await _vnPay.HandleVnPayReturnAsync(Request.Query);
+            // return Redirect($"https://your-frontend.com/payment/result?success={rs.Data}");
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
 
         /// <summary>
         /// IPN (Instant Payment Notification) - server to server.
         /// VNPay sẽ gọi endpoint này để confirm trạng thái thanh toán.
-        /// Get: https://localhost:7213/api/Payment/ipn
+        /// Get: https://localhost:7213/api/Payment/vnpay/ipn
         /// </summary>
-        //[HttpGet("ipn")]
-        //public async Task<IActionResult> Ipn()
-        //{
-        //    var result = await _vnPay.HandleVnPayIpnAsync(Request.Query);
-        //    return StatusCode(result.StatusCode, new
-        //    {
-        //        success = result.Success,
-        //        message = result.Message,
-        //        data = result.Data
-        //    });
-        //}
+        [HttpGet("vnpay/ipn")]
+        public async Task<IActionResult> VnPayIpn()
+        {
+            var (ok, code, msg) = await _vnPay.HandleVnPayIpnAsync(Request.Query)
+                .ContinueWith(t =>
+                {
+                    var r = t.Result;
+                    // Map sang code VNPay:
+                    // 00 = nhận thành công; 97 = chữ ký sai; 04 = đã xác nhận; 99 = lỗi khác
+                    if (!r.Success && r.StatusCode == 400 && r.Message.Contains("Chữ ký")) return (false, "97", "Invalid signature");
+                    if (!r.Success && r.StatusCode == 400) return (false, "99", r.Message);
+                    if (!r.Success && r.StatusCode == 404) return (false, "01", r.Message);
+                    return (true, "00", "Confirm Success");
+                });
 
-        //[HttpGet("vnpay/ipn")]
-        //public async Task<IActionResult> VnPayIpn()
-        //{
-        //    var (ok, code, msg) = await _vnPay.HandleVnPayIpnAsync(Request.Query)
-        //        .ContinueWith(t =>
-        //        {
-        //            var r = t.Result;
-        //            // Map sang code VNPay:
-        //            // 00 = nhận thành công; 97 = chữ ký sai; 04 = đã xác nhận; 99 = lỗi khác
-        //            if (!r.Success && r.StatusCode == 400 && r.Message.Contains("Chữ ký")) return (false, "97", "Invalid signature");
-        //            if (!r.Success && r.StatusCode == 400) return (false, "99", r.Message);
-        //            if (!r.Success && r.StatusCode == 404) return (false, "01", r.Message);
-        //            return (true, "00", "Confirm Success");
-        //        });
-
-        //    return Content($"RspCode={code}&Message={msg}", "text/plain");
-        //}
+            return Content($"RspCode={code}&Message={msg}", "text/plain");
+        }
 
     }
 }

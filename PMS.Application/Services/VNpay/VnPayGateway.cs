@@ -88,7 +88,7 @@ namespace PMS.API.Helpers.VnPay
         }
 
         public async Task<(string url, string qrBase64, string txnRef)> BuildPaymentAsync(
-            int salesOrderId, decimal amount, string orderInfo, string? bankCode, string? locale, string clientIp)
+            int salesOrderId, decimal amount, string orderInfo, string? locale, string clientIp)
         {
             var amountVnp = ((long)(amount * 100m)).ToString(CultureInfo.InvariantCulture);
 

@@ -30,91 +30,91 @@ namespace PMS.Application.Services.SalesOrder
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
 
-        //public async Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, SalesOrderStatus status)
-        //{
-        //    try
-        //    {
-        //        var order = await _unitOfWork.SalesOrder.Query()
-        //            .Include(o => o.SalesOrderDetails)
-        //            .Include(o => o.CustomerDebts)
-        //            .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+        public async Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, PaymentStatus status)
+        {
+            try
+            {
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesOrderDetails)
+                    .Include(o => o.CustomerDebts)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
-        //        if (order == null)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy đơn hàng",
-        //                Data = false
-        //            };
-        //        }
+                if (order == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy đơn hàng",
+                        Data = false
+                    };
+                }
 
-        //        if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.SalesOrderStatus != SalesOrderStatus.Deposited)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã được chấp thuận hoặc đã cọc.",
-        //                Data = false
-        //            };
-        //        }
+                if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.PaymentStatus != PaymentStatus.Deposited)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã được chấp thuận hoặc đã cọc.",
+                        Data = false
+                    };
+                }
 
-        //        decimal depositAmount = order.TotalPrice * decimal.Round(order.SalesQuotation.DepositPercent / 100, 2);
+                decimal depositAmount = order.TotalPrice * decimal.Round(order.SalesQuotation.DepositPercent / 100, 2);
 
-        //        if (status == SalesOrderStatus.Deposited)
-        //        {
-        //            order.SalesOrderStatus = status;
-        //            order.IsDeposited = true;
-        //            order.PaidAmount = depositAmount;
-        //            order.CustomerDebts.DebtAmount = order.TotalPrice - depositAmount;
-        //            if (DateTime.Now > order.SalesOrderExpiredDate)
-        //            {
-        //                order.CustomerDebts.status = CustomerDebtStatus.BadDebt;
-        //            }
-        //            else
-        //            {
-        //                order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
-        //            }
-        //        }
+                if (status == PaymentStatus.Deposited)
+                {
+                    order.PaymentStatus = status;
+                    order.IsDeposited = true;
+                    order.PaidAmount = depositAmount;
+                    order.CustomerDebts.DebtAmount = order.TotalPrice - depositAmount;
+                    if (DateTime.Now > order.SalesOrderExpiredDate)
+                    {
+                        order.CustomerDebts.status = CustomerDebtStatus.BadDebt;
+                    }
+                    else
+                    {
+                        order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
+                    }
+                }
 
-        //        if (status == SalesOrderStatus.Paid)
-        //        {
-        //            order.SalesOrderStatus = status;
-        //            order.IsDeposited = true;
-        //            order.PaidAmount = order.TotalPrice;
-        //            order.CustomerDebts.DebtAmount = 0;
-        //            if (DateTime.Now > order.SalesOrderExpiredDate)
-        //            {
-        //                order.CustomerDebts.status = CustomerDebtStatus.BadDebt;
-        //            }
-        //            else
-        //            {
-        //                order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
-        //            }
-        //        }
-                
+                if (status == PaymentStatus.Paid)
+                {
+                    order.PaymentStatus = status;
+                    order.IsDeposited = true;
+                    order.PaidAmount = order.TotalPrice;
+                    order.CustomerDebts.DebtAmount = 0;
+                    if (DateTime.Now > order.SalesOrderExpiredDate)
+                    {
+                        order.CustomerDebts.status = CustomerDebtStatus.BadDebt;
+                    }
+                    else
+                    {
+                        order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
+                    }
+                }
 
-        //        _unitOfWork.SalesOrder.Update(order);
-        //        await _unitOfWork.CommitAsync();
 
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Xác nhận thanh toán thành công.",
-        //            Data = true
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi ConfirmPaymentAsync");
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Lỗi xác nhận thanh toán",
-        //            Data = false
-        //        };
-        //    }
-        //}
+                _unitOfWork.SalesOrder.Update(order);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Xác nhận thanh toán thành công.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ConfirmPaymentAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi xác nhận thanh toán",
+                    Data = false
+                };
+            }
+        }
 
         public async Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync(SalesOrderRequestDTO req)
         {
@@ -482,55 +482,55 @@ namespace PMS.Application.Services.SalesOrder
         }
 
         //Customer mark order is complete
-        //public async Task<ServiceResult<bool>> MarkCompleteAsync(int salesOrderId)
-        //{
-        //    try
-        //    {
-        //        var so = await _unitOfWork.SalesOrder.Query()
-        //            .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+        public async Task<ServiceResult<bool>> MarkCompleteAsync(int salesOrderId)
+        {
+            try
+            {
+                var so = await _unitOfWork.SalesOrder.Query()
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
-        //        if (so == null)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 404,
-        //                Message = "Không tìm thấy SalesOrder",
-        //                Data = false
-        //            };
-        //        }
+                if (so == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesOrder",
+                        Data = false
+                    };
+                }
 
-        //        if (so.SalesOrderStatus != SalesOrderStatus.Paid && so.SalesOrderStatus != SalesOrderStatus.Deposited)
-        //        {
-        //            return new ServiceResult<bool>
-        //            {
-        //                StatusCode = 400,
-        //                Message = "Chỉ được hoàn tất đơn khi đã thanh toán (Paid/Deposited)",
-        //                Data = false
-        //            };
-        //        }
+                if (so.PaymentStatus != PaymentStatus.Paid && so.SalesOrderStatus != SalesOrderStatus.Delivered)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được hoàn tất đơn khi đã thanh toán và trạng thái đơn hàng là đã giao hàng",
+                        Data = false
+                    };
+                }
 
-        //        so.SalesOrderStatus = SalesOrderStatus.Complete;
-        //        _unitOfWork.SalesOrder.Update(so);
-        //        await _unitOfWork.CommitAsync();
+                so.SalesOrderStatus = SalesOrderStatus.Complete;
+                _unitOfWork.SalesOrder.Update(so);
+                await _unitOfWork.CommitAsync();
 
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 200,
-        //            Message = "Đơn hàng đã được đánh dấu hoàn tất",
-        //            Data = true
-        //        };
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "Lỗi MarkCompleteAsync");
-        //        return new ServiceResult<bool>
-        //        {
-        //            StatusCode = 500,
-        //            Message = "Có lỗi khi hoàn tất đơn hàng",
-        //            Data = false
-        //        };
-        //    }
-        //}
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Đơn hàng đã được đánh dấu hoàn tất",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi MarkCompleteAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi hoàn tất đơn hàng",
+                    Data = false
+                };
+            }
+        }
 
         //Customer send the sales order draft
         public async Task<ServiceResult<object>> SendOrderAsync(int salesOrderId)

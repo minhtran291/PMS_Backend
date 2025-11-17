@@ -33,205 +33,206 @@ namespace PMS.Application.Services.VietQR
             _opt = options.Value;
             _logger = logger;
         }
-        //public async Task<ServiceResult<bool>> ConfirmAsync(VietQrConfirmRequest req)
-        //{
-        //    // Xác nhận thanh toán (thủ công hoặc webhook đối soát) -> cập nhật trạng thái & công nợ
-        //    try
-        //    {
-        //        var order = await _db.SalesOrders
-        //            .Include(o => o.SalesQuotation)
-        //            .Include(o => o.CustomerDebts)
-        //            .FirstOrDefaultAsync(o => o.SalesOrderId == req.SalesOrderId);
 
-        //        if (order == null)
-        //            return ServiceResult<bool>.Fail("Không tìm thấy đơn hàng.", 404);
+        public async Task<ServiceResult<bool>> ConfirmAsync(VietQrConfirmRequest req)
+        {
+            // Xác nhận thanh toán (thủ công hoặc webhook đối soát) -> cập nhật trạng thái & công nợ
+            try
+            {
+                var order = await _db.SalesOrders
+                    .Include(o => o.SalesQuotation)
+                    .Include(o => o.CustomerDebts)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == req.SalesOrderId);
 
-        //        if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.SalesOrderStatus != SalesOrderStatus.Deposited)
-        //            return ServiceResult<bool>.Fail("Chỉ xác nhận thanh toán cho đơn Approved/Deposited.", 400);
+                if (order == null)
+                    return ServiceResult<bool>.Fail("Không tìm thấy đơn hàng.", 404);
 
-        //        var depositAmount = decimal.Round(
-        //            order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m),
-        //            0, MidpointRounding.AwayFromZero);
+                if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.PaymentStatus != PaymentStatus.Deposited)
+                    return ServiceResult<bool>.Fail("Chỉ xác nhận thanh toán cho đơn hàng được chấp nhận hoặc trạng thái thanh toán là đã đặt cọc.", 400);
 
-        //        var remaining = order.TotalPrice - order.PaidAmount;
-        //        if (remaining <= 0)
-        //            return ServiceResult<bool>.Fail("Đơn đã được thanh toán đủ.", 400);
+                var depositAmount = decimal.Round(
+                    order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m),
+                    0, MidpointRounding.AwayFromZero);
 
-        //        var type = req.PaymentType?.Trim().ToLowerInvariant();
-        //        decimal expectedAmount;
+                var remaining = order.TotalPrice - order.PaidAmount;
+                if (remaining <= 0)
+                    return ServiceResult<bool>.Fail("Đơn đã được thanh toán đủ.", 400);
 
-        //        switch (type)
-        //        {
-        //            case "deposit":
-        //                // Không cho đặt cọc thêm nếu đã cọc đủ rồi
-        //                if (order.PaidAmount >= depositAmount)
-        //                    return ServiceResult<bool>.Fail("Đơn đã được đặt cọc trước đó.", 400);
-        //                expectedAmount = depositAmount;
-        //                break;
+                var type = req.PaymentType?.Trim().ToLowerInvariant();
+                decimal expectedAmount;
 
-        //            case "remain":
-        //                // Thanh toán phần còn thiếu
-        //                expectedAmount = remaining;
-        //                break;
+                switch (type)
+                {
+                    case "deposit":
+                        // Không cho đặt cọc thêm nếu đã cọc đủ rồi
+                        if (order.PaidAmount >= depositAmount)
+                            return ServiceResult<bool>.Fail("Đơn đã được đặt cọc trước đó.", 400);
+                        expectedAmount = depositAmount;
+                        break;
 
-        //            case "full":
-        //                // Nếu chưa thanh toán gì -> full = tổng tiền
-        //                // Nếu đã thanh toán (vd: đã cọc) -> full = phần còn lại
-        //                expectedAmount = order.PaidAmount == 0 ? order.TotalPrice : remaining;
-        //                break;
+                    case "remain":
+                        // Thanh toán phần còn thiếu
+                        expectedAmount = remaining;
+                        break;
 
-        //            default:
-        //                return ServiceResult<bool>.Fail("PaymentType không hợp lệ. (deposit / full / remain)", 400);
-        //        }
+                    case "full":
+                        // Nếu chưa thanh toán gì -> full = tổng tiền
+                        // Nếu đã thanh toán (vd: đã cọc) -> full = phần còn lại
+                        expectedAmount = order.PaidAmount == 0 ? order.TotalPrice : remaining;
+                        break;
 
-        //        // Nếu AmountReceived có gửi lên thì phải khớp expectedAmount
-        //        var payThisTime = req.AmountReceived ?? expectedAmount;
-        //        if (payThisTime != expectedAmount)
-        //            return ServiceResult<bool>.Fail(
-        //                $"Số tiền xác nhận không khớp. Yêu cầu: {expectedAmount}, nhận: {payThisTime}.", 400);
+                    default:
+                        return ServiceResult<bool>.Fail("PaymentType không hợp lệ. (deposit / full / remain)", 400);
+                }
 
-        //        var newPaid = order.PaidAmount + payThisTime;
-        //        if (newPaid > order.TotalPrice)
-        //            return ServiceResult<bool>.Fail("Thanh toán vượt quá số tiền đơn hàng.", 400);
+                // Nếu AmountReceived có gửi lên thì phải khớp expectedAmount
+                var payThisTime = req.AmountReceived ?? expectedAmount;
+                if (payThisTime != expectedAmount)
+                    return ServiceResult<bool>.Fail(
+                        $"Số tiền xác nhận không khớp. Yêu cầu: {expectedAmount}, nhận: {payThisTime}.", 400);
 
-        //        await using var tx = await _db.Database.BeginTransactionAsync();
+                var newPaid = order.PaidAmount + payThisTime;
+                if (newPaid > order.TotalPrice)
+                    return ServiceResult<bool>.Fail("Thanh toán vượt quá số tiền đơn hàng.", 400);
 
-        //        order.PaidAmount = newPaid;
+                await using var tx = await _db.Database.BeginTransactionAsync();
 
-        //        if (order.PaidAmount >= order.TotalPrice)
-        //        {
-        //            order.SalesOrderStatus = SalesOrderStatus.Paid;
-        //            order.PaidAmount = order.TotalPrice; 
-        //        }
-        //        else
-        //        {
-        //            order.SalesOrderStatus = SalesOrderStatus.Deposited;
-        //        }
-        //        order.IsDeposited = order.SalesOrderStatus is SalesOrderStatus.Deposited or SalesOrderStatus.Paid;
+                order.PaidAmount = newPaid;
 
-        //        // Cập nhật CustomerDebt
-        //        if (order.CustomerDebts == null)
-        //        {
-        //            order.CustomerDebts = new CustomerDebt
-        //            {
-        //                CustomerId = order.CreateBy, 
-        //                SalesOrderId = order.SalesOrderId,
-        //                DebtAmount = order.TotalPrice - order.PaidAmount,
-        //                status = DateTime.Now > order.SalesOrderExpiredDate
-        //                    ? CustomerDebtStatus.BadDebt
-        //                    : CustomerDebtStatus.NoDebt
-        //            };
-        //            _db.CustomerDebts.Add(order.CustomerDebts);
-        //        }
-        //        else
-        //        {
-        //            order.CustomerDebts.DebtAmount = order.TotalPrice - order.PaidAmount;
-        //            order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate
-        //                ? CustomerDebtStatus.BadDebt
-        //                : CustomerDebtStatus.NoDebt;
-        //        }
+                if (order.PaidAmount >= order.TotalPrice)
+                {
+                    order.PaymentStatus = PaymentStatus.Paid;
+                    order.PaidAmount = order.TotalPrice;
+                }
+                else
+                {
+                    order.PaymentStatus = PaymentStatus.Deposited;
+                }
+                order.IsDeposited = order.PaymentStatus is PaymentStatus.Deposited or PaymentStatus.Paid;
 
-        //        _db.SalesOrders.Update(order);
+                // Cập nhật CustomerDebt
+                if (order.CustomerDebts == null)
+                {
+                    order.CustomerDebts = new CustomerDebt
+                    {
+                        CustomerId = order.CreateBy,
+                        SalesOrderId = order.SalesOrderId,
+                        DebtAmount = order.TotalPrice - order.PaidAmount,
+                        status = DateTime.Now > order.SalesOrderExpiredDate
+                            ? CustomerDebtStatus.BadDebt
+                            : CustomerDebtStatus.NoDebt
+                    };
+                    _db.CustomerDebts.Add(order.CustomerDebts);
+                }
+                else
+                {
+                    order.CustomerDebts.DebtAmount = order.TotalPrice - order.PaidAmount;
+                    order.CustomerDebts.status = DateTime.Now > order.SalesOrderExpiredDate
+                        ? CustomerDebtStatus.BadDebt
+                        : CustomerDebtStatus.NoDebt;
+                }
 
-        //        await _db.SaveChangesAsync();
-        //        await tx.CommitAsync();
+                _db.SalesOrders.Update(order);
 
-        //        return ServiceResult<bool>.SuccessResult(true, "Xác nhận thanh toán VietQR thành công.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "VietQR Confirm error {@Req}", req);
-        //        return ServiceResult<bool>.Fail("Lỗi xác nhận thanh toán.", 500);
-        //    }
-        //}
+                await _db.SaveChangesAsync();
+                await tx.CommitAsync();
 
-        //public async Task<ServiceResult<VietQrInitResponse>> InitAsync(VietQrInitRequest req)
-        //{
-        //    try
-        //    {
-        //        var order = await _db.SalesOrders
-        //            .Include(o => o.SalesQuotation)
-        //            .FirstOrDefaultAsync(o => o.SalesOrderId == req.SalesOrderId);
+                return ServiceResult<bool>.SuccessResult(true, "Xác nhận thanh toán VietQR thành công.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "VietQR Confirm error {@Req}", req);
+                return ServiceResult<bool>.Fail("Lỗi xác nhận thanh toán.", 500);
+            }
+        }
 
-        //        if (order == null)
-        //            return ServiceResult<VietQrInitResponse>.Fail("Không tìm thấy đơn hàng.", 404);
+        public async Task<ServiceResult<VietQrInitResponse>> InitAsync(VietQrInitRequest req)
+        {
+            try
+            {
+                var order = await _db.SalesOrders
+                    .Include(o => o.SalesQuotation)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == req.SalesOrderId);
 
-        //        if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.SalesOrderStatus != SalesOrderStatus.Deposited)
-        //            return ServiceResult<VietQrInitResponse>.Fail("Chỉ tạo QR cho đơn Approved/Deposited.", 400);
+                if (order == null)
+                    return ServiceResult<VietQrInitResponse>.Fail("Không tìm thấy đơn hàng.", 404);
 
-        //        var depositAmount = decimal.Round(
-        //            order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m),
-        //            0, MidpointRounding.AwayFromZero);
+                if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.PaymentStatus != PaymentStatus.Deposited)
+                    return ServiceResult<VietQrInitResponse>.Fail("Chỉ tạo QR cho đơn Approved/Deposited.", 400);
 
-        //        var remaining = order.TotalPrice - order.PaidAmount;
-        //        if (remaining <= 0)
-        //            return ServiceResult<VietQrInitResponse>.Fail("Đơn đã được thanh toán đủ.", 400);
+                var depositAmount = decimal.Round(
+                    order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m),
+                    0, MidpointRounding.AwayFromZero);
 
-        //        var type = req.PaymentType?.Trim().ToLowerInvariant();
-        //        decimal amount;
-        //        string tag;
+                var remaining = order.TotalPrice - order.PaidAmount;
+                if (remaining <= 0)
+                    return ServiceResult<VietQrInitResponse>.Fail("Đơn đã được thanh toán đủ.", 400);
 
-        //        switch (type)
-        //        {
-        //            case "deposit":
-        //                if (order.PaidAmount >= depositAmount)
-        //                    return ServiceResult<VietQrInitResponse>.Fail("Đơn đã được đặt cọc trước đó.", 400);
-        //                amount = depositAmount;
-        //                tag = "DEPO";
-        //                break;
+                var type = req.PaymentType?.Trim().ToLowerInvariant();
+                decimal amount;
+                string tag;
 
-        //            case "remain":
-        //                amount = remaining;
-        //                tag = "REMAIN";
-        //                break;
+                switch (type)
+                {
+                    case "deposit":
+                        if (order.PaidAmount >= depositAmount)
+                            return ServiceResult<VietQrInitResponse>.Fail("Đơn đã được đặt cọc trước đó.", 400);
+                        amount = depositAmount;
+                        tag = "DEPO";
+                        break;
 
-        //            case "full":
-        //                // Nếu chưa thanh toán gì -> full = tổng
-        //                // Nếu đã thanh toán (ví dụ đã cọc) -> full = phần còn lại
-        //                amount = order.PaidAmount == 0 ? order.TotalPrice : remaining;
-        //                tag = "FULL";
-        //                break;
+                    case "remain":
+                        amount = remaining;
+                        tag = "REMAIN";
+                        break;
 
-        //            default:
-        //                return ServiceResult<VietQrInitResponse>.Fail("PaymentType không hợp lệ. (deposit / full / remain)", 400);
-        //        }
+                    case "full":
+                        // Nếu chưa thanh toán gì -> full = tổng
+                        // Nếu đã thanh toán (ví dụ đã cọc) -> full = phần còn lại
+                        amount = order.PaidAmount == 0 ? order.TotalPrice : remaining;
+                        tag = "FULL";
+                        break;
 
-        //        if (amount <= 0)
-        //            return ServiceResult<VietQrInitResponse>.Fail("Số tiền không hợp lệ.", 400);
+                    default:
+                        return ServiceResult<VietQrInitResponse>.Fail("PaymentType không hợp lệ. (deposit / full / remain)", 400);
+                }
 
-        //        var transferContent = RemoveDiacritics($"SO{order.SalesOrderId}-{tag}").ToUpperInvariant();
+                if (amount <= 0)
+                    return ServiceResult<VietQrInitResponse>.Fail("Số tiền không hợp lệ.", 400);
 
-        //        string Encode(string s) => Uri.EscapeDataString(s);
-        //        var baseUrl = (_opt.BaseImageUrl ?? "https://img.vietqr.io/image").Trim().TrimEnd('/');
-        //        var bank = (_opt.BankCode ?? "mbbank").Trim();
-        //        var acct = (_opt.AccountNumber ?? "").Trim();
-        //        var accName = (_opt.AccountName ?? "").Trim();
-        //        var template = string.IsNullOrWhiteSpace(_opt.Template) ? "compact2" : _opt.Template;
+                var transferContent = RemoveDiacritics($"SO{order.SalesOrderId}-{tag}").ToUpperInvariant();
 
-        //        if (string.IsNullOrWhiteSpace(acct) || string.IsNullOrWhiteSpace(accName))
-        //            return ServiceResult<VietQrInitResponse>.Fail("Chưa cấu hình VietQR: AccountNumber/AccountName.", 500);
+                string Encode(string s) => Uri.EscapeDataString(s);
+                var baseUrl = (_opt.BaseImageUrl ?? "https://img.vietqr.io/image").Trim().TrimEnd('/');
+                var bank = (_opt.BankCode ?? "mbbank").Trim();
+                var acct = (_opt.AccountNumber ?? "").Trim();
+                var accName = (_opt.AccountName ?? "").Trim();
+                var template = string.IsNullOrWhiteSpace(_opt.Template) ? "compact2" : _opt.Template;
 
-        //        var imgUrl = $"{baseUrl}/{bank}-{acct}-{template}.png" +
-        //                     $"?amount={(long)amount}" +
-        //                     $"&addInfo={Encode(transferContent)}" +
-        //                     $"&accountName={Encode(accName)}";
+                if (string.IsNullOrWhiteSpace(acct) || string.IsNullOrWhiteSpace(accName))
+                    return ServiceResult<VietQrInitResponse>.Fail("Chưa cấu hình VietQR: AccountNumber/AccountName.", 500);
 
-        //        var resp = new VietQrInitResponse
-        //        {
-        //            QrImageUrl = imgUrl,
-        //            TransferContent = transferContent,
-        //            Amount = amount,
-        //            ExpireAt = DateTime.Now.AddHours(24)
-        //        };
+                var imgUrl = $"{baseUrl}/{bank}-{acct}-{template}.png" +
+                             $"?amount={(long)amount}" +
+                             $"&addInfo={Encode(transferContent)}" +
+                             $"&accountName={Encode(accName)}";
 
-        //        return ServiceResult<VietQrInitResponse>.SuccessResult(resp, "Tạo VietQR thành công.");
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        _logger.LogError(ex, "VietQR Init error {@Req}", req);
-        //        return ServiceResult<VietQrInitResponse>.Fail("Lỗi tạo VietQR.", 500);
-        //    }
-        //}
+                var resp = new VietQrInitResponse
+                {
+                    QrImageUrl = imgUrl,
+                    TransferContent = transferContent,
+                    Amount = amount,
+                    ExpireAt = DateTime.Now.AddHours(24)
+                };
+
+                return ServiceResult<VietQrInitResponse>.SuccessResult(resp, "Tạo VietQR thành công.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "VietQR Init error {@Req}", req);
+                return ServiceResult<VietQrInitResponse>.Fail("Lỗi tạo VietQR.", 500);
+            }
+        }
 
         private static string RemoveDiacritics(string s)
         {

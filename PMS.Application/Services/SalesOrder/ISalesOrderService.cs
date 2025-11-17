@@ -26,7 +26,7 @@ namespace PMS.Application.Services.SalesOrder
         Task<ServiceResult<object>> SendOrderAsync(int salesOrderId);
 
         //Customer mark is receipted of goods
-        //Task<ServiceResult<bool>> MarkCompleteAsync(int salesOrderId);
+        Task<ServiceResult<bool>> MarkCompleteAsync(int salesOrderId);
 
         //View Sales Orders
         Task<ServiceResult<object>> GetOrderDetailsAsync(int salesOrderId);
@@ -38,7 +38,7 @@ namespace PMS.Application.Services.SalesOrder
         Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListSalesOrdersAsync();
         Task<ServiceResult<bool>> ApproveSalesOrderAsync(int salesOrderId);
         Task<ServiceResult<bool>> RejectSalesOrderAsync(int  salesOrderId);
-        //Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, SalesOrderStatus status); // When Sales Order is approveed and cannot payment auto then manualy
+        Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, PaymentStatus status); // When Sales Order is approveed and cannot payment auto then manualy
 
 
         //

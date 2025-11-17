@@ -10,6 +10,7 @@ namespace PMS.Core.Domain.Enums
     {
         Deposit = 0,
         Remain = 1,
-        Full = 2
+        Full = 2,
+        Paid = 3
     }
 }

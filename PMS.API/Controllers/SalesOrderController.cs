@@ -100,18 +100,18 @@ namespace PMS.API.Controllers
         /// POST: https://localhost:7213/api/SalesOrder/confirm-payment
         /// (Xác nhận THỦ CÔNG) đổi trạng thái Pending -> Deposited/Paid (Deposited = 4,Paid = 5,).
         /// </summary>
-        //[HttpPost("confirm-payment")]
-        //[Authorize(Roles = UserRoles.ACCOUNTANT)]
-        //public async Task<IActionResult> ConfirmPaymentManual(int orderId, SalesOrderStatus status)
-        //{
-        //    var result = await _service.ConfirmPaymentAsync(orderId, status);
-        //    return StatusCode(result.StatusCode, new
-        //    {
-        //        success = result.Success,
-        //        message = result.Message,
-        //        data = result.Data
-        //    });
-        //}
+        [HttpPost("confirm-payment")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> ConfirmPaymentManual(int orderId, PaymentStatus status)
+        {
+            var result = await _service.ConfirmPaymentAsync(orderId, status);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
 
         /// <summary>
         /// GET: https://localhost:7213/api/SalesOrder/details/{orderId}
@@ -170,18 +170,18 @@ namespace PMS.API.Controllers
         /// POST: https://localhost:7213/api/SalesOrder/complete/{orderId}
         /// Customer đánh dấu hoàn tất đơn (chỉ khi đã thanh toán và nhận được hàng).
         /// </summary>
-        //[HttpPost("complete/{orderId}")]
-        //[Authorize(Roles = UserRoles.CUSTOMER)]
-        //public async Task<IActionResult> MarkComplete(int orderId)
-        //{
-        //    var result = await _service.MarkCompleteAsync(orderId);
-        //    return StatusCode(result.StatusCode, new
-        //    {
-        //        success = result.Success,
-        //        message = result.Message,
-        //        data = result.Data
-        //    });
-        //}
+        [HttpPost("complete/{orderId}")]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
+        public async Task<IActionResult> MarkComplete(int orderId)
+        {
+            var result = await _service.MarkCompleteAsync(orderId);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
 
         /// <summary>
         /// POST: https://localhost:7213/api/SalesOrder/draft/create?salesQuotationId=123
@@ -282,7 +282,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="SalesOrderId"></param>
         /// <returns></returns>
-        [HttpPost("check-delivered-sales-order-by-id")]
+        [HttpPost("check-delivered-sales-order")]
         public async Task<IActionResult> checkDeliveredSalesOrder()
         {
             var result = await _service.CheckAndUpdateDeliveredStatusAsync();
