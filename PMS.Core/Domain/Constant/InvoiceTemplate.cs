@@ -153,7 +153,7 @@ namespace PMS.Core.Domain.Constant
 
                     .sign-area {{
                         display:flex;
-                        justify-content:space-between;
+                        justify-content:space-between;!Important
                         margin-top:40px;
                         font-size:11px;
                     }}
