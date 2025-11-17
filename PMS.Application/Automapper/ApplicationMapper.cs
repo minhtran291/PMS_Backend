@@ -3,6 +3,7 @@ using PMS.Application.DTOs.GoodsIssueNote;
 using PMS.Application.DTOs.Profile;
 using PMS.Application.DTOs.SalesQuotation;
 using PMS.Application.DTOs.StockExportOrder;
+using PMS.Application.DTOs.TaxPolicy;
 using PMS.Application.DTOs.Warehouse;
 using PMS.Application.DTOs.WarehouseLocation;
 using PMS.Core.Domain.Entities;
@@ -32,7 +33,7 @@ namespace PMS.Application.Automapper
                 .ForMember(dest => dest.ProductID, opt => opt.MapFrom(src => src.Product.ProductID))
                 .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => src.Product.Unit));
 
-            CreateMap<TaxPolicy, TaxPolicyDTO>();
+            CreateMap<TaxPolicy, DTOs.SalesQuotation.TaxPolicyDTO>();
 
             CreateMap<SalesQuotation, SalesQuotationDTO>()
                 .ForMember(dest => dest.RequestCode, opt => opt.MapFrom(src => src.RequestSalesQuotation.RequestCode));
@@ -55,30 +56,39 @@ namespace PMS.Application.Automapper
                 .IncludeBase<Warehouse, WarehouseDTO>()
                 .ForMember(dest => dest.WarehouseLocations, opt => opt.MapFrom(src => src.WarehouseLocations));
 
-            CreateMap<SalesQuotationComment, SalesQuotationCommentDTO>();
+            CreateMap<SalesQuotationComment, SalesQuotationCommentDTO>()
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.User.FullName));
 
             CreateMap<StockExportOrder, ListStockExportOrderDTO>()
                 .ForMember(dest => dest.SalesOrderCode, opt => opt.MapFrom(src => src.SalesOrder.SalesOrderCode))
                 .ForMember(dest => dest.CreateBy, opt => opt.MapFrom(src => src.SalesStaff.FullName));
 
             CreateMap<StockExportOrderDetails, DetailsStockExportOrderDTO>()
+                .ForMember(dest => dest.LotId, opt => opt.MapFrom(src => src.LotProduct.LotID))
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.LotProduct.Product.ProductName))
-                .ForMember(dest => dest.ExpiredDate, opt => opt.MapFrom(src => src.LotProduct.ExpiredDate));
+                .ForMember(dest => dest.ExpiredDate, opt => opt.MapFrom(src => src.LotProduct.ExpiredDate))
+                .ForMember(dest => dest.LocationName, opt => opt.MapFrom(src => src.LotProduct.WarehouseLocation.LocationName))
+                .ForMember(dest => dest.WarehouseName, opt => opt.MapFrom(src => src.LotProduct.WarehouseLocation.Warehouse.Name));
 
             CreateMap<StockExportOrder, ViewModelDetails>()
                 .IncludeBase<StockExportOrder, ListStockExportOrderDTO>()
                 .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.StockExportOrderDetails));
 
             CreateMap<GoodsIssueNote, GoodsIssueNoteListDTO>()
-                .ForMember(dest => dest.CreateBy, opt => opt.MapFrom(src => src.WarehouseStaff.FullName));
+                .ForMember(dest => dest.WarehouseName, opt => opt.MapFrom(src => src.Warehouse.Name))
+                .ForMember(dest => dest.CreateBy, opt => opt.MapFrom(src => src.WarehouseStaff.FullName))
+                .ForMember(dest => dest.StockExportOrderCode, opt => opt.MapFrom(src => src.StockExportOrder.StockExportOrderCode));
 
             CreateMap<GoodsIssueNoteDetails, GoodsIssueNoteDetailsDTO>()
+                .ForMember(dest => dest.WarehouseLocationName, opt => opt.MapFrom(src => src.LotProduct.WarehouseLocation.LocationName))
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.LotProduct.Product.ProductName))
                 .ForMember(dest => dest.ExpiredDate, opt => opt.MapFrom(src => src.LotProduct.ExpiredDate));
 
             CreateMap<GoodsIssueNote, GoodsIssueNoteWithDetailsDTO>()
                 .IncludeBase<GoodsIssueNote, GoodsIssueNoteListDTO>()
                 .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.GoodsIssueNoteDetails));
+
+            CreateMap<TaxPolicy, DTOs.TaxPolicy.TaxPolicyDTO>();
         }
     }
 }

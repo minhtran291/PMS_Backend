@@ -90,6 +90,19 @@ namespace PMS.API.Controllers
 
 
         /// <summary>
+        /// Lấy chi tiết đơn mua hàng (PO) theo ID kèm theo số lượng còn lại
+        /// https://localhost:7213/api/PO/GetPoDetailByPoId2/poid
+        /// </summary>
+        [HttpGet("GetPoDetailByPoId2/{poid}")]
+        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF}")]
+        public async Task<IActionResult> GetPurchaseOrderDetail2(int poid)
+        {
+            var result = await _poService.ViewDetailPObyID2(poid);
+            return HandleServiceResult(result);
+        }
+
+
+        /// <summary>
         /// https://localhost:7213/api/PO/{poid}/status?newStatus=approved
         /// </summary>
         /// <param name="poid"></param>

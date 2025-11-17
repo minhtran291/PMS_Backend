@@ -23,7 +23,7 @@ namespace PMS.Core.Domain.Entities
 
         public virtual RequestSalesQuotation RequestSalesQuotation { get; set; } = null!;
         public virtual ICollection<SalesQuotaionDetails> SalesQuotaionDetails { get; set; } = [];
-        public virtual ICollection<SalesQuotationComment>? SalesQuotationComments { get; set; }
+        public virtual ICollection<SalesQuotationComment> SalesQuotationComments { get; set; } = [];
         public virtual StaffProfile StaffProfile { get; set; } = null!;
         public virtual SalesQuotationNote SalesQuotationNote { get; set; } = null!;
         public virtual ICollection<SalesOrder> SalesOrders { get; set; } = new List<SalesOrder>();

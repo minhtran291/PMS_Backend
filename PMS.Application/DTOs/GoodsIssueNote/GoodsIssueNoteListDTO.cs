@@ -10,6 +10,9 @@ namespace PMS.Application.DTOs.GoodsIssueNote
     public class GoodsIssueNoteListDTO
     {
         public int Id { get; set; }
+        public string WarehouseName { get; set; } = string.Empty;
+        public string GoodsIssueNoteCode { get; set; } = string.Empty;
+        public string StockExportOrderCode { get; set; } = string.Empty;
         public string CreateBy { get; set; } = string.Empty;
         public DateTime CreateAt { get; set; }
         public DateTime? ExportedAt { get; set; }

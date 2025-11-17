@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using PMS.Application.DTOs.GRN;
 using PMS.Application.DTOs.PO;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
@@ -38,6 +39,8 @@ namespace PMS.Application.Services.PO
         Task<ServiceResult<List<DebtReport>>> GetAllDebtReport();
 
         Task<ServiceResult<DebtReport>> GetDebtReportDetail(int dbid);
+
+        Task<ServiceResult<POViewDTO2>> ViewDetailPObyID2(int poid);
 
     }
 }

@@ -122,5 +122,23 @@ namespace PMS.API.Controllers
                 message = result.Message,
             });
         }
+
+        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("stock-export-order-form")]
+        public async Task<IActionResult> Form(int soId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _stockExportOderService.GenerateForm(soId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                Data = result.Data
+            });
+        }
     }
 }

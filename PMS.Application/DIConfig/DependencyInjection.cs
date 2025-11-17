@@ -30,6 +30,10 @@ using PMS.Application.Services.GoodsIssueNote;
 using System.ComponentModel.Design;
 using PMS.API.Helpers.VnPay;
 using PMS.Application.Services.VietQR;
+using Microsoft.AspNetCore.Routing;
+using PMS.Application.Hub;
+using Microsoft.AspNetCore.Builder;
+using PMS.Application.Services.TaxPolicy;
 using PMS.Application.Services.PaymentRemainService;
 using PMS.Application.Services.Invoice;
 
@@ -67,6 +71,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IVietQrService, VietQrService>();
             services.AddScoped<IStockExportOderService, StockExportOrderService>();
             services.AddScoped<IGoodsIssueNoteService, GoodsIssueNoteService>();
+            services.AddScoped<ITaxPolicySerivce, TaxPolicyService>();
             services.AddScoped<IPaymentRemainService, PaymentRemainService>();
             services.AddScoped<IInvoiceService, InvoiceService>();
         }
@@ -88,6 +93,11 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IPdfService, PdfService>();
             services.AddSingleton<IConverter, SynchronizedConverter>(_ => new SynchronizedConverter(new PdfTools()));
+        }
+
+        public static void MapHubs(this IEndpointRouteBuilder app)
+        {
+            app.MapHub<SalesQuotationHub>("/salesQuotationHub");
         }
     }
 }

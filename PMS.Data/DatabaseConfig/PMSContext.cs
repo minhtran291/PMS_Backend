@@ -1021,6 +1021,10 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(seo => seo.SalesOrderId)
                     .IsRequired();
 
+                entity.Property(seo => seo.StockExportOrderCode)
+                    .HasMaxLength(256)
+                    .IsRequired();
+
                 entity.Property(seo => seo.CreateBy)
                     .HasMaxLength(450)
                     .IsRequired();
@@ -1131,6 +1135,10 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(gin => gin.Id)
                     .ValueGeneratedOnAdd();
 
+                entity.Property(gin => gin.GoodsIssueNoteCode)
+                    .HasMaxLength(256)
+                    .IsRequired();
+
                 entity.Property(gin => gin.CreateBy)
                     .HasMaxLength(450)
                     .IsRequired();
@@ -1141,13 +1149,18 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired();
 
                 entity.HasOne(gin => gin.StockExportOrder)
-                    .WithOne(seo => seo.GoodsIssueNote)
-                    .HasForeignKey<GoodsIssueNote>(gin => gin.StockExportOrderId)
+                    .WithMany(seo => seo.GoodsIssueNotes)
+                    .HasForeignKey(gin => gin.StockExportOrderId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(gin => gin.WarehouseStaff)
                     .WithMany(u => u.GoodsIssueNotes)
                     .HasForeignKey(gin => gin.CreateBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(gin => gin.Warehouse)
+                    .WithMany(w => w.GoodsIssueNotes)
+                    .HasForeignKey(gin => gin.WarehouseId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 // 1 - n (1 GoodsIssueNote - n InvoiceDetail)

@@ -96,10 +96,12 @@ namespace PMS.API.Controllers
 
             var salesStaffId = User.FindFirstValue("staff_id");
 
+            var customerId = User.FindFirstValue("customer_id");
+
             if (string.IsNullOrEmpty(role))
                 return Unauthorized();
 
-            var result = await _salesQuotationService.SalesQuotationListAsync(role, salesStaffId);
+            var result = await _salesQuotationService.SalesQuotationListAsync(role, salesStaffId, customerId);
 
             return StatusCode(result.StatusCode, new
             {

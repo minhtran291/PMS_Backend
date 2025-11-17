@@ -12,6 +12,7 @@ namespace PMS.Core.Domain.Entities
     {
         public int Id { get; set; }
         public int SalesOrderId { get; set; }
+        public required string StockExportOrderCode { get; set; }
         public required string CreateBy { get; set; }
         public DateTime DueDate { get; set; } // han yeu cau tao phieu xuat
         public DateTime? RequestDate {  get; set; } // ngay gui yeu cau
@@ -20,6 +21,6 @@ namespace PMS.Core.Domain.Entities
         public virtual SalesOrder SalesOrder { get; set; } = null!;
         public virtual User SalesStaff { get; set; } = null!;
         public virtual ICollection<StockExportOrderDetails> StockExportOrderDetails { get; set; } = [];
-        public virtual GoodsIssueNote? GoodsIssueNote { get; set; }
+        public virtual ICollection<GoodsIssueNote> GoodsIssueNotes { get; set; } = [];
     }
 }

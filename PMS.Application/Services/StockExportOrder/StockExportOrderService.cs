@@ -188,6 +188,7 @@ namespace PMS.Application.Services.StockExportOrder
                 var newExport = new Core.Domain.Entities.StockExportOrder
                 {
                     SalesOrderId = dto.SalesOrderId,
+                    StockExportOrderCode = GenerateStockExportOrderCode(),
                     CreateBy = userId,
                     DueDate = dto.DueDate,
                     Status = StockExportOrderStatus.Draft,
@@ -200,6 +201,25 @@ namespace PMS.Application.Services.StockExportOrder
 
                 await _unitOfWork.StockExportOrder.AddAsync(newExport);
                 await _unitOfWork.CommitAsync();
+
+                if (dto.Status == 1)
+                {
+                    newExport.RequestDate = DateTime.Now;
+                    newExport.Status = StockExportOrderStatus.Sent;
+
+                    _unitOfWork.StockExportOrder.Update(newExport);
+
+                    await _unitOfWork.CommitAsync();
+
+                    await _notificationService.SendNotificationToRolesAsync(
+                        userId,
+                        ["WAREHOUSE_STAFF"],
+                        "Bạn nhận được 1 thông báo mới",
+                        "Lệnh yêu cầu xuất kho",
+                        NotificationType.Message
+                        );
+                }
+                
                 await _unitOfWork.CommitTransactionAsync();
 
                 return new ServiceResult<object>
@@ -297,6 +317,12 @@ namespace PMS.Application.Services.StockExportOrder
                     .Include(seo => seo.StockExportOrderDetails)
                         .ThenInclude(d => d.LotProduct)
                             .ThenInclude(lp => lp.Product)
+                    .Include(s => s.StockExportOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.WarehouseLocation)
+                                .ThenInclude(l => l.Warehouse)
+                    .Include(s => s.SalesOrder)
+                        .ThenInclude(so => so.SalesOrderDetails)
                     .FirstOrDefaultAsync(seo => seo.Id == seoId);
 
                 if (stockExportOrder == null)
@@ -317,7 +343,7 @@ namespace PMS.Application.Services.StockExportOrder
                 }
                 else
                 {
-                    if (stockExportOrder.Status != StockExportOrderStatus.Sent)
+                    if (stockExportOrder.Status == StockExportOrderStatus.Draft)
                         return new ServiceResult<object>
                         {
                             StatusCode = 400,
@@ -327,6 +353,41 @@ namespace PMS.Application.Services.StockExportOrder
 
                 var result = _mapper.Map<ViewModelDetails>(stockExportOrder);
 
+                var previousExports = await _unitOfWork.StockExportOrder.Query()
+                    .AsNoTracking()
+                    .Include(seo => seo.StockExportOrderDetails)
+                    .Where(seo => seo.SalesOrderId == stockExportOrder.SalesOrderId && seo.Id != stockExportOrder.Id)
+                    .ToListAsync();
+
+                if (previousExports.Any())
+                {
+                    var exportedQuantities = previousExports
+                        .SelectMany(seo => seo.StockExportOrderDetails)
+                        .GroupBy(d => d.LotId)
+                        .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
+
+                    foreach (var detail in result.Details)
+                    {
+                        var order = stockExportOrder.SalesOrder.SalesOrderDetails.First(d => d.LotId == detail.LotId);
+
+                        var alreadyExported = exportedQuantities.ContainsKey(detail.LotId) ? exportedQuantities[detail.LotId] : 0;
+
+                        var availableToExport = order.Quantity - alreadyExported;
+
+                        detail.Available = availableToExport;
+                    }
+                }
+                else
+                {
+                    foreach(var detail in result.Details)
+                    {
+                        var order = stockExportOrder.SalesOrder.SalesOrderDetails
+                            .FirstOrDefault(d => d.LotId == detail.LotId);
+
+                        detail.Available = order.Quantity;
+                    }
+                }
+
                 return new ServiceResult<object>
                 {
                     StatusCode = 200,
@@ -335,6 +396,73 @@ namespace PMS.Application.Services.StockExportOrder
 
             }
             catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
+
+        public async Task<ServiceResult<object>> GenerateForm(int soId)
+        {
+            try
+            {
+                var salesOrder = await _unitOfWork.SalesOrder.Query()
+                    .Include(s => s.SalesOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.Product)
+                    .FirstOrDefaultAsync(s => s.SalesOrderId == soId);
+
+                if (salesOrder == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Không tìm thấy đơn hàng"
+                    };
+
+                var stockExportOrder = await _unitOfWork.StockExportOrder.Query()
+                    .Where(s => s.SalesOrderId == soId)
+                    .ToListAsync();
+
+                var exportedQuantities = stockExportOrder
+                    .SelectMany(s => s.StockExportOrderDetails)
+                    .GroupBy(g => g.LotId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
+
+                var listOrder = new List<FormDataDTO>();
+
+                foreach(var detail in salesOrder.SalesOrderDetails)
+                {
+                    var lotId = detail.LotId;
+
+                    var quantity = detail.Quantity;
+
+                    var alreadyExported = exportedQuantities.ContainsKey(lotId) ? exportedQuantities[lotId] : 0;
+
+                    var availableToExport = detail.Quantity - alreadyExported;
+
+                    var order = new FormDataDTO
+                    {
+                        LotId = lotId,
+                        ProductName = detail.LotProduct.Product.ProductName,
+                        ExpiredDate = detail.LotProduct.ExpiredDate,
+                        Avaiable = availableToExport,
+                    };
+
+                    listOrder.Add(order);
+                }
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = listOrder
+                };
+            }
+            catch(Exception ex)
             {
                 _logger.LogError(ex, "Loi");
 
@@ -364,7 +492,7 @@ namespace PMS.Application.Services.StockExportOrder
                 if (isSales)
                     query = query.Where(seo => seo.CreateBy == userId);
                 else
-                    query = query.Where(seo => seo.Status == StockExportOrderStatus.Sent);
+                    query = query.Where(seo => seo.Status != StockExportOrderStatus.Draft);
 
                 var list = await query.ToListAsync();
 
@@ -772,6 +900,12 @@ namespace PMS.Application.Services.StockExportOrder
             }
 
             return null;
+        }
+
+        private static string GenerateStockExportOrderCode()
+        {
+            var randomPart = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
+            return $"SEO-{randomPart}";
         }
     }
 }

@@ -72,14 +72,21 @@ namespace PMS.API.Controllers
                     Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
                 });
             }
+
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized(new { Message = "Không thể xác định người dùng từ token." });
             }
+
             var result = await _IGRNService.CreateGRNByManually(userId, poId, dto);
 
-            return HandleServiceResult(result);
+            return StatusCode(result.StatusCode, new
+            {
+                Success = result.Success,
+                Message = result.Message,
+                Data = result.Data   
+            });
         }
 
         /// <summary>
