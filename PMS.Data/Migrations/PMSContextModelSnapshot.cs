@@ -532,8 +532,7 @@ namespace PMS.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SalesOrderId")
-                        .IsUnique();
+                    b.HasIndex("SalesOrderId");
 
                     b.ToTable("Invoices");
                 });
@@ -568,8 +567,7 @@ namespace PMS.Data.Migrations
 
                     b.HasKey("InvoiceId", "GoodsIssueNoteId");
 
-                    b.HasIndex("GoodsIssueNoteId")
-                        .IsUnique();
+                    b.HasIndex("GoodsIssueNoteId");
 
                     b.ToTable("InvoiceDetails");
                 });
@@ -1772,8 +1770,8 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.Invoice", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
-                        .WithOne("Invoice")
-                        .HasForeignKey("PMS.Core.Domain.Entities.Invoice", "SalesOrderId")
+                        .WithMany("Invoice")
+                        .HasForeignKey("SalesOrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1783,8 +1781,8 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.InvoiceDetail", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Entities.GoodsIssueNote", "GoodsIssueNote")
-                        .WithOne("InvoiceDetail")
-                        .HasForeignKey("PMS.Core.Domain.Entities.InvoiceDetail", "GoodsIssueNoteId")
+                        .WithMany("InvoiceDetails")
+                        .HasForeignKey("GoodsIssueNoteId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -2200,7 +2198,7 @@ namespace PMS.Data.Migrations
                 {
                     b.Navigation("GoodsIssueNoteDetails");
 
-                    b.Navigation("InvoiceDetail");
+                    b.Navigation("InvoiceDetails");
 
                     b.Navigation("PaymentRemain");
                 });

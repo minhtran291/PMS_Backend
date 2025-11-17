@@ -97,5 +97,39 @@ namespace PMS.Core.Domain.Constant
 
             return body;
         }
+
+
+        public static string INVOICE(string customerName)
+        {
+            var body = $@"
+<!DOCTYPE html>
+<html lang=""vi"">
+<head>
+    <meta charset=""UTF-8"">
+    <title>Hóa đơn giá trị gia tăng</title>
+</head>
+<body style=""margin:0;font-family:Arial,sans-serif;background-color:#f4f4f4;padding:40px;"">
+    <div style=""max-width:600px;margin:auto;background-color:#fff;border-radius:10px;
+                padding:30px;box-shadow:0 2px 8px rgba(0,0,0,0.1);"">
+        <h2 style=""text-align:center;color:#333;"">Hóa đơn giá trị gia tăng</h2>
+        <p style=""font-size:15px;color:#555;"">
+            Chào <strong>{customerName}</strong>,
+        </p>
+        <p style=""font-size:15px;color:#555;"">
+            Chúng tôi gửi kèm theo email này hóa đơn VAT cho đơn hàng của bạn.
+        </p>
+        <p style=""font-size:13px;color:#888;"">
+            Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ lại với chúng tôi.
+        </p>
+        <hr style=""margin:40px 0;border:none;border-top:1px solid #eee;"">
+        <p style=""font-size:12px;color:#aaa;text-align:center;"">
+            © {DateTime.Now.Year} PMS. All rights reserved.
+        </p>
+    </div>
+</body>
+</html>";
+            return body;
+        }
+
     }
 }

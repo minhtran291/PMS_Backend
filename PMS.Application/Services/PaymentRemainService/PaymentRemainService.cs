@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PMS.Application.DTOs.PaymentRemain;
 
 namespace PMS.Application.Services.PaymentRemainService
 {
@@ -214,5 +215,182 @@ namespace PMS.Application.Services.PaymentRemainService
                 };
             }
         }
+
+        public async Task<ServiceResult<PaymentRemainItemDTO>> GetPaymentRemainDetailAsync(int id)
+        {
+            try
+            {
+                var entity = await _unitOfWork.PaymentRemains.Query()
+                    .Include(p => p.SalesOrder)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == id);
+
+                if (entity == null)
+                {
+                    return new ServiceResult<PaymentRemainItemDTO>
+                    {
+                        StatusCode = 404,
+                        Success = false,
+                        Message = "Không tìm thấy PaymentRemain.",
+                        Data = null
+                    };
+                }
+
+                var dto = new PaymentRemainItemDTO
+                {
+                    Id = entity.Id,
+                    SalesOrderId = entity.SalesOrderId,
+                    SalesOrderCode = entity.SalesOrder?.SalesOrderCode,
+                    GoodsIssueNoteId = entity.GoodsIssueNoteId,
+                    PaymentType = entity.PaymentType,
+                    PaymentMethod = entity.PaymentMethod,
+                    Status = entity.Status,
+                    Amount = entity.Amount,
+                    PaidAt = entity.PaidAt,
+                    GatewayTransactionRef = entity.GatewayTransactionRef,
+                    Gateway = entity.Gateway,
+                    SalesOrderTotalPrice = entity.SalesOrder?.TotalPrice ?? 0m,
+                    SalesOrderPaidAmount = entity.SalesOrder?.PaidAmount ?? 0m
+                };
+
+                return new ServiceResult<PaymentRemainItemDTO>
+                {
+                    StatusCode = 200,
+                    Success = true,
+                    Message = "Lấy thông tin chi tiết PaymentRemain thành công.",
+                    Data = dto
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi GetPaymentRemainDetailAsync({Id})", id);
+
+                return new ServiceResult<PaymentRemainItemDTO>
+                {
+                    StatusCode = 500,
+                    Success = false,
+                    Message = "Có lỗi xảy ra khi lấy chi tiết PaymentRemain.",
+                    Data = null
+                };
+            }
+        }
+
+        public async Task<ServiceResult<List<int>>> GetPaymentRemainIdsBySalesOrderIdAsync(int salesOrderId)
+        {
+            try
+            {
+                var ids = await _unitOfWork.PaymentRemains.Query()
+                    .Where(p => p.SalesOrderId == salesOrderId
+                                && p.Status == PaymentStatus.Success
+                                && (p.PaymentType == PaymentType.Remain
+                                    || p.PaymentType == PaymentType.Full))
+                    .OrderBy(p => p.PaidAt)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                return new ServiceResult<List<int>>
+                {
+                    StatusCode = 200,
+                    Success = true,
+                    Message = "Lấy danh sách PaymentRemainId thành công.",
+                    Data = ids
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Lỗi GetPaymentRemainIdsBySalesOrderIdAsync({SalesOrderId})",
+                    salesOrderId);
+
+                return new ServiceResult<List<int>>
+                {
+                    StatusCode = 500,
+                    Success = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách PaymentRemainId.",
+                    Data = null
+                };
+            }
+        }
+
+        public async Task<ServiceResult<List<PaymentRemainItemDTO>>> GetPaymentRemainsAsync(PaymentRemainListRequestDTO request)
+        {
+            try
+            {
+                var query = _unitOfWork.PaymentRemains.Query()
+                    .Include(p => p.SalesOrder)
+                    .AsNoTracking();
+
+                // Filter theo SalesOrderId
+                if (request.SalesOrderId.HasValue)
+                {
+                    query = query.Where(p => p.SalesOrderId == request.SalesOrderId.Value);
+                }
+
+                // Filter theo GoodsIssueNoteId
+                if (request.GoodsIssueNoteId.HasValue)
+                {
+                    query = query.Where(p => p.GoodsIssueNoteId == request.GoodsIssueNoteId.Value);
+                }
+
+                // Filter theo Status
+                if (request.Status.HasValue)
+                {
+                    query = query.Where(p => p.Status == request.Status.Value);
+                }
+
+                // Filter theo PaymentMethod
+                if (request.PaymentMethod.HasValue)
+                {
+                    query = query.Where(p => p.PaymentMethod == request.PaymentMethod.Value);
+                }
+
+                // Filter theo PaymentType
+                if (request.PaymentType.HasValue)
+                {
+                    query = query.Where(p => p.PaymentType == request.PaymentType.Value);
+                }
+
+                query = query.OrderByDescending(p => p.PaidAt)
+                             .ThenByDescending(p => p.Id);
+
+                var items = await query.ToListAsync();
+
+                var data = items.Select(p => new PaymentRemainItemDTO
+                {
+                    Id = p.Id,
+                    SalesOrderId = p.SalesOrderId,
+                    GoodsIssueNoteId = p.GoodsIssueNoteId,
+                    PaymentType = p.PaymentType,
+                    PaymentMethod = p.PaymentMethod,
+                    Status = p.Status,
+                    Amount = p.Amount,
+                    PaidAt = p.PaidAt,
+                    GatewayTransactionRef = p.GatewayTransactionRef,
+                    Gateway = p.Gateway,
+                    SalesOrderCode = p.SalesOrder?.SalesOrderCode
+                }).ToList();
+
+                return new ServiceResult<List<PaymentRemainItemDTO>>
+                {
+                    StatusCode = 200,
+                    Success = true,
+                    Message = "Lấy danh sách PaymentRemain thành công.",
+                    Data = data
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi GetPaymentRemainsAsync");
+                return new ServiceResult<List<PaymentRemainItemDTO>>
+                {
+                    StatusCode = 500,
+                    Success = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách PaymentRemain.",
+                    Data = null
+                };
+            }
+        }
+
+
     }
 }

@@ -951,10 +951,10 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(so => so.CreateBy)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                //1-1 (1 SalesOrder - 1 Invoice)
-                entity.HasOne(so => so.Invoice)
+                //1-n (1 SalesOrder - n Invoice)
+                entity.HasMany(so => so.Invoice)
                     .WithOne(inv => inv.SalesOrder)
-                    .HasForeignKey<Invoice>(inv => inv.SalesOrderId)
+                    .HasForeignKey(inv => inv.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
 
                 //1-n (1 SalesOrder - n PaymentRemains)
@@ -983,11 +983,6 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(o => o.SalesOrderDetails)
                     .HasForeignKey(d => d.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
-
-                //entity.HasOne(d => d.Product)
-                //    .WithMany(p => p.SalesOrderDetails)
-                //    .HasForeignKey(d => d.ProductId)
-                //    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(d => d.LotProduct)
                     .WithMany(lp => lp.SalesOrderDetails)
@@ -1155,10 +1150,10 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(gin => gin.CreateBy)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // 1 - 1 (1 GoodsIssueNote - 1 InvoiceDetail)
-                entity.HasOne(gin => gin.InvoiceDetail)
+                // 1 - n (1 GoodsIssueNote - n InvoiceDetail)
+                entity.HasMany(gin => gin.InvoiceDetails)
                     .WithOne(id => id.GoodsIssueNote)
-                    .HasForeignKey<InvoiceDetail>(id => id.GoodsIssueNoteId)
+                    .HasForeignKey(id => id.GoodsIssueNoteId)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 // 1 - 1: 1 GoodsIssueNote - 1 PaymentRemain
@@ -1224,10 +1219,10 @@ namespace PMS.Data.DatabaseConfig
                     .HasPrecision(18, 2)
                     .IsRequired();
 
-                // 1 - 1 với SalesOrder
+                // 1 - n (1 SalesOrder - n Invoice)
                 entity.HasOne(inv => inv.SalesOrder)
-                    .WithOne(so => so.Invoice)
-                    .HasForeignKey<Invoice>(inv => inv.SalesOrderId)
+                    .WithMany(so => so.Invoice)
+                    .HasForeignKey(inv => inv.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
 
                 // 1 - n (Invoice -> InvoiceDetails)
@@ -1261,8 +1256,7 @@ namespace PMS.Data.DatabaseConfig
                     .HasPrecision(18, 2)
                     .IsRequired();
 
-                entity.HasIndex(d => d.GoodsIssueNoteId)
-                    .IsUnique();
+                entity.HasIndex(d => d.GoodsIssueNoteId);
             });
 
             builder.Entity<PaymentRemain>(entity =>

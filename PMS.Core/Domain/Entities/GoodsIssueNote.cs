@@ -22,7 +22,8 @@ namespace PMS.Core.Domain.Entities
         public virtual StockExportOrder StockExportOrder { get; set; } = null!;
         public virtual User WarehouseStaff { get; set; } = null!;
         public virtual ICollection<GoodsIssueNoteDetails> GoodsIssueNoteDetails { get; set; } = [];
-        public virtual InvoiceDetail? InvoiceDetail { get; set; }
+        public virtual ICollection<InvoiceDetail> InvoiceDetails { get; set; }
+        = new List<InvoiceDetail>();
         public virtual PaymentRemain? PaymentRemain { get; set; }
     }
 }

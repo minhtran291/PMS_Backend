@@ -31,6 +31,7 @@ using System.ComponentModel.Design;
 using PMS.API.Helpers.VnPay;
 using PMS.Application.Services.VietQR;
 using PMS.Application.Services.PaymentRemainService;
+using PMS.Application.Services.Invoice;
 
 namespace PMS.Application.DIConfig
 {
@@ -67,6 +68,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IStockExportOderService, StockExportOrderService>();
             services.AddScoped<IGoodsIssueNoteService, GoodsIssueNoteService>();
             services.AddScoped<IPaymentRemainService, PaymentRemainService>();
+            services.AddScoped<IInvoiceService, InvoiceService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
