@@ -7,8 +7,11 @@ using PMS.Data.Repositories.GoodsIssueNote;
 using PMS.Data.Repositories.GoodsIssueNoteDetails;
 using PMS.Data.Repositories.InventoryHistory;
 using PMS.Data.Repositories.InventorySession;
+using PMS.Data.Repositories.InvoiceDetailRepo;
+using PMS.Data.Repositories.InvoiceRepo;
 using PMS.Data.Repositories.LotProductRepository;
 using PMS.Data.Repositories.Notification;
+using PMS.Data.Repositories.PaymentRemainRepo;
 using PMS.Data.Repositories.PharmacySecretInfor;
 using PMS.Data.Repositories.ProductCategoryRepository;
 using PMS.Data.Repositories.ProductRepository;
@@ -94,6 +97,11 @@ namespace PMS.Data.UnitOfWork
         //GoodsIssueNote
         IGoodsIssueNoteRepository GoodsIssueNote { get; }
         IGoodsIssueNoteDetailsRepository GoodsIssueNoteDetails { get; }
+
+        //Invoice
+        IInvoiceRepository Invoices { get; }
+        IInvoiceDetailRepository InvoicesDetails { get; }
+        IPaymentRemainRepository PaymentRemains { get; }
 
         Task<int> CommitAsync();
         Task BeginTransactionAsync();

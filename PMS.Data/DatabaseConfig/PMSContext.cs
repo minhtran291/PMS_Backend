@@ -61,6 +61,11 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<GoodsIssueNoteDetails> GoodsIssueNoteDetails { get; set; }
 
         //
+        public virtual DbSet<PaymentRemain> PaymentRemains { get; set; }
+        public virtual DbSet<Invoice> Invoices { get; set; }
+        public virtual DbSet<InvoiceDetail> InvoiceDetails { get; set; }
+
+        //
         public virtual DbSet<PharmacySecretInfor> PharmacySecretInfors { get; set; }
         //
         public virtual DbSet<InventoryHistory> InventoryHistories { get; set; }
@@ -911,7 +916,12 @@ namespace PMS.Data.DatabaseConfig
                     .HasPrecision(18, 2)
                     .IsRequired();
 
-                entity.Property(so => so.Status)
+                entity.Property(so => so.SalesOrderStatus)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(so => so.PaymentStatus)
                     .HasConversion<byte>()
                     .HasColumnType("TINYINT")
                     .IsRequired();
@@ -940,6 +950,18 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(u => u.SalesOrders)
                     .HasForeignKey(so => so.CreateBy)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                //1-n (1 SalesOrder - n Invoice)
+                entity.HasMany(so => so.Invoice)
+                    .WithOne(inv => inv.SalesOrder)
+                    .HasForeignKey(inv => inv.SalesOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                //1-n (1 SalesOrder - n PaymentRemains)
+                entity.HasMany(so => so.PaymentRemains)
+                    .WithOne(pr => pr.SalesOrder)
+                    .HasForeignKey(pr => pr.SalesOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             builder.Entity<SalesOrderDetails>(entity =>
@@ -961,11 +983,6 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(o => o.SalesOrderDetails)
                     .HasForeignKey(d => d.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
-
-                //entity.HasOne(d => d.Product)
-                //    .WithMany(p => p.SalesOrderDetails)
-                //    .HasForeignKey(d => d.ProductId)
-                //    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(d => d.LotProduct)
                     .WithMany(lp => lp.SalesOrderDetails)
@@ -1145,6 +1162,18 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(w => w.GoodsIssueNotes)
                     .HasForeignKey(gin => gin.WarehouseId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                // 1 - n (1 GoodsIssueNote - n InvoiceDetail)
+                entity.HasMany(gin => gin.InvoiceDetails)
+                    .WithOne(id => id.GoodsIssueNote)
+                    .HasForeignKey(id => id.GoodsIssueNoteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // 1 - 1: 1 GoodsIssueNote - 1 PaymentRemain
+                entity.HasOne(gin => gin.PaymentRemain)
+                    .WithOne(pr => pr.GoodsIssueNote)
+                    .HasForeignKey<PaymentRemain>(pr => pr.GoodsIssueNoteId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<GoodsIssueNoteDetails>(entity =>
@@ -1163,6 +1192,137 @@ namespace PMS.Data.DatabaseConfig
                     .WithMany(lp => lp.GoodsIssueNoteDetails)
                     .HasForeignKey(d => d.LotId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Invoice>(entity =>
+            {
+                entity.HasKey(inv => inv.Id);
+
+                entity.Property(inv => inv.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(inv => inv.InvoiceCode)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(inv => inv.CreatedAt)
+                    .IsRequired();
+
+                entity.Property(inv => inv.IssuedAt)
+                    .IsRequired();
+
+                entity.Property(inv => inv.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(inv => inv.TotalAmount)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(inv => inv.TotalPaid)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(inv => inv.TotalDeposit)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(inv => inv.TotalRemain)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                // 1 - n (1 SalesOrder - n Invoice)
+                entity.HasOne(inv => inv.SalesOrder)
+                    .WithMany(so => so.Invoice)
+                    .HasForeignKey(inv => inv.SalesOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // 1 - n (Invoice -> InvoiceDetails)
+                entity.HasMany(inv => inv.InvoiceDetails)
+                    .WithOne(d => d.Invoice)
+                    .HasForeignKey(d => d.InvoiceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<InvoiceDetail>(entity =>
+            {
+                entity.HasKey(d => new { d.InvoiceId, d.GoodsIssueNoteId });
+
+                entity.Property(d => d.GoodsIssueAmount)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(d => d.AllocatedDeposit)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(d => d.PaidRemain)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(d => d.TotalPaidForNote)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(d => d.NoteBalance)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.HasIndex(d => d.GoodsIssueNoteId);
+            });
+
+            builder.Entity<PaymentRemain>(entity =>
+            {
+                entity.HasKey(p => p.Id);
+
+                entity.Property(p => p.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(p => p.Amount)
+                    .HasPrecision(18, 2)
+                    .IsRequired();
+
+                entity.Property(p => p.PaidAt)
+                    .IsRequired();
+
+                entity.Property(p => p.PaymentType)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(p => p.PaymentMethod)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(p => p.Status)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
+                entity.Property(p => p.Gateway)
+                    .HasMaxLength(50);
+
+                entity.Property(p => p.GatewayTransactionRef)
+                    .HasMaxLength(100);
+
+                // n - 1: n PaymentRemain - 1 SalesOrder
+                entity.HasOne(p => p.SalesOrder)
+                    .WithMany(so => so.PaymentRemains)
+                    .HasForeignKey(p => p.SalesOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // 1 - 1: 1 GoodsIssueNote - 1 PaymentRemain 
+                entity.HasOne(p => p.GoodsIssueNote)
+                    .WithOne(g => g.PaymentRemain)
+                    .HasForeignKey<PaymentRemain>(p => p.GoodsIssueNoteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // only 1 PaymentRemain - 1 GoodsIssueNote:
+                entity.HasIndex(p => p.GoodsIssueNoteId)
+                    .IsUnique()
+                    .HasFilter("[GoodsIssueNoteId] IS NOT NULL");
             });
         }
     }

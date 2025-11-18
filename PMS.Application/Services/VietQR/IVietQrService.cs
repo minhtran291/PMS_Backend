@@ -10,7 +10,7 @@ namespace PMS.Application.Services.VietQR
 {
     public interface IVietQrService
     {
-        Task<ServiceResult<VietQrInitResponse>> InitAsync(VietQrInitRequest req);
-        Task<ServiceResult<bool>> ConfirmAsync(VietQrConfirmRequest req);
+        //Task<ServiceResult<VietQrInitResponse>> InitAsync(VietQrInitRequest req);
+        //Task<ServiceResult<bool>> ConfirmAsync(VietQrConfirmRequest req);
     }
 }

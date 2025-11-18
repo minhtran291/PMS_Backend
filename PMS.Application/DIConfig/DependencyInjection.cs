@@ -34,6 +34,8 @@ using Microsoft.AspNetCore.Routing;
 using PMS.Application.Hub;
 using Microsoft.AspNetCore.Builder;
 using PMS.Application.Services.TaxPolicy;
+using PMS.Application.Services.PaymentRemainService;
+using PMS.Application.Services.Invoice;
 
 namespace PMS.Application.DIConfig
 {
@@ -70,6 +72,8 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IStockExportOderService, StockExportOrderService>();
             services.AddScoped<IGoodsIssueNoteService, GoodsIssueNoteService>();
             services.AddScoped<ITaxPolicySerivce, TaxPolicyService>();
+            services.AddScoped<IPaymentRemainService, PaymentRemainService>();
+            services.AddScoped<IInvoiceService, InvoiceService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)

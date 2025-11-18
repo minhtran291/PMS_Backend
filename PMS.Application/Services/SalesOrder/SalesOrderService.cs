@@ -30,7 +30,7 @@ namespace PMS.Application.Services.SalesOrder
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
 
-        public async Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, SalesOrderStatus status)
+        public async Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, PaymentStatus status)
         {
             try
             {
@@ -49,7 +49,7 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                if (order.Status != SalesOrderStatus.Approved && order.Status != SalesOrderStatus.Deposited)
+                if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.PaymentStatus != PaymentStatus.Deposited)
                 {
                     return new ServiceResult<bool>
                     {
@@ -61,9 +61,9 @@ namespace PMS.Application.Services.SalesOrder
 
                 decimal depositAmount = order.TotalPrice * decimal.Round(order.SalesQuotation.DepositPercent / 100, 2);
 
-                if (status == SalesOrderStatus.Deposited)
+                if (status == PaymentStatus.Deposited)
                 {
-                    order.Status = status;
+                    order.PaymentStatus = status;
                     order.IsDeposited = true;
                     order.PaidAmount = depositAmount;
                     order.CustomerDebts.DebtAmount = order.TotalPrice - depositAmount;
@@ -73,13 +73,13 @@ namespace PMS.Application.Services.SalesOrder
                     }
                     else
                     {
-                        order.CustomerDebts.status = CustomerDebtStatus.OnTime;
+                        order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
                     }
                 }
 
-                if (status == SalesOrderStatus.Paid)
+                if (status == PaymentStatus.Paid)
                 {
-                    order.Status = status;
+                    order.PaymentStatus = status;
                     order.IsDeposited = true;
                     order.PaidAmount = order.TotalPrice;
                     order.CustomerDebts.DebtAmount = 0;
@@ -89,10 +89,10 @@ namespace PMS.Application.Services.SalesOrder
                     }
                     else
                     {
-                        order.CustomerDebts.status = CustomerDebtStatus.OnTime;
+                        order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
                     }
                 }
-                
+
 
                 _unitOfWork.SalesOrder.Update(order);
                 await _unitOfWork.CommitAsync();
@@ -146,9 +146,12 @@ namespace PMS.Application.Services.SalesOrder
                     };
 
                 var sq = await _unitOfWork.SalesQuotation.Query()
-                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.Product)
-                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.LotProduct)
-                    .Include(q => q.SalesQuotaionDetails).ThenInclude(d => d.TaxPolicy)
+                    .Include(q => q.SalesQuotaionDetails)
+                        .ThenInclude(d => d.Product)
+                    .Include(q => q.SalesQuotaionDetails)
+                        .ThenInclude(d => d.LotProduct)
+                    .Include(q => q.SalesQuotaionDetails)
+                        .ThenInclude(d => d.TaxPolicy)
                     .FirstOrDefaultAsync(q => q.Id == req.SalesQuotationId);
 
                 if (sq == null)
@@ -168,7 +171,8 @@ namespace PMS.Application.Services.SalesOrder
                     };
 
                 var sqDetailByKey = sq.SalesQuotaionDetails
-                    .ToDictionary(d => (d.ProductId, d.LotId), d => d);
+                    .Where(d => d.LotId.HasValue)
+                    .ToDictionary(d => d.LotId!.Value, d => d);
 
                 foreach (var it in req.Details)
                 {
@@ -176,16 +180,15 @@ namespace PMS.Application.Services.SalesOrder
                         return new ServiceResult<object>
                         {
                             StatusCode = 400,
-                            Message = $"Quantity âm ở ProductId={it.ProductId}.",
+                            Message = $"Quantity âm ở {it.LotId}.",
                             Data = null
                         };
 
-                    var key = (it.ProductId, it.LotId);
-                    if (!sqDetailByKey.ContainsKey(key))
+                    if (!sqDetailByKey.ContainsKey(it.LotId))
                         return new ServiceResult<object>
                         {
                             StatusCode = 400,
-                            Message = $"Dòng không thuộc báo giá: ProductId={it.ProductId}, LotId={it.LotId}.",
+                            Message = $"Dòng không thuộc báo giá: LotId={it.LotId}.",
                             Data = null
                         };
                 }
@@ -199,7 +202,7 @@ namespace PMS.Application.Services.SalesOrder
                     SalesOrderCode = GenerateSalesOrderCode(),
                     CreateBy = req.CreateBy.Trim(),
                     CreateAt = DateTime.Now,
-                    Status = SalesOrderStatus.Draft,
+                    SalesOrderStatus = SalesOrderStatus.Draft,
                     IsDeposited = false,
                     TotalPrice = 0m,
                     PaidAmount = 0m,
@@ -213,7 +216,7 @@ namespace PMS.Application.Services.SalesOrder
                 var detailEntities = new List<SalesOrderDetails>();
                 foreach (var it in req.Details)
                 {
-                    var sqd = sqDetailByKey[(it.ProductId, it.LotId)];
+                    var sqd = sqDetailByKey[it.LotId];
 
                     var basePrice = sqd.LotProduct?.SalePrice ?? 0m;
 
@@ -226,7 +229,6 @@ namespace PMS.Application.Services.SalesOrder
                     detailEntities.Add(new SalesOrderDetails
                     {
                         SalesOrderId = order.SalesOrderId,
-                        //ProductId = it.ProductId,
                         LotId = it.LotId,
                         Quantity = it.Quantity,
                         UnitPrice = serverUnitPrice,
@@ -242,16 +244,6 @@ namespace PMS.Application.Services.SalesOrder
 
                 _unitOfWork.SalesOrder.Update(order);
 
-                //Customer dept
-                var debt = new CustomerDebt
-                {
-                    CustomerId = req.CreateBy,
-                    SalesOrderId = order.SalesOrderId,
-                    DebtAmount = order.TotalPrice - order.PaidAmount,
-                    status = CustomerDebtStatus.Maturity
-                };
-                await _unitOfWork.CustomerDebt.AddAsync(debt);
-
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -262,22 +254,13 @@ namespace PMS.Application.Services.SalesOrder
                     order.SalesQuotationId,
                     order.CreateBy,
                     order.CreateAt,
-                    order.Status,
+                    order.SalesOrderStatus,
                     order.IsDeposited,
                     order.TotalPrice,
                     order.SalesOrderExpiredDate,
-                    CustomerDebt = new
-                    {
-                        debt.CustomerId,
-                        debt.SalesOrderId,
-                        debt.DebtAmount,
-                        debt.status
-                    },
                     Details = detailEntities.Select(d => new
                     {
-                        //d.ProductId,
                         d.LotId,
-                        //ProductName = sqDetailByKey[(d.ProductId, d.LotId)].Product.ProductName,
                         d.Quantity,
                         d.UnitPrice,
                         d.SubTotalPrice
@@ -322,7 +305,7 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                if (so.Status != SalesOrderStatus.Draft)
+                if (so.SalesOrderStatus != SalesOrderStatus.Draft)
                 {
                     return new ServiceResult<bool>
                     {
@@ -420,7 +403,7 @@ namespace PMS.Application.Services.SalesOrder
                     order.SalesQuotationId,
                     order.CreateBy,
                     order.CreateAt,
-                    order.Status,
+                    order.SalesOrderStatus,
                     order.TotalPrice,
                     order.PaidAmount,
                     order.SalesOrderExpiredDate,
@@ -471,8 +454,8 @@ namespace PMS.Application.Services.SalesOrder
                     {
                         SalesOrderId = o.SalesOrderId,
                         SalesOrderCode = o.SalesOrderCode,
-                        Status = o.Status,
-                        StatusName = o.Status.ToString(),
+                        Status = o.SalesOrderStatus,
+                        StatusName = o.SalesOrderStatus.ToString(),
                         IsDeposited = o.IsDeposited,
                         TotalPrice = o.TotalPrice,
                         CreateAt = o.CreateAt
@@ -516,17 +499,17 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                if (so.Status != SalesOrderStatus.Paid && so.Status != SalesOrderStatus.Deposited)
+                if (so.PaymentStatus != PaymentStatus.Paid && so.SalesOrderStatus != SalesOrderStatus.Delivered)
                 {
                     return new ServiceResult<bool>
                     {
                         StatusCode = 400,
-                        Message = "Chỉ được hoàn tất đơn khi đã thanh toán (Paid/Deposited)",
+                        Message = "Chỉ được hoàn tất đơn khi đã thanh toán và trạng thái đơn hàng là đã giao hàng",
                         Data = false
                     };
                 }
 
-                so.Status = SalesOrderStatus.Complete;
+                so.SalesOrderStatus = SalesOrderStatus.Complete;
                 _unitOfWork.SalesOrder.Update(so);
                 await _unitOfWork.CommitAsync();
 
@@ -556,7 +539,8 @@ namespace PMS.Application.Services.SalesOrder
             {
                 var so = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                        //.ThenInclude(d => d.Product)
+                        .ThenInclude(l => l.LotProduct)
+                            .ThenInclude(p => p.Product)
                     .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (so == null)
@@ -569,7 +553,7 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                if (so.Status != SalesOrderStatus.Draft)
+                if (so.SalesOrderStatus != SalesOrderStatus.Draft)
                 {
                     return new ServiceResult<object>
                     {
@@ -582,17 +566,16 @@ namespace PMS.Application.Services.SalesOrder
                 var warnings = new List<string>();
                 foreach (var d in so.SalesOrderDetails)
                 {
-                    //if (d.ProductId == null) continue;
+                    var lot = d.LotProduct;
+                    if (lot == null) continue;
 
-                    var totalAvailable = await _unitOfWork.LotProduct.Query()
-                        //.Where(l => l.ProductID == d.ProductId && l.ExpiredDate > DateTime.Now && l.LotQuantity > 0)
-                        .SumAsync(l => (int?)l.LotQuantity) ?? 0;
+                    var totalAvailable = lot.LotQuantity;
 
                     if (d.Quantity > totalAvailable)
                     {
-                        //var prodName = d.Product?.ProductName ?? $"Product {d.ProductId}";
-                        //var missing = d.Quantity - totalAvailable;
-                        //warnings.Add($"{prodName}: thiếu {missing}");
+                        var prodName = lot.Product?.ProductName ?? $"Lô {d.LotId}";
+                        var missing = d.Quantity - totalAvailable;
+                        warnings.Add($"{prodName} (Lô {d.LotId}): thiếu {missing}");
                     }
                 }
 
@@ -600,23 +583,58 @@ namespace PMS.Application.Services.SalesOrder
                 {
                     var msg = string.Join("; ", warnings);
                     await _noti.SendNotificationToRolesAsync(
-                        "system",
+                        "261b6651-7d07-4267-bc71-d70b32bae334",
                         new List<string> { "PURCHASES_STAFF" },
                         "Thiếu hàng khi khách gửi SalesOrder",
                         $"Các mặt hàng thiếu/sắp hết: {msg}",
                         NotificationType.Warning
                     );
+                    await _noti.SendNotificationToRolesAsync(
+                        "261b6651-7d07-4267-bc71-d70b32bae334",
+                        new List<string> { "SALES_STAFF" },
+                        "Thiếu hàng khi khách gửi SalesOrder",
+                        $"Liên hệ nhân viên mua hàng để có thể ra quyết định chấp nhận hoặc từ chối",
+                        NotificationType.Message
+                    );
                 }
 
-                so.Status = SalesOrderStatus.Send;
-                _unitOfWork.SalesOrder.Update(so);
+                
                 await _unitOfWork.CommitAsync();
+
+                so.SalesOrderStatus = SalesOrderStatus.Send;
+                _unitOfWork.SalesOrder.Update(so);
+
+                if (so.CustomerDebts == null)
+                {
+                    var debt = new CustomerDebt
+                    {
+                        CustomerId = so.CreateBy, 
+                        SalesOrderId = so.SalesOrderId,
+                        DebtAmount = so.TotalPrice - so.PaidAmount,
+                        status = CustomerDebtStatus.UnPaid 
+                    };
+
+                    await _unitOfWork.CustomerDebt.AddAsync(debt);
+                    so.CustomerDebts = debt;
+                }
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
 
                 var data = new
                 {
                     so.SalesOrderId,
-                    so.Status,
+                    so.SalesOrderStatus,
                     so.TotalPrice,
+                    CustomerDebt = so.CustomerDebts == null
+                    ? null
+                    : new
+                    {
+                        so.CustomerDebts.CustomerId,
+                        so.CustomerDebts.SalesOrderId,
+                        so.CustomerDebts.DebtAmount,
+                        so.CustomerDebts.status
+                    },
                     Warnings = warnings
                 };
 
@@ -696,7 +714,7 @@ namespace PMS.Application.Services.SalesOrder
                         Data = null
                     };
 
-                if (order.Status != SalesOrderStatus.Draft)
+                if (order.SalesOrderStatus != SalesOrderStatus.Draft)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
@@ -765,7 +783,7 @@ namespace PMS.Application.Services.SalesOrder
                     order.SalesOrderId,
                     order.SalesOrderCode,
                     order.SalesQuotationId,
-                    order.Status,
+                    order.SalesOrderStatus,
                     order.IsDeposited,
                     order.TotalPrice,
                     order.PaidAmount,
@@ -895,8 +913,8 @@ namespace PMS.Application.Services.SalesOrder
                     {
                         SalesOrderId = o.SalesOrderId,
                         SalesOrderCode = o.SalesOrderCode,
-                        Status = o.Status,
-                        StatusName = o.Status.ToString(),
+                        Status = o.SalesOrderStatus,
+                        StatusName = o.SalesOrderStatus.ToString(),
                         IsDeposited = o.IsDeposited,
                         TotalPrice = o.TotalPrice,
                         CreateAt = o.CreateAt
@@ -939,7 +957,7 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                if (so.Status != SalesOrderStatus.Send)
+                if (so.SalesOrderStatus != SalesOrderStatus.Send)
                 {
                     return new ServiceResult<bool>
                     {
@@ -949,7 +967,7 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                so.Status = SalesOrderStatus.Approved;
+                so.SalesOrderStatus = SalesOrderStatus.Approved;
                 _unitOfWork.SalesOrder.Update(so);
                 await _unitOfWork.CommitAsync();
 
@@ -1013,7 +1031,7 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                if (so.Status != SalesOrderStatus.Send)
+                if (so.SalesOrderStatus != SalesOrderStatus.Send)
                 {
                     return new ServiceResult<bool>
                     {
@@ -1023,7 +1041,7 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                so.Status = SalesOrderStatus.Rejected;
+                so.SalesOrderStatus = SalesOrderStatus.Rejected;
                 _unitOfWork.SalesOrder.Update(so);
                 await _unitOfWork.CommitAsync();
 
@@ -1066,6 +1084,190 @@ namespace PMS.Application.Services.SalesOrder
                 {
                     StatusCode = 500,
                     Message = "Có lỗi khi hoàn tất đơn hàng",
+                    Data = false
+                };
+            }
+        }
+
+        public async Task<ServiceResult<bool>> RecalculateTotalReceiveAsync()
+        {
+            try
+            {
+                // 1) Tổng PaidAmount của tất cả SalesOrder
+                var totalPaidFromOrders = await _unitOfWork.SalesOrder.Query()
+                    .SumAsync(o => (decimal?)o.PaidAmount) ?? 0m;
+
+                // 2) Lấy bản ghi PharmacySecretInfor (PMSID = 1)
+                var info = await _unitOfWork.PharmacySecretInfor.Query()
+                    .FirstOrDefaultAsync(x => x.PMSID == 1);
+
+                if (info == null)
+                {
+                    // Nếu chưa có thì tạo mới
+                    info = new PharmacySecretInfor
+                    {
+                        PMSID = 1,
+                        Equity = 0m,
+                        TotalRecieve = totalPaidFromOrders,
+                        TotalPaid = 0m
+                    };
+
+                    await _unitOfWork.PharmacySecretInfor.AddAsync(info);
+                }
+                else
+                {
+                    // Nếu đã có thì cập nhật
+                    info.TotalRecieve = totalPaidFromOrders;
+                    _unitOfWork.PharmacySecretInfor.Update(info);
+                }
+
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật TotalRecieve từ PaidAmount của SalesOrder thành công.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Lỗi RecalculateTotalReceiveAsync khi tính TotalRecieve từ SalesOrder.PaidAmount");
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi cập nhật TotalRecieve.",
+                    Data = false
+                };
+            }
+        }
+
+        public async Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListSaleOrderNotDeliveredAsync()
+        {
+            try
+            {
+                var orders = await _unitOfWork.SalesOrder.Query()
+                    .Where(s => s.SalesOrderStatus != SalesOrderStatus.Delivered)
+                    .AsNoTracking()
+                    .OrderByDescending(o => o.CreateAt)
+                    .Select(o => new SalesOrderItemDTO
+                    {
+                        SalesOrderId = o.SalesOrderId,
+                        SalesOrderCode = o.SalesOrderCode,
+                        Status = o.SalesOrderStatus,
+                        StatusName = o.SalesOrderStatus.ToString(),
+                        IsDeposited = o.IsDeposited,
+                        TotalPrice = o.TotalPrice,
+                        CreateAt = o.CreateAt
+                    })
+                    .ToListAsync();
+
+                return new ServiceResult<IEnumerable<SalesOrderItemDTO>>
+                {
+                    StatusCode = 200,
+                    Message = "Lấy danh sách đơn hàng thành công.",
+                    Data = orders
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ListSalesOrdersAsync");
+                return new ServiceResult<IEnumerable<SalesOrderItemDTO>>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi lấy danh sách đơn hàng.",
+                    Data = null
+                };
+            }
+        }
+
+        public async Task<ServiceResult<bool>> CheckAndUpdateDeliveredStatusAsync()
+        {
+            try
+            {
+                // Lấy tất cả SalesOrder kèm:
+                // - SalesOrderDetails (để tính tổng quantity đặt)
+                // - StockExportOrders -> GoodsIssueNote -> GoodsIssueNoteDetails (để tính tổng quantity đã xuất)
+                var salesOrders = await _unitOfWork.SalesOrder.Query()
+                    .Include(so => so.SalesOrderDetails)
+                    .Include(so => so.StockExportOrders)
+                        .ThenInclude(seo => seo.GoodsIssueNotes)
+                            .ThenInclude(gi => gi.GoodsIssueNoteDetails)
+                    .ToListAsync();
+
+                if (!salesOrders.Any())
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 200,
+                        Message = "Không có đơn hàng nào để kiểm tra Delivered.",
+                        Data = true
+                    };
+                }
+
+                int updatedCount = 0;
+
+                foreach (var order in salesOrders)
+                {
+                    // Tổng quantity đặt trong SalesOrder
+                    var totalOrderedQty = order.SalesOrderDetails?.Sum(d => d.Quantity) ?? 0;
+
+                    // Lấy tất cả GoodsIssueNote liên quan đến SalesOrder này qua StockExportOrder
+                    var goodsIssueNotes = order.StockExportOrders
+                        .Where(seo => seo.GoodsIssueNotes != null)
+                        .SelectMany(seo => seo.GoodsIssueNotes!)
+                        .ToList();
+
+                    if (!goodsIssueNotes.Any())
+                    {
+                        // Chưa có phiếu xuất nào -> không thể Delivered
+                        continue;
+                    }
+
+                    // Tổng quantity đã xuất trong tất cả GoodsIssueNoteDetail
+                    var totalExportedQty = goodsIssueNotes
+                        .SelectMany(gi => gi.GoodsIssueNoteDetails)
+                        .Sum(d => d.Quantity);
+
+
+                    // Tất cả GoodsIssueNote phải ở trạng thái Sent
+                    bool allSent = goodsIssueNotes.All(gi => gi.Status == GoodsIssueNoteStatus.Sent);
+
+                    if (allSent &&
+                        totalExportedQty == totalOrderedQty &&
+                        order.SalesOrderStatus != SalesOrderStatus.Delivered)
+                    {
+                        order.SalesOrderStatus = SalesOrderStatus.Delivered;
+                        _unitOfWork.SalesOrder.Update(order);
+                        updatedCount++;
+                    }
+                }
+
+                if (updatedCount > 0)
+                {
+                    await _unitOfWork.CommitAsync();
+                }
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = updatedCount > 0
+                        ? $"Cập nhật trạng thái Delivered cho {updatedCount} đơn hàng."
+                        : "Không có đơn hàng nào đủ điều kiện chuyển sang Delivered.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Lỗi RecalculateDeliveredStatusAsync khi kiểm tra Quantity của GoodsIssueNote và SalesOrder.");
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi cập nhật trạng thái Delivered cho đơn hàng.",
                     Data = false
                 };
             }
