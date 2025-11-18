@@ -126,5 +126,18 @@ namespace PMS.API.Controllers
                 data = result.Data,
             });
         }
+
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Route("warnings")]
+        public async Task<IActionResult> Warnings()
+        {
+            var result = await _goodsIssueNoteService.WarningAsync();
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data,
+            });
+        }
     }
 }

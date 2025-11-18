@@ -16,5 +16,6 @@ namespace PMS.Application.Services.GoodsIssueNote
         Task<ServiceResult<object>> DetailsAsync(int ginId, string userId);
         Task<ServiceResult<object>> UpdateAsync(UpdateGoodsIssueNoteDTO dto, string userId);
         Task<ServiceResult<object>> DeleteAsync(int ginId, string userId);
+        Task<ServiceResult<object>> WarningAsync();
     }
 }
