@@ -656,6 +656,63 @@ namespace PMS.Application.Services.SalesQuotation
                 if (toDelete.Count > 0)
                     _unitOfWork.SalesQuotationDetails.RemoveRange(toDelete);
 
+                if(dto.Status == 1)
+                {
+                    var salesQuotationData = await _unitOfWork.SalesQuotation.Query()
+                    .Include(sq => sq.RequestSalesQuotation)
+                        .ThenInclude(rsq => rsq.CustomerProfile)
+                            .ThenInclude(cp => cp.User)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(sqd => sqd.TaxPolicy)
+                    .Include(sq => sq.SalesQuotationNote)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(sqd => sqd.LotProduct)
+                    .Include(sq => sq.SalesQuotaionDetails)
+                        .ThenInclude(sqd => sqd.Product)
+                    .Include(sq => sq.StaffProfile)
+                        .ThenInclude(sp => sp.User)
+                    .FirstOrDefaultAsync(sq => sq.Id == salesQuotation.Id);
+
+                    var rsq = salesQuotation.RequestSalesQuotation;
+
+                    rsq.Status = Core.Domain.Enums.RequestSalesQuotationStatus.Quoted;
+
+                    _unitOfWork.RequestSalesQuotation.Update(rsq);
+
+                    salesQuotation.QuotationDate = DateTime.Now;
+
+                    salesQuotation.Status = Core.Domain.Enums.SalesQuotationStatus.Sent;
+
+                    _unitOfWork.SalesQuotation.Update(salesQuotation);
+
+                    await _unitOfWork.CommitAsync();
+
+                    var customer = salesQuotation.RequestSalesQuotation.CustomerProfile.User;
+
+                    var staff = salesQuotation.StaffProfile.User;
+
+                    var html = QuotationTemplate.GenerateQuotationHtml(salesQuotation);
+
+                    var pdfBytes = _pdfService.GeneratePdfFromHtml(html);
+
+                    await SendSalesQuotationEmailAsync(pdfBytes, "Báo giá.pdf", customer.Email);
+
+                    await _notificationService.SendNotificationToCustomerAsync(
+                    staff.Id,
+                    customer.Id,
+                    "Bạn nhận được 1 thông báo mới",
+                    "Báo giá mới",
+                    Core.Domain.Enums.NotificationType.Message);
+
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 200,
+                        Message = "Gửi báo giá thành công"
+                    };
+                }
+
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 

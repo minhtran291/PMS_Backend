@@ -224,6 +224,30 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 if (toRemove.Count != 0)
                     _unitOfWork.RequestSalesQuotationDetails.RemoveRange(toRemove);
 
+                if(dto.Status == 1)
+                {
+                    rsq.RequestDate = DateTime.Now;
+                    rsq.Status = Core.Domain.Enums.RequestSalesQuotationStatus.Sent;
+
+                    _unitOfWork.RequestSalesQuotation.Update(rsq);
+
+                    await _unitOfWork.CommitAsync();
+
+                    await _notificationService.SendNotificationToRolesAsync(
+                        profile.UserId,
+                        ["SALES_STAFF"],
+                        "Yêu cầu báo giá",
+                        "Bạn nhận được 1 yêu cầu báo giá mới từ khách hàng",
+                        Core.Domain.Enums.NotificationType.Message
+                        );
+
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 200,
+                        Message = "Gửi yêu cầu báo giá thành công",
+                    };
+                }
+
                 await _unitOfWork.CommitAsync();
 
                 return new ServiceResult<object>
