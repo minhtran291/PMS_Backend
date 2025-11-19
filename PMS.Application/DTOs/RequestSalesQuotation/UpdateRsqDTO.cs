@@ -11,6 +11,7 @@ namespace PMS.Application.DTOs.RequestSalesQuotation
     {
         public int RsqId { get; set; }
         //public List<UpdateRsqDetailsDTO> Product { get; set; } = [];
+        public int Status {  get; set; }
         public List<int> ProductIdList { get; set; } = [];
     }
 }
