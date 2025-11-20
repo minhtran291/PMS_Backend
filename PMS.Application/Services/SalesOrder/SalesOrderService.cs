@@ -1149,7 +1149,7 @@ namespace PMS.Application.Services.SalesOrder
             try
             {
                 var orders = await _unitOfWork.SalesOrder.Query()
-                    .Where(s => s.SalesOrderStatus != SalesOrderStatus.Delivered)
+                    .Where(s => s.SalesOrderStatus == SalesOrderStatus.Approved && s.IsDeposited == true)
                     .AsNoTracking()
                     .OrderByDescending(o => o.CreateAt)
                     .Select(o => new SalesOrderItemDTO
