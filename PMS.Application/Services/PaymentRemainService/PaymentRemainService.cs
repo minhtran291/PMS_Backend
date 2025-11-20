@@ -249,8 +249,8 @@ namespace PMS.Application.Services.PaymentRemainService
                     PaidAt = entity.PaidAt,
                     GatewayTransactionRef = entity.GatewayTransactionRef,
                     Gateway = entity.Gateway,
-                    SalesOrderTotalPrice = entity.SalesOrder?.TotalPrice ?? 0m,
-                    SalesOrderPaidAmount = entity.SalesOrder?.PaidAmount ?? 0m
+                    SalesOrderTotalPrice = entity.SalesOrder.TotalPrice,
+                    SalesOrderPaidAmount = entity.SalesOrder.PaidAmount 
                 };
 
                 return new ServiceResult<PaymentRemainItemDTO>
@@ -367,7 +367,10 @@ namespace PMS.Application.Services.PaymentRemainService
                     PaidAt = p.PaidAt,
                     GatewayTransactionRef = p.GatewayTransactionRef,
                     Gateway = p.Gateway,
-                    SalesOrderCode = p.SalesOrder?.SalesOrderCode
+                    SalesOrderCode = p.SalesOrder?.SalesOrderCode,
+                    SalesOrderTotalPrice = p.SalesOrder.TotalPrice,
+                    SalesOrderPaidAmount = p.SalesOrder.PaidAmount
+
                 }).ToList();
 
                 return new ServiceResult<List<PaymentRemainItemDTO>>

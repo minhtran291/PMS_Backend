@@ -606,7 +606,7 @@ namespace PMS.Application.Services.SalesOrder
 
                 if (so.CustomerDebts == null)
                 {
-                    var debt = new CustomerDebt
+                    var debt = new PMS.Core.Domain.Entities.CustomerDebt
                     {
                         CustomerId = so.CreateBy, 
                         SalesOrderId = so.SalesOrderId,

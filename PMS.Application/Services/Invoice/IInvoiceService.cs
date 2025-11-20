@@ -15,5 +15,11 @@ namespace PMS.Application.Services.Invoice
 
         Task<ServiceResult<InvoicePDFResultDTO>> GenerateInvoicePdfAsync(int invoiceId);
         Task<ServiceResult<bool>> SendInvoiceEmailAsync(int invoiceId);
+
+        Task<ServiceResult<List<InvoiceDTO>>> GetAllInvoicesAsync();
+        Task<ServiceResult<InvoiceDTO>> GetInvoiceByIdAsync(int invoiceId);
+        Task<ServiceResult<InvoiceDTO>> UpdateInvoicePaymentRemainsAsync(
+            int invoiceId,
+            InvoiceUpdateDTO request);
     }
 }
