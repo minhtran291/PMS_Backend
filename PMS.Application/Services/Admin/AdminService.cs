@@ -176,14 +176,18 @@ namespace PMS.Application.Services.Admin
         }
 
         //Get role to account details 
-        private static StaffRole? MapToSingleStaffRole(IList<string> roleNames)
+        private static string MapToSingleStaffRole(IList<string> roleNames)
         {
-            if (roleNames == null || roleNames.Count == 0) return null;
+            if (roleNames == null || roleNames.Count == 0)
+                return null; // hoặc default bạn muốn
 
-            if (roleNames.Contains(UserRoles.SALES_STAFF)) return StaffRole.SalesStaff;
-            if (roleNames.Contains(UserRoles.PURCHASES_STAFF)) return StaffRole.PurchasesStaff;
-            if (roleNames.Contains(UserRoles.WAREHOUSE_STAFF)) return StaffRole.WarehouseStaff;
-            if (roleNames.Contains(UserRoles.ACCOUNTANT)) return StaffRole.Accountant;
+            if (roleNames.Contains(UserRoles.SALES_STAFF)) return UserRoles.SALES_STAFF;
+            if (roleNames.Contains(UserRoles.PURCHASES_STAFF)) return UserRoles.PURCHASES_STAFF;
+            if (roleNames.Contains(UserRoles.WAREHOUSE_STAFF)) return UserRoles.WAREHOUSE_STAFF;
+            if (roleNames.Contains(UserRoles.ACCOUNTANT)) return UserRoles.ACCOUNTANT;
+            if (roleNames.Contains(UserRoles.CUSTOMER)) return UserRoles.CUSTOMER;
+            if (roleNames.Contains(UserRoles.ADMIN)) return UserRoles.ADMIN;
+            if (roleNames.Contains(UserRoles.MANAGER)) return UserRoles.MANAGER;
 
             return null;
         }
@@ -213,7 +217,7 @@ namespace PMS.Application.Services.Admin
             if (result == null || result.Count == 0)
                 throw new Exception("Không có dữ liệu");
 
-            var roleOfUser = new Dictionary<string, StaffRole>();
+            var roleOfUser = new Dictionary<string, string>();
             foreach (var u in result)
             {
                 var roleNames = await _unitOfWork.Users.UserManager.GetRolesAsync(u);
@@ -231,18 +235,26 @@ namespace PMS.Application.Services.Admin
                 Address = u.Address,
                 Gender = u.Gender,
                 EmployeeCode = u.StaffProfile?.EmployeeCode,
-                Role = roleOfUser.TryGetValue(u.Id, out var r) ? r : StaffRole.SalesStaff,
+                Role = roleOfUser.TryGetValue(u.Id, out var r) ? r : null,
                 IsCustomer = u.CustomerProfile != null
             }).ToList();
         }
 
         //Get role to account list
-        private static StaffRole ToStaffRole(IList<string> names)
+        private static string? ToStaffRole(IList<string> roleNames)
         {
-            if (names.Contains(UserRoles.SALES_STAFF)) return StaffRole.SalesStaff;
-            if (names.Contains(UserRoles.PURCHASES_STAFF)) return StaffRole.PurchasesStaff;
-            if (names.Contains(UserRoles.WAREHOUSE_STAFF)) return StaffRole.WarehouseStaff;
-            else return StaffRole.Accountant;
+            if (roleNames == null || roleNames.Count == 0)
+                return null; // hoặc default bạn muốn
+
+            if (roleNames.Contains(UserRoles.SALES_STAFF)) return UserRoles.SALES_STAFF;
+            if (roleNames.Contains(UserRoles.PURCHASES_STAFF)) return UserRoles.PURCHASES_STAFF;
+            if (roleNames.Contains(UserRoles.WAREHOUSE_STAFF)) return UserRoles.WAREHOUSE_STAFF;
+            if (roleNames.Contains(UserRoles.ACCOUNTANT)) return UserRoles.ACCOUNTANT;
+            if (roleNames.Contains(UserRoles.CUSTOMER)) return UserRoles.CUSTOMER;
+            if (roleNames.Contains(UserRoles.ADMIN)) return UserRoles.ADMIN;
+            if (roleNames.Contains(UserRoles.MANAGER)) return UserRoles.MANAGER;
+
+            return null;
         }
 
         //Change account status to Inactive
