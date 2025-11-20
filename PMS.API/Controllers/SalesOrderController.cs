@@ -39,7 +39,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: https://localhost:7213/api/SalesOrder/send/{salesOrderId}
+        /// POST: http://localhost:5137/api/SalesOrder/send/{salesOrderId}
         /// Customer gửi đơn (Draft -> Send). Hệ thống kiểm tra tồn kho và cảnh báo
         /// tới PURCHASES_STAFF nếu thiếu/sắp hết.
         /// </summary>
@@ -58,7 +58,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: https://localhost:7213/api/SalesOrder/approve/{salesOrderId}
+        /// POST: http://localhost:5137/api/SalesOrder/approve/{salesOrderId}
         /// Sau khi customer send SalesOrder nếu đủ số lượng hàng sẽ được approved
         /// <param name="salesOrderId"></param>
         /// <returns></returns>
@@ -77,7 +77,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: https://localhost:7213/api/SalesOrder/reject/{salesOrderId}
+        /// POST: http://localhost:5137/api/SalesOrder/reject/{salesOrderId}
         /// Sau khi customer send SalesOrder nếu không đủ số lượng hàng sẽ bị reject
         /// <param name="salesOrderId"></param>
         /// <returns></returns>
@@ -97,7 +97,7 @@ namespace PMS.API.Controllers
 
 
         /// <summary>
-        /// POST: https://localhost:7213/api/SalesOrder/confirm-payment
+        /// POST: http://localhost:5137/api/SalesOrder/confirm-payment
         /// (Xác nhận THỦ CÔNG) đổi trạng thái Pending -> Deposited/Paid (Deposited = 4,Paid = 5,).
         /// </summary>
         [HttpPost("confirm-payment")]
@@ -114,7 +114,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// GET: https://localhost:7213/api/SalesOrder/details/{orderId}
+        /// GET: http://localhost:5137/api/SalesOrder/details/{orderId}
         /// Lấy chi tiết sales order
         /// </summary>
         [HttpGet("details/{orderId}")]
@@ -132,7 +132,7 @@ namespace PMS.API.Controllers
 
 
         /// <summary>
-        /// GET: https://localhost:7213/api/SalesOrder/my-list-sales-order
+        /// GET: http://localhost:5137/api/SalesOrder/my-list-sales-order
         /// Trả về danh sách SalesOrder theo user hiện tại (customer chỉ thấy đơn của mình).
         /// </summary>
         [HttpGet("my-list-sales-order")]
@@ -150,7 +150,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// GET: https://localhost:7213/api/SalesOrder/list-sales-order
+        /// GET: http://localhost:5137/api/SalesOrder/list-sales-order
         /// Trả về danh sách SalesOrder theo user hiện tại (customer chỉ thấy đơn của mình).
         /// </summary>
         [HttpGet("list-sales-order")]
@@ -167,7 +167,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: https://localhost:7213/api/SalesOrder/complete/{orderId}
+        /// POST: http://localhost:5137/api/SalesOrder/complete/{orderId}
         /// Customer đánh dấu hoàn tất đơn (chỉ khi đã thanh toán và nhận được hàng).
         /// </summary>
         [HttpPost("complete/{orderId}")]
@@ -184,7 +184,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: https://localhost:7213/api/SalesOrder/draft/create?salesQuotationId=123
+        /// POST: http://localhost:5137/api/SalesOrder/draft/create?salesQuotationId=123
         /// Tạo SalesOrder trạng thái Draft từ SalesQuotation.
         /// </summary>
         [HttpPost("draft/create")]
@@ -208,7 +208,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// PUT: https://localhost:7213/api/SalesOrder/draft/{orderId}/quantities
+        /// PUT: http://localhost:5137/api/SalesOrder/draft/{orderId}/quantities
         /// Cập nhật số lượng từng sản phẩm trong Draft (chỉ thay đổi Quantity).
         /// </summary>
         [HttpPut("draft/{orderId}/quantities")]
@@ -225,7 +225,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// DELETE: https://localhost:7213/api/SalesOrder/draft/{orderId}
+        /// DELETE: http://localhost:5137/api/SalesOrder/draft/{orderId}
         /// Xoá SalesOrder khi còn ở trạng thái Draft.
         /// </summary>
         [HttpDelete("draft/{orderId}")]
@@ -242,7 +242,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: https://localhost:7213/api/SalesOrder/total-receipt
+        /// POST: http://localhost:5137/api/SalesOrder/total-receipt
         /// </summary>
         /// 
         /// <returns></returns>
@@ -261,7 +261,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// 
+        /// http://localhost:5137/api/SalesOrder/list-sales-order-not-delivered
         /// </summary>
         /// <returns></returns>
         [HttpGet("list-sales-order-not-delivered")]
@@ -278,7 +278,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// 
+        /// http://localhost:5137/api/SalesOrder/check-delivered-sales-order
         /// </summary>
         /// <param name="SalesOrderId"></param>
         /// <returns></returns>

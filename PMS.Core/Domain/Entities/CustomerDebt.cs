@@ -14,5 +14,7 @@ namespace PMS.Core.Domain.Entities
         public int SalesOrderId { get; set; }
         public decimal DebtAmount { get; set; }
         public CustomerDebtStatus status { get; set; }
+        public virtual SalesOrder SalesOrder { get; set; }
+
     }
 }

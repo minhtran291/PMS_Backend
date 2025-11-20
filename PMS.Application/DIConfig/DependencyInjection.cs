@@ -36,6 +36,7 @@ using Microsoft.AspNetCore.Builder;
 using PMS.Application.Services.TaxPolicy;
 using PMS.Application.Services.PaymentRemainService;
 using PMS.Application.Services.Invoice;
+using PMS.Application.Services.CustomerDebt;
 
 namespace PMS.Application.DIConfig
 {
@@ -74,6 +75,7 @@ namespace PMS.Application.DIConfig
             services.AddScoped<ITaxPolicySerivce, TaxPolicyService>();
             services.AddScoped<IPaymentRemainService, PaymentRemainService>();
             services.AddScoped<IInvoiceService, InvoiceService>();
+            services.AddScoped<ICustomerDebtService, CustomerDebtService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)

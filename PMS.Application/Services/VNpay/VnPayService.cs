@@ -283,7 +283,7 @@ namespace PMS.Application.Services.VNpay
                 // 7) Cập nhật CustomerDebt
                 if (order.CustomerDebts == null)
                 {
-                    order.CustomerDebts = new CustomerDebt
+                    order.CustomerDebts = new PMS.Core.Domain.Entities.CustomerDebt
                     {
                         CustomerId = order.CreateBy,
                         SalesOrderId = order.SalesOrderId,
@@ -450,7 +450,7 @@ namespace PMS.Application.Services.VNpay
             // TODO: chỉnh theo enum CustomerDebtStatus thực tế
             if (order.CustomerDebts == null)
             {
-                order.CustomerDebts = new CustomerDebt
+                order.CustomerDebts = new PMS.Core.Domain.Entities.CustomerDebt
                 {
                     CustomerId = order.CreateBy,
                     SalesOrderId = order.SalesOrderId,

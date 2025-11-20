@@ -113,7 +113,7 @@ namespace PMS.Application.Services.VietQR
                 // Cập nhật CustomerDebt
                 if (order.CustomerDebts == null)
                 {
-                    order.CustomerDebts = new CustomerDebt
+                    order.CustomerDebts = new PMS.Core.Domain.Entities.CustomerDebt
                     {
                         CustomerId = order.CreateBy,
                         SalesOrderId = order.SalesOrderId,
