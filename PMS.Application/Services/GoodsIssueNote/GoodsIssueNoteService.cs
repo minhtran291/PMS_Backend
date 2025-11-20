@@ -483,5 +483,39 @@ namespace PMS.Application.Services.GoodsIssueNote
             var randomPart = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
             return $"GIN-{randomPart}";
         }
+
+        public async Task<ServiceResult<object>> WarningAsync()
+        {
+            try
+            {
+                var today = DateTime.Today;
+
+                var query = await _unitOfWork.StockExportOrder.Query()
+                    .Where(s => s.Status == Core.Domain.Enums.StockExportOrderStatus.Sent && s.DueDate < today.AddDays(3))
+                    .ToListAsync();
+
+                var result = query.Select(s => new
+                {
+                    s.StockExportOrderCode,
+                    s.DueDate,
+                });
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = result
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
     }
 }

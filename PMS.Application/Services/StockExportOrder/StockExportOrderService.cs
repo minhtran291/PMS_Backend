@@ -746,11 +746,6 @@ namespace PMS.Application.Services.StockExportOrder
 
                 var listAdd = new List<StockExportOrderDetails>();
 
-                //foreach (var remove in removeDetails)
-                //{
-                //    _unitOfWork.StockExportOrderDetails.Remove(remove);
-                //}
-
                 if (removeDetails.Any())
                     _unitOfWork.StockExportOrderDetails.RemoveRange(removeDetails);
 
@@ -774,6 +769,30 @@ namespace PMS.Application.Services.StockExportOrder
 
                 if (listAdd.Count != 0)
                     await _unitOfWork.StockExportOrderDetails.AddRangeAsync(listAdd);
+
+                if(dto.Status == 1)
+                {
+                    stockExportOrder.RequestDate = DateTime.Now;
+                    stockExportOrder.Status = StockExportOrderStatus.Sent;
+
+                    _unitOfWork.StockExportOrder.Update(stockExportOrder);
+                    await _unitOfWork.CommitAsync();
+                    await _unitOfWork.CommitTransactionAsync();
+
+                    await _notificationService.SendNotificationToRolesAsync(
+                    userId,
+                    ["WAREHOUSE_STAFF"],
+                    "Bạn nhận được 1 thông báo mới",
+                    "Lệnh yêu cầu xuất kho",
+                    NotificationType.Message
+                    );
+
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 200,
+                        Message = "Gửi lệnh yêu cầu xuất kho thành công"
+                    };
+                }
 
                 _unitOfWork.StockExportOrder.Update(stockExportOrder);
                 await _unitOfWork.CommitAsync();

@@ -16,6 +16,7 @@ namespace PMS.Application.DTOs.SalesQuotation
         public decimal DepositPercent { get; set; }
         [Range(1, 7, ErrorMessage = "Thời hạn thanh toán cọc trong khoảng từ 1 đến 7 ngày")]
         public int DepositDueDays { get; set; }
+        public int Status { get; set; }
         public List<UpdateSalesQuotationDetailsDTO> Details { get; set; } = [];
     }
 }
