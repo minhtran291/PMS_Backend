@@ -139,7 +139,8 @@ namespace PMS.API.Services.QuotationService
                         ProductDescription = d.ProductDescription,
                         ProductUnit = d.ProductUnit,
                         UnitPrice = d.UnitPrice,
-                        ProductDate = d.ProductDate
+                        ProductDate = d.ProductDate,
+                        tax=d.Tax,
                     }).ToList()
                 };
 

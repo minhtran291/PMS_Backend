@@ -15,5 +15,7 @@ namespace PMS.Application.DTOs.SQ
         public required string ProductUnit { get; set; }
         public required decimal UnitPrice { get; set; }
         public required DateTime ProductDate { get; set; }
+
+        public decimal tax {  get; set; }
     }
 }

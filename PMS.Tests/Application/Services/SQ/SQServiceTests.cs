@@ -33,7 +33,7 @@ namespace PMS.Tests.Application.Services.SQ
                 new Quotation { QID = 2, SupplierID = 2, SendDate = now.AddDays(-5), QuotationExpiredDate = now.AddDays(-1) }
             }.AsQueryable();
 
-                    var suppliers = new List<Supplier>
+            var suppliers = new List<Supplier>
             {
                 new Supplier { Id = 1, Name = "Supplier A" },
                 new Supplier { Id = 2, Name = "Supplier B" }
@@ -88,7 +88,7 @@ namespace PMS.Tests.Application.Services.SQ
                 new Quotation { QID = 2, SupplierID = 2, SendDate = now.AddDays(-3), QuotationExpiredDate = now.AddDays(-2) }
             }.AsQueryable();
 
-                    var suppliers = new List<Supplier>
+            var suppliers = new List<Supplier>
             {
                 new Supplier { Id = 1, Name = "NCC A" },
                 new Supplier { Id = 2, Name = "NCC B" }
@@ -134,6 +134,7 @@ namespace PMS.Tests.Application.Services.SQ
                 UnitPrice = 20000,
                 ProductDate = now,
                 QID = 100,
+                Tax=5
             }
         }
             };
