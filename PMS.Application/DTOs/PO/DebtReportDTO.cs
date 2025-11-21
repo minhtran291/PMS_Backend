@@ -25,5 +25,7 @@ namespace PMS.Application.DTOs.PO
         public decimal CurrentDebt { get; set; } // Dư nợ hiện tại
 
         public DateTime CreatedDate { get; set; } // ngày tạo
+
+        public ICollection<ViewDebtPODTO> viewDebtPODTOs { get; set; } = new List<ViewDebtPODTO>();
     }
 }

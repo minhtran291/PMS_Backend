@@ -227,7 +227,7 @@ namespace PMS.API.Services.POService
                             Description = d.Description,
                             ExpiredDate = d.ExpiredDate,
                             RemainingQty = remainingQty > 0 ? remainingQty : 0,
-                            Tax=d.Tax
+                            Tax = d.Tax
                         };
                     }).ToList()
                 };
@@ -983,8 +983,9 @@ namespace PMS.API.Services.POService
         {
             try
             {
-                var pharmacy = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(db=>db.ReportID ==dbid);
-                
+
+                var pharmacy = await _unitOfWork.DebtReport.Query()
+                    .FirstOrDefaultAsync(db => db.ReportID == dbid);
 
                 if (pharmacy == null)
                 {
@@ -992,11 +993,15 @@ namespace PMS.API.Services.POService
                     {
                         Success = false,
                         Data = null,
-                        Message = "Lấy thông tin tài chính của công ty thất bại ",
+                        Message = "Không tìm thấy thông tin tài chính",
                         StatusCode = 400,
                     };
                 }
-                var sup = await _unitOfWork.Supplier.Query().FirstOrDefaultAsync(sup => sup.Id == pharmacy.EntityID);
+
+
+                var sup = await _unitOfWork.Supplier.Query()
+                    .FirstOrDefaultAsync(s => s.Id == pharmacy.EntityID);
+
                 if (sup == null)
                 {
                     return new ServiceResult<DebtReportDTO>
@@ -1006,8 +1011,20 @@ namespace PMS.API.Services.POService
                         Message = "Không tìm thấy thông tin tên người nợ",
                         StatusCode = 200,
                     };
-
                 }
+
+                var allPOs = await _unitOfWork.PurchasingOrder.Query()
+                    .Include(po => po.Quotations)
+                    .ToListAsync();
+
+                var pos = await _unitOfWork.PurchasingOrder.Query().Include(po => po.Quotations).Where(po => po.Quotations.SupplierID == pharmacy.EntityID).ToListAsync();
+
+                var viewDebtPOs = pos.Select(po => new ViewDebtPODTO
+                {
+                    poid = po.POID,
+                    toatlPo = po.Total
+                }).ToList();
+
                 var result = new DebtReportDTO
                 {
                     EntityID = pharmacy.EntityID,
@@ -1019,6 +1036,7 @@ namespace PMS.API.Services.POService
                     Payday = pharmacy.Payday,
                     ReportID = pharmacy.ReportID,
                     Status = pharmacy.Status,
+                    viewDebtPODTOs = viewDebtPOs
                 };
 
                 return new ServiceResult<DebtReportDTO>
@@ -1031,8 +1049,9 @@ namespace PMS.API.Services.POService
             }
             catch (Exception ex)
             {
-                return ServiceResult<DebtReportDTO>.Fail($"Lỗi khi lấy thông tin tài chính thất bại: {ex.Message}", 500);
+                return ServiceResult<DebtReportDTO>.Fail($"Lỗi khi lấy thông tin tài chính: {ex.Message}", 500);
             }
         }
+
     }
 }
