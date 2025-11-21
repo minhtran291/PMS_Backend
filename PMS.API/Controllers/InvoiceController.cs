@@ -18,7 +18,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: /api/Invoice/generate-from-payment-remains
+        /// POST: http://localhost:5137/api/Invoice/generate-from-payment-remains
         /// Tạo hóa đơn từ danh sách PaymentRemainId (cùng 1 SalesOrder).
         /// </summary>
         /// <remarks>
@@ -45,10 +45,10 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// GET: /api/Invoice/{id}/pdf
+        /// GET: http://localhost:5137//api/Invoice/{id}/pdf
         /// Tạo PDF hóa đơn để in / tải về.
         /// </summary>
-        [HttpGet("{id:int}/pdf")]
+        [HttpGet("{id}/pdf")]
         public async Task<IActionResult> GetInvoicePdf(int id)
         {
             var result = await _invoiceService.GenerateInvoicePdfAsync(id);
@@ -73,14 +73,64 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: /api/Invoice/{id}/send-email
+        /// POST: http://localhost:5137//api/Invoice/{id}/send-email
         /// Gửi hóa đơn cho khách hàng qua email (đính kèm PDF) và đổi trạng thái sang Send.
         /// </summary>
-        [HttpPost("{id:int}/send-email")]
+        [HttpPost("{id}/send-email")]
         public async Task<IActionResult> SendInvoiceEmail(int id)
         {
             var result = await _invoiceService.SendInvoiceEmailAsync(id);
 
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// GET: http://localhost:5137/api/Invoice/get-all/invoices
+        /// Lấy toàn bộ danh sách Invoice
+        /// </summary>
+        [HttpGet("get-all/invoices")]
+        public async Task<IActionResult> GetAll()
+        {
+            var result = await _invoiceService.GetAllInvoicesAsync();
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// GET: http://localhost:5137/api/Invoice/{id}/invoice/details
+        /// Xem chi tiết 1 Invoice
+        /// </summary>
+        [HttpGet("{id}/invoice/details")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var result = await _invoiceService.GetInvoiceByIdAsync(id);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// http://localhost:5137/api/Invoice/{id}/update/draft-invoice
+        /// Sửa Invoice (thêm/bớt PaymentRemain) khi Invoice còn Draft
+        /// </summary>
+        [HttpPut("{id}/update/draft-invoice")]
+        public async Task<IActionResult> UpdatePaymentRemains(
+            int id,
+            [FromBody] InvoiceUpdateDTO request)
+        {
+            var result = await _invoiceService.UpdateInvoicePaymentRemainsAsync(id, request);
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,

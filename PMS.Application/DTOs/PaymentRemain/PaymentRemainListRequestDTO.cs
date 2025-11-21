@@ -9,6 +9,7 @@ namespace PMS.Application.DTOs.PaymentRemain
 {
     public class PaymentRemainListRequestDTO
     {
+        public string? CustomerId { get; set; }
         public int? SalesOrderId { get; set; }
         public int? GoodsIssueNoteId { get; set; }
         public PaymentStatus? Status { get; set; }

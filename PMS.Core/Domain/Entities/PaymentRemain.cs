@@ -21,13 +21,13 @@ namespace PMS.Core.Domain.Entities
         public PaymentMethod PaymentMethod { get; set; } // VnPay, VietQR, Cash...
 
         public decimal Amount { get; set; }            // số tiền thanh toán lần này
-        public DateTime PaidAt { get; set; }           // thời điểm thanh toán
+        public DateTime CreateRequestAt { get; set; } 
 
         public PaymentStatus Status { get; set; }      // Pending, Success, Failed...
 
         // Thông tin từ cổng thanh toán (nếu có)
         public string? GatewayTransactionRef { get; set; }
-        public string? Gateway { get; set; }           // "VNPay", "VietQR", ...
+        public string? Gateway { get; set; }  
 
         public virtual SalesOrder SalesOrder { get; set; } = null!;
         public virtual GoodsIssueNote? GoodsIssueNote { get; set; }

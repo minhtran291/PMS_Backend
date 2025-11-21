@@ -31,4 +31,8 @@
     <ProjectReference Include="..\PMS.Core\PMS.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Application\Services\SalesOrder\" />
+  </ItemGroup>
+
 </Project>

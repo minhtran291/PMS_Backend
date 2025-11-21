@@ -48,7 +48,7 @@ namespace PMS.Application.Services.Supplier
                 {
                     return new ServiceResult<SupplierResponseDTO>
                     {
-                        StatusCode = 200,
+                        StatusCode = 400,
                         Message = "Email hoặc SĐT đã được sử dụng",
                         Data = null
                     };

@@ -283,7 +283,7 @@ namespace PMS.Application.Services.VNpay
                 // 7) Cập nhật CustomerDebt
                 if (order.CustomerDebts == null)
                 {
-                    order.CustomerDebts = new CustomerDebt
+                    order.CustomerDebts = new PMS.Core.Domain.Entities.CustomerDebt
                     {
                         CustomerId = order.CreateBy,
                         SalesOrderId = order.SalesOrderId,
@@ -364,7 +364,7 @@ namespace PMS.Application.Services.VNpay
                 payment.Gateway = "VNPay";
                 payment.GatewayTransactionRef = txnRef;
                 // (Tuỳ bạn) Có thể chỉ set PaidAt khi Success
-                payment.PaidAt = DateTime.Now;
+                payment.CreateRequestAt = DateTime.Now;
 
                 _unitOfWork.PaymentRemains.Update(payment);
                 await _unitOfWork.CommitAsync();
@@ -450,7 +450,7 @@ namespace PMS.Application.Services.VNpay
             // TODO: chỉnh theo enum CustomerDebtStatus thực tế
             if (order.CustomerDebts == null)
             {
-                order.CustomerDebts = new CustomerDebt
+                order.CustomerDebts = new PMS.Core.Domain.Entities.CustomerDebt
                 {
                     CustomerId = order.CreateBy,
                     SalesOrderId = order.SalesOrderId,
@@ -473,7 +473,7 @@ namespace PMS.Application.Services.VNpay
             payment.Status = PaymentStatus.Success;
             payment.PaymentMethod = PaymentMethod.VnPay;
             payment.Gateway = "VNPay";
-            payment.PaidAt = DateTime.Now;
+            payment.CreateRequestAt = DateTime.Now;
 
             _unitOfWork.PaymentRemains.Update(payment);
             _unitOfWork.SalesOrder.Update(order);

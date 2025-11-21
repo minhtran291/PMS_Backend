@@ -941,7 +941,7 @@ namespace PMS.Data.DatabaseConfig
 
                 //1 - 1 (1 SalesOrder to 1 CustomerDepts)
                 entity.HasOne(so => so.CustomerDebts)
-                    .WithOne() // CustomerDebt không có navigation ngược
+                    .WithOne(cd => cd.SalesOrder)
                     .HasForeignKey<CustomerDebt>(cd => cd.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
 
@@ -1283,7 +1283,7 @@ namespace PMS.Data.DatabaseConfig
                     .HasPrecision(18, 2)
                     .IsRequired();
 
-                entity.Property(p => p.PaidAt)
+                entity.Property(p => p.CreateRequestAt)
                     .IsRequired();
 
                 entity.Property(p => p.PaymentType)

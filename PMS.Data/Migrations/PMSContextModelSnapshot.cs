@@ -683,6 +683,9 @@ namespace PMS.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime>("CreateRequestAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Gateway")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -693,9 +696,6 @@ namespace PMS.Data.Migrations
 
                     b.Property<int?>("GoodsIssueNoteId")
                         .HasColumnType("int");
-
-                    b.Property<DateTime>("PaidAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<byte>("PaymentMethod")
                         .HasColumnType("TINYINT");
@@ -1101,6 +1101,9 @@ namespace PMS.Data.Migrations
                     b.Property<decimal>("PaidAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("PaidFullAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("PaymentStatus")
                         .HasColumnType("TINYINT");
@@ -1676,11 +1679,13 @@ namespace PMS.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", null)
+                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
                         .WithOne("CustomerDebts")
                         .HasForeignKey("PMS.Core.Domain.Entities.CustomerDebt", "SalesOrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("SalesOrder");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.CustomerProfile", b =>

@@ -183,7 +183,7 @@ namespace PMS.Application.Services.PaymentRemainService
                     PaymentType = PaymentType.Remain,
                     PaymentMethod = PaymentMethod.None, 
                     Amount = amountDueForNote,
-                    PaidAt = DateTime.Now,
+                    CreateRequestAt = DateTime.Now,
                     Status = PaymentStatus.Pending,
                     Gateway = null
                 };
@@ -222,6 +222,17 @@ namespace PMS.Application.Services.PaymentRemainService
             {
                 var entity = await _unitOfWork.PaymentRemains.Query()
                     .Include(p => p.SalesOrder)
+                        .ThenInclude(so => so.Customer)
+                    .Include(p => p.SalesOrder)
+                        .ThenInclude(so => so.SalesQuotation)
+                            .ThenInclude(sq => sq.SalesQuotaionDetails)
+                                .ThenInclude(sqd => sqd.TaxPolicy)
+                    .Include(p => p.SalesOrder)
+                        .ThenInclude(so => so.SalesOrderDetails)
+                    .Include(p => p.GoodsIssueNote)
+                        .ThenInclude(g => g.Warehouse)
+                    .Include(p => p.GoodsIssueNote)
+                        .ThenInclude(g => g.GoodsIssueNoteDetails)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -236,21 +247,117 @@ namespace PMS.Application.Services.PaymentRemainService
                     };
                 }
 
+                var so = entity.SalesOrder;
+                var customer = so.Customer;
+                var quotation = so.SalesQuotation;
+                var note = entity.GoodsIssueNote;
+
+                decimal depositPercent = quotation?.DepositPercent ?? 0m;
+                decimal depositAmount = Math.Round(
+                    so.TotalPrice * (depositPercent / 100m),
+                    0,
+                    MidpointRounding.AwayFromZero);
+
+                decimal remainingAmount = so.TotalPrice - so.PaidAmount;
+
+                var details = new List<PaymentRemainGoodsIssueDetailDTO>();
+
+                if (note != null)
+                {
+                    int index = 1;
+
+                    foreach (var d in note.GoodsIssueNoteDetails)
+                    {
+                        // 1) Tìm SalesOrderDetail theo LotId
+                        var soDetail = so.SalesOrderDetails
+                            .FirstOrDefault(x => x.LotId == d.LotId);
+
+                        if (soDetail == null)
+                        {
+                            // Có thể log cảnh báo nếu cần
+                            continue;
+                        }
+
+                        // 2) Tìm SalesQuotationDetail tương ứng theo ProductId
+                        var sqDetail = quotation?.SalesQuotaionDetails
+                            .FirstOrDefault(x => x.ProductId == soDetail.LotProduct.Product.ProductID); 
+
+                        if (sqDetail == null)
+                        {
+                            var fallbackProductName = soDetail.LotProduct.Product.ProductName; 
+
+                            details.Add(new PaymentRemainGoodsIssueDetailDTO
+                            {
+                                Index = index++,
+                                ProductName = fallbackProductName,
+                                Quantity = d.Quantity,
+                                UnitPrice = soDetail.UnitPrice,
+                                TaxPercent = 0,
+                                UnitPriceAfterTax = soDetail.UnitPrice,
+                                ExpiredDate = soDetail.SalesOrder.SalesOrderExpiredDate, 
+                                SubTotal = soDetail.UnitPrice * d.Quantity,
+                                SubTotalAfterTax = soDetail.UnitPrice * d.Quantity
+                            });
+
+                            continue;
+                        }
+
+                        var taxPercent = sqDetail.TaxPolicy?.Rate ?? 0m; 
+
+                        // 4) Lấy các thông tin hiển thị
+                        var productName = sqDetail.Product.ProductName;   
+                        var unitPrice = soDetail.UnitPrice;    
+                        var expiredDate = soDetail.SalesOrder.SalesOrderExpiredDate;   
+
+                        var unitPriceAfterTax = unitPrice * (1 + taxPercent / 100m);
+                        var subTotal = unitPrice * d.Quantity;
+                        var subTotalAfterTax = unitPriceAfterTax * d.Quantity;
+
+                        details.Add(new PaymentRemainGoodsIssueDetailDTO
+                        {
+                            Index = index++,
+                            ProductName = productName,
+                            Quantity = d.Quantity,
+                            UnitPrice = unitPrice,
+                            TaxPercent = taxPercent,
+                            UnitPriceAfterTax = unitPriceAfterTax,
+                            ExpiredDate = expiredDate,
+                            SubTotal = subTotal,
+                            SubTotalAfterTax = subTotalAfterTax
+                        });
+                    }
+                }
+
                 var dto = new PaymentRemainItemDTO
                 {
                     Id = entity.Id,
                     SalesOrderId = entity.SalesOrderId,
-                    SalesOrderCode = entity.SalesOrder?.SalesOrderCode,
                     GoodsIssueNoteId = entity.GoodsIssueNoteId,
                     PaymentType = entity.PaymentType,
                     PaymentMethod = entity.PaymentMethod,
                     Status = entity.Status,
                     Amount = entity.Amount,
-                    PaidAt = entity.PaidAt,
+                    PaidAt = entity.CreateRequestAt,    
                     GatewayTransactionRef = entity.GatewayTransactionRef,
                     Gateway = entity.Gateway,
-                    SalesOrderTotalPrice = entity.SalesOrder?.TotalPrice ?? 0m,
-                    SalesOrderPaidAmount = entity.SalesOrder?.PaidAmount ?? 0m
+
+                    SalesOrderCode = so.SalesOrderCode,
+                    SalesOrderTotalPrice = so.TotalPrice,
+                    SalesOrderPaidAmount = so.PaidAmount,
+
+                    CustomerId = customer?.Id,
+                    CustomerName = customer?.FullName,
+                    RequestCreatedAt = entity.CreateRequestAt,
+                    PaymentStatusText = entity.Status.ToString(),
+
+                    GoodsIssueNoteCode = note?.GoodsIssueNoteCode,
+                    GoodsIssueNoteCreatedAt = note?.CreateAt,
+
+                    DepositAmount = depositAmount,
+                    DepositPercent = depositPercent,
+                    RemainingAmount = remainingAmount,
+
+                    GoodsIssueDetails = details
                 };
 
                 return new ServiceResult<PaymentRemainItemDTO>
@@ -284,7 +391,7 @@ namespace PMS.Application.Services.PaymentRemainService
                                 && p.Status == PaymentStatus.Success
                                 && (p.PaymentType == PaymentType.Remain
                                     || p.PaymentType == PaymentType.Full))
-                    .OrderBy(p => p.PaidAt)
+                    .OrderBy(p => p.CreateRequestAt)
                     .Select(p => p.Id)
                     .ToListAsync();
 
@@ -320,6 +427,12 @@ namespace PMS.Application.Services.PaymentRemainService
                     .Include(p => p.SalesOrder)
                     .AsNoTracking();
 
+                //Filter theo CustomerId
+                if (request.CustomerId != null)
+                {
+                    query = query.Where(p => p.SalesOrder.CreateBy == request.CustomerId);
+                }
+
                 // Filter theo SalesOrderId
                 if (request.SalesOrderId.HasValue)
                 {
@@ -350,7 +463,7 @@ namespace PMS.Application.Services.PaymentRemainService
                     query = query.Where(p => p.PaymentType == request.PaymentType.Value);
                 }
 
-                query = query.OrderByDescending(p => p.PaidAt)
+                query = query.OrderByDescending(p => p.CreateRequestAt)
                              .ThenByDescending(p => p.Id);
 
                 var items = await query.ToListAsync();
@@ -364,10 +477,13 @@ namespace PMS.Application.Services.PaymentRemainService
                     PaymentMethod = p.PaymentMethod,
                     Status = p.Status,
                     Amount = p.Amount,
-                    PaidAt = p.PaidAt,
+                    PaidAt = p.CreateRequestAt,
                     GatewayTransactionRef = p.GatewayTransactionRef,
                     Gateway = p.Gateway,
-                    SalesOrderCode = p.SalesOrder?.SalesOrderCode
+                    SalesOrderCode = p.SalesOrder?.SalesOrderCode,
+                    SalesOrderTotalPrice = p.SalesOrder.TotalPrice,
+                    SalesOrderPaidAmount = p.SalesOrder.PaidAmount
+
                 }).ToList();
 
                 return new ServiceResult<List<PaymentRemainItemDTO>>
