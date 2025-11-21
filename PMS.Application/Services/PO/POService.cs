@@ -277,7 +277,6 @@ namespace PMS.API.Services.POService
 
                 existingPO.Status = newStatus;
 
-
                 if (newStatus == PurchasingOrderStatus.paid)
                 {
                     existingPO.PaymentDate = DateTime.Now;

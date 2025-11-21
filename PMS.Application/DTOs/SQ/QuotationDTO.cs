@@ -23,7 +23,7 @@ namespace PMS.Application.DTOs.SQ
 
         [Required(ErrorMessage = "Ngày hết hạn không được phép bỏ trống")]
 
-        public required DateTime QuotationExpiredDate { get; set; }
+        public required string QuotationExpiredDate { get; set; }
 
         public virtual ICollection<QuotationDetailDTO> QuotationDetailDTOs { get; set; }= new List<QuotationDetailDTO>();
         public string SupplierName { get; set; }
