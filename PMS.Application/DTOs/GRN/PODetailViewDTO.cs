@@ -18,5 +18,7 @@ namespace PMS.Application.DTOs.GRN
         public string Description { get; set; }
         public DateTime? ExpiredDate { get; set; }
         public decimal RemainingQty { get; set; } 
+
+        public decimal Tax {  get; set; }
     }
 }

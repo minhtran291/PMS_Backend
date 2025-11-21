@@ -226,7 +226,8 @@ namespace PMS.API.Services.POService
                             UnitPriceTotal = d.UnitPriceTotal,
                             Description = d.Description,
                             ExpiredDate = d.ExpiredDate,
-                            RemainingQty = remainingQty > 0 ? remainingQty : 0
+                            RemainingQty = remainingQty > 0 ? remainingQty : 0,
+                            Tax=d.Tax
                         };
                     }).ToList()
                 };
