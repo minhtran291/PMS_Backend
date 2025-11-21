@@ -22,5 +22,20 @@ namespace PMS.Application.DTOs.PaymentRemain
         public string? SalesOrderCode { get; set; }
         public decimal SalesOrderTotalPrice { get; set; }
         public decimal SalesOrderPaidAmount { get; set; }
+
+        public string? CustomerId { get; set; }          // ID Khách hàng
+        public string? CustomerName { get; set; }        // Tên khách hàng
+        public DateTime? RequestCreatedAt { get; set; }  // Ngày tạo yêu cầu thanh toán
+        public string? PaymentStatusText { get; set; }   // Trạng thái hiển thị cho FE
+
+        public string? GoodsIssueNoteCode { get; set; }  // Mã phiếu xuất
+        public DateTime? GoodsIssueNoteCreatedAt { get; set; }
+
+        public decimal DepositAmount { get; set; }       // Tiền đã cọc
+        public decimal DepositPercent { get; set; }      // % cọc 
+
+        public decimal RemainingAmount { get; set; }
+
+        public List<PaymentRemainGoodsIssueDetailDTO> GoodsIssueDetails { get; set; } = new();
     }
 }

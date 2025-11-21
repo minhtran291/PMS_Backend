@@ -683,6 +683,9 @@ namespace PMS.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime>("CreateRequestAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Gateway")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -693,9 +696,6 @@ namespace PMS.Data.Migrations
 
                     b.Property<int?>("GoodsIssueNoteId")
                         .HasColumnType("int");
-
-                    b.Property<DateTime>("PaidAt")
-                        .HasColumnType("datetime2");
 
                     b.Property<byte>("PaymentMethod")
                         .HasColumnType("TINYINT");
