@@ -11,12 +11,16 @@ namespace PMS.Application.DTOs.SalesOrder
     {
         public int SalesOrderId { get; set; }
         public string SalesOrderCode { get; set; } = null!;
-        public SalesOrderStatus Status { get; set; }
-        public string StatusName { get; set; } = null!;
+        public string? CustomerName { get; set; }
+        public SalesOrderStatus SalesOrderStatus { get; set; }
+        public PaymentStatus PaymentStatus { get; set; }
+        public string SalesOrderStatusName { get; set; } = null!;
+        public string PaymentStatusName { get; set; } = null!;
         public bool IsDeposited { get; set; }
         public decimal TotalPrice { get; set; }
         public DateTime CreateAt { get; set; }
         public DateTime SalesOrderExpiredDate { get; set; }
+        public DateTime PaidFullAt { get; set; }
         public decimal PaidAmount { get; set; }
     }
 }

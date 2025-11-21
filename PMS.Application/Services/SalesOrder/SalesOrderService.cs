@@ -447,6 +447,8 @@ namespace PMS.Application.Services.SalesOrder
                 }
 
                 var orders = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesOrderDetails)
+                    .Include(o => o.Customer)
                     .AsNoTracking()
                     .Where(o => o.CreateBy == userId)
                     .OrderByDescending(o => o.CreateAt)
@@ -454,9 +456,13 @@ namespace PMS.Application.Services.SalesOrder
                     {
                         SalesOrderId = o.SalesOrderId,
                         SalesOrderCode = o.SalesOrderCode,
-                        Status = o.SalesOrderStatus,
-                        StatusName = o.SalesOrderStatus.ToString(),
+                        CustomerName = o.Customer.FullName,
+                        SalesOrderStatus = o.SalesOrderStatus,
+                        PaymentStatus = o.PaymentStatus,
+                        SalesOrderStatusName = o.SalesOrderStatus.ToString(),
+                        PaymentStatusName = o.PaymentStatus.ToString(),
                         IsDeposited = o.IsDeposited,
+                        PaidFullAt = o.PaidFullAt,
                         TotalPrice = o.TotalPrice,
                         CreateAt = o.CreateAt
                     })
@@ -907,15 +913,20 @@ namespace PMS.Application.Services.SalesOrder
             try
             {
                 var orders = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.Customer)
                     .AsNoTracking()
                     .OrderByDescending(o => o.CreateAt)
                     .Select(o => new SalesOrderItemDTO
                     {
                         SalesOrderId = o.SalesOrderId,
                         SalesOrderCode = o.SalesOrderCode,
-                        Status = o.SalesOrderStatus,
-                        StatusName = o.SalesOrderStatus.ToString(),
+                        CustomerName = o.Customer.FullName,
+                        SalesOrderStatus = o.SalesOrderStatus,
+                        PaymentStatus = o.PaymentStatus,
+                        SalesOrderStatusName = o.SalesOrderStatus.ToString(),
+                        PaymentStatusName = o.PaymentStatus.ToString(),
                         IsDeposited = o.IsDeposited,
+                        PaidFullAt = o.PaidFullAt,
                         TotalPrice = o.TotalPrice,
                         CreateAt = o.CreateAt
                     })
@@ -1156,9 +1167,13 @@ namespace PMS.Application.Services.SalesOrder
                     {
                         SalesOrderId = o.SalesOrderId,
                         SalesOrderCode = o.SalesOrderCode,
-                        Status = o.SalesOrderStatus,
-                        StatusName = o.SalesOrderStatus.ToString(),
+                        CustomerName = o.Customer.FullName,
+                        SalesOrderStatus = o.SalesOrderStatus,
+                        PaymentStatus = o.PaymentStatus,
+                        SalesOrderStatusName = o.SalesOrderStatus.ToString(),
+                        PaymentStatusName = o.PaymentStatus.ToString(),
                         IsDeposited = o.IsDeposited,
+                        PaidFullAt = o.PaidFullAt,
                         TotalPrice = o.TotalPrice,
                         CreateAt = o.CreateAt
                     })
