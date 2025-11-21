@@ -19,6 +19,7 @@ namespace PMS.Application.DTOs.SalesQuotation
         public string SenderAddress {  get; set; } = string.Empty;
         public string SenderPhone { get; set; } = string.Empty;
         public string SenderName {  get; set; } = string.Empty;
+        public string ReceiverName {  get; set; } = string.Empty;
         public string ReceiverPhone {  get; set; } = string.Empty;
         public long? ReceiverMst {  get; set; }
         public string ReceiverAddress {  get; set; } = string.Empty;

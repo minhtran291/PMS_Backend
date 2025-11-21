@@ -1276,6 +1276,7 @@ namespace PMS.Application.Services.SalesQuotation
                     SenderAddress = "Hà Nội",
                     SenderPhone = "0915054117",
                     SenderName = salesQuotation.StaffProfile.User.FullName ?? "",
+                    ReceiverName = salesQuotation.RequestSalesQuotation.CustomerProfile.User.FullName ?? "",
                     ReceiverPhone = salesQuotation.RequestSalesQuotation.CustomerProfile.User.PhoneNumber ?? "",
                     ReceiverMst = salesQuotation.RequestSalesQuotation.CustomerProfile.Mst,
                     ReceiverAddress = salesQuotation.RequestSalesQuotation.CustomerProfile.User.Address,

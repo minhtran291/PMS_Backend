@@ -18,6 +18,14 @@ namespace PMS.Core.Domain.Constant
 
             var sender = sq.StaffProfile.User.FullName ?? "";
 
+            var receiverName = sq.RequestSalesQuotation.CustomerProfile.User.FullName ?? "";
+
+            var receiverPhone = sq.RequestSalesQuotation.CustomerProfile.User.PhoneNumber ?? "";
+
+            var receiverMST = sq.RequestSalesQuotation.CustomerProfile.Mst;
+
+            var receiverAddress = sq.RequestSalesQuotation.CustomerProfile.User.Address;
+
             var validityTimeSpan = sq.QuotationDate.HasValue ? sq.ExpiredDate - sq.QuotationDate : null;
 
             string validityText;
@@ -199,16 +207,20 @@ namespace PMS.Core.Domain.Constant
         <div class=""receiver"">
             <div class=""header-title"">BÊN NHẬN</div>
             <div class=""info-row"">
-                <span class=""label"">SĐT:</span>
-                <span class=""value"">0398233099</span>
+                <span class=""label"">Người nhận:</span>
+                <span class=""value"">{HttpUtility.HtmlEncode(receiverName)}</span>
+            </div>
+            <div class=""info-row"">
+                <span class=""label"">Số điện thoại:</span>
+                <span class=""value"">{HttpUtility.HtmlEncode(receiverPhone)}</span>
             </div>
             <div class=""info-row"">
                 <span class=""label"">Mã số thuế:</span>
-                <span class=""value"">123456789</span>
+                <span class=""value"">{HttpUtility.HtmlEncode(receiverMST)}</span>
             </div>
             <div class=""info-row"">
                 <span class=""label"">Địa chỉ:</span>
-                <span class=""value"">123 Đường Láng, Hà Nội</span>
+                <span class=""value"">{HttpUtility.HtmlEncode(receiverAddress)}</span>
             </div>
         </div>
     </div>
