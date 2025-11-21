@@ -1283,7 +1283,7 @@ namespace PMS.Data.DatabaseConfig
                     .HasPrecision(18, 2)
                     .IsRequired();
 
-                entity.Property(p => p.PaidAt)
+                entity.Property(p => p.CreateRequestAt)
                     .IsRequired();
 
                 entity.Property(p => p.PaymentType)
