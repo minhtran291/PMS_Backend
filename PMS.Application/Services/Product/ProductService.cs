@@ -112,7 +112,7 @@ namespace PMS.Application.Services.Product
                     MinQuantity = product.MinQuantity,
                     MaxQuantity = product.MaxQuantity,
                     TotalCurrentQuantity =0,
-                    Status = false,
+                    Status = product.Status,
                     Image = imageUrl
                 };
                 await _unitOfWork.Product.AddAsync(newProduct);
