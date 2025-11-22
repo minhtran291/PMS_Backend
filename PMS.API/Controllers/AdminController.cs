@@ -1,10 +1,12 @@
-
+﻿
 using System.Data;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PMS.Application.Services.Admin;
-using PMS.Core.Domain.Constant;
 using PMS.Application.DTOs.Admin;
+using PMS.Application.Services.Admin;
+using PMS.Application.Services.User;
+using PMS.Core.Domain.Constant;
 
 namespace PMS.API.Controllers
 {
@@ -14,10 +16,12 @@ namespace PMS.API.Controllers
 
     {
         private readonly IAdminService _adminService;
+        private readonly IUserService _userService;
 
-        public AdminController(IAdminService adminService)
+        public AdminController(IAdminService adminService, IUserService userService)
         {
             _adminService = adminService;
+            _userService = userService;
         }
         //[Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("create-staff-account")]
@@ -112,5 +116,30 @@ namespace PMS.API.Controllers
         }
 
 
+        /// <summary>
+        /// Duyệt và kích hoạt tài khoản khách hàng (chuyển trạng thái sang Active).
+        /// https://localhost:7213/api/Admin/activate/{userId}
+        /// </summary>
+        /// <param name="userId">ID của khách hàng cần duyệt</param>
+        /// <returns>Kết quả cập nhật trạng thái</returns>
+        [HttpPut("activate/{userId}")]
+        [ProducesResponseType(typeof(ServiceResult<bool>), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        [ProducesResponseType(500)]
+        [Authorize(Roles = UserRoles.MANAGER)]
+        public async Task<IActionResult> UpdateCustomerStatus(string userId)
+        {
+            var Admin = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(Admin))
+                return Unauthorized(new { message = "Không thể xác thực người dùng." });
+
+            var result = await _userService.UpdateCustomerStatus(userId, Admin);
+
+            if (result.Data)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
     }
 }
