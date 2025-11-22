@@ -426,7 +426,7 @@ namespace PMS.Application.Services.User
                     senderId: userId,
                     targetRoles: new List<string> { "ADMIN" },
                     title: "Yêu cầu duyệt hồ sơ",
-                    message: $"Khách hàng {user.UserName} vừa cập nhật hồ sơ và cần duyệt.",
+                    message: $"Khách hàng {user.UserName} có id {user.Id} vừa cập nhật hồ sơ và cần duyệt.",
                     type: NotificationType.System
                 );
 
