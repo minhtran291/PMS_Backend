@@ -471,7 +471,6 @@ namespace PMS.Application.Services.User
             return $"/{folder}/{fileName}".Replace("\\", "/");
         }
 
-
         public async Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus()
         {
             try
