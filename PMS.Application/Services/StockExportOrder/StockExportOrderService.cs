@@ -183,6 +183,24 @@ namespace PMS.Application.Services.StockExportOrder
                 if (exportQuantityValidation != null)
                     return exportQuantityValidation;
 
+
+                // --------------------------------------------------------------------
+                //var lotIds = dto.Details.Select(d => d.LotId).ToList();
+
+                //var checkWarehouse = await _unitOfWork.LotProduct.Query()
+                //    .Include(lp => lp.WarehouseLocation)
+                //    .Where(lp => lotIds.Contains(lp.LotID))
+                //    .ToListAsync();
+
+                //if(checkWarehouse.Any(c => c.WarehouseLocation.WarehouseId != dto.WarehouseId))
+                //{
+                //    return new ServiceResult<object>
+                //    {
+                //        StatusCode = 400,
+                //        Message = "Có sản phẩm không khớp với kho hiện tại"
+                //    };
+                //}
+
                 await _unitOfWork.BeginTransactionAsync();
 
                 var newExport = new Core.Domain.Entities.StockExportOrder
@@ -415,6 +433,10 @@ namespace PMS.Application.Services.StockExportOrder
                     .Include(s => s.SalesOrderDetails)
                         .ThenInclude(d => d.LotProduct)
                             .ThenInclude(lp => lp.Product)
+                    .Include(s => s.SalesOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.WarehouseLocation)
+                                .ThenInclude(wl => wl.Warehouse)
                     .FirstOrDefaultAsync(s => s.SalesOrderId == soId);
 
                 if (salesOrder == null)
@@ -449,17 +471,25 @@ namespace PMS.Application.Services.StockExportOrder
                     {
                         LotId = lotId,
                         ProductName = detail.LotProduct.Product.ProductName,
+                        Unit = detail.LotProduct.Product.Unit,
                         ExpiredDate = detail.LotProduct.ExpiredDate,
                         Avaiable = availableToExport,
+                        WarehouseName = detail.LotProduct.WarehouseLocation.Warehouse.Name
                     };
 
                     listOrder.Add(order);
                 }
 
+                var result = new FormDataWithDueDateDTO
+                {
+                    DueDate = salesOrder.CreateAt.Date.AddDays(30),
+                    Details = listOrder
+                };
+
                 return new ServiceResult<object>
                 {
                     StatusCode = 200,
-                    Data = listOrder
+                    Data = result
                 };
             }
             catch(Exception ex)
@@ -716,6 +746,23 @@ namespace PMS.Application.Services.StockExportOrder
                 //            StatusCode = 400,
                 //            Message = $"Số lượng yêu cầu xuất lô {lotId} vượt quá số lượng đã lên trong đơn."
                 //        };
+                //}
+
+                // --------------------------------------------------------------------
+                //var lotIds = dto.Details.Select(d => d.LotId).ToList();
+
+                //var checkWarehouse = await _unitOfWork.LotProduct.Query()
+                //    .Include(lp => lp.WarehouseLocation)
+                //    .Where(lp => lotIds.Contains(lp.LotID))
+                //    .ToListAsync();
+
+                //if (checkWarehouse.Any(c => c.WarehouseLocation.WarehouseId != dto.WarehouseId))
+                //{
+                //    return new ServiceResult<object>
+                //    {
+                //        StatusCode = 400,
+                //        Message = "Có sản phẩm không khớp với kho hiện tại"
+                //    };
                 //}
 
                 await _unitOfWork.BeginTransactionAsync();

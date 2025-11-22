@@ -10,6 +10,7 @@ namespace PMS.Application.DTOs.StockExportOrder
     {
         public int LotId { get; set; }
         public string ProductName { get; set; } = string.Empty;
+        public string Unit {  get; set; } = string.Empty;
         public DateTime ExpiredDate { get; set; } 
         public int Quantity { get; set; }
         public int Available {  get; set; }
