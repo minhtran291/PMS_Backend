@@ -22,6 +22,8 @@ namespace PMS.Core.Domain.Entities
         public required decimal UnitPrice { get; set; }
         public required DateTime ProductDate { get; set; }
 
+        public decimal Tax { get; set; }
+
         public virtual Quotation Quotation { get; set; } = null;
     }
 }

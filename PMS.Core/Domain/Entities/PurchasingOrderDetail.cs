@@ -23,6 +23,7 @@ namespace PMS.Core.Domain.Entities
         public decimal UnitPrice { get; set; }
         public decimal UnitPriceTotal { get; set; }
         public string Description { get; set; }
+        public decimal Tax { get; set; }
         public int POID { get; set; }
         [ForeignKey("POID")]
         public virtual PurchasingOrder PurchasingOrder { get; set; } = null!;

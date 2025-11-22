@@ -226,7 +226,8 @@ namespace PMS.API.Services.POService
                             UnitPriceTotal = d.UnitPriceTotal,
                             Description = d.Description,
                             ExpiredDate = d.ExpiredDate,
-                            RemainingQty = remainingQty > 0 ? remainingQty : 0
+                            RemainingQty = remainingQty > 0 ? remainingQty : 0,
+                            Tax = d.Tax
                         };
                     }).ToList()
                 };
@@ -275,7 +276,6 @@ namespace PMS.API.Services.POService
 
 
                 existingPO.Status = newStatus;
-
 
                 if (newStatus == PurchasingOrderStatus.paid)
                 {
@@ -924,62 +924,133 @@ namespace PMS.API.Services.POService
             }
         }
 
-        public async Task<ServiceResult<List<DebtReport>>> GetAllDebtReport()
+        public async Task<ServiceResult<List<DebtReportDTO>>> GetAllDebtReport()
         {
             try
             {
-                var pharmacy = await _unitOfWork.DebtReport.Query().ToListAsync();
-                if (pharmacy == null)
+                var debtReports = await _unitOfWork.DebtReport.Query().ToListAsync();
+
+                if (debtReports == null || !debtReports.Any())
                 {
-                    return new ServiceResult<List<DebtReport>>
+                    return new ServiceResult<List<DebtReportDTO>>
                     {
                         Success = false,
                         Data = null,
-                        Message = "Lấy thông tin tài chính của công ty thất bại ",
+                        Message = "Không tìm thấy thông tin tài chính của công ty",
                         StatusCode = 400,
                     };
                 }
-                return new ServiceResult<List<DebtReport>>
+
+                var supplierIds = debtReports.Select(d => d.EntityID).Where(id => id.HasValue).ToList();
+                var suppliers = await _unitOfWork.Supplier.Query()
+                    .Where(s => supplierIds.Contains(s.Id))
+                    .ToListAsync();
+
+                var result = debtReports.Select(d =>
+                {
+                    var supplier = suppliers.FirstOrDefault(s => s.Id == d.EntityID);
+                    return new DebtReportDTO
+                    {
+                        EntityID = d.EntityID,
+                        CreatedDate = d.CreatedDate,
+                        CurrentDebt = d.CurrentDebt,
+                        DebtName = supplier?.Name ?? "N/A",
+                        EntityType = d.EntityType,
+                        Payables = d.Payables,
+                        Payday = d.Payday,
+                        ReportID = d.ReportID,
+                        Status = d.Status,
+                    };
+                }).ToList();
+
+                return new ServiceResult<List<DebtReportDTO>>
                 {
                     Success = true,
-                    Data = pharmacy,
+                    Data = result,
                     Message = "Lấy dữ liệu thành công",
                     StatusCode = 200,
                 };
             }
             catch (Exception ex)
             {
-                return ServiceResult<List<DebtReport>>.Fail($"Lỗi khi lấy thông tin tài chính thất bại: {ex.Message}", 500);
+                return ServiceResult<List<DebtReportDTO>>.Fail($"Lỗi khi lấy thông tin tài chính: {ex.Message}", 500);
             }
         }
 
-        public async Task<ServiceResult<DebtReport>> GetDebtReportDetail(int dbid)
+
+        public async Task<ServiceResult<DebtReportDTO>> GetDebtReportDetail(int dbid)
         {
             try
             {
-                var pharmacy = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(db=>db.ReportID ==dbid);
+
+                var pharmacy = await _unitOfWork.DebtReport.Query()
+                    .FirstOrDefaultAsync(db => db.ReportID == dbid);
+
                 if (pharmacy == null)
                 {
-                    return new ServiceResult<DebtReport>
+                    return new ServiceResult<DebtReportDTO>
                     {
                         Success = false,
                         Data = null,
-                        Message = "Lấy thông tin tài chính của công ty thất bại ",
+                        Message = "Không tìm thấy thông tin tài chính",
                         StatusCode = 400,
                     };
                 }
-                return new ServiceResult<DebtReport>
+
+
+                var sup = await _unitOfWork.Supplier.Query()
+                    .FirstOrDefaultAsync(s => s.Id == pharmacy.EntityID);
+
+                if (sup == null)
+                {
+                    return new ServiceResult<DebtReportDTO>
+                    {
+                        Success = false,
+                        Data = null,
+                        Message = "Không tìm thấy thông tin tên người nợ",
+                        StatusCode = 200,
+                    };
+                }
+
+                var allPOs = await _unitOfWork.PurchasingOrder.Query()
+                    .Include(po => po.Quotations)
+                    .ToListAsync();
+
+                var pos = await _unitOfWork.PurchasingOrder.Query().Include(po => po.Quotations).Where(po => po.Quotations.SupplierID == pharmacy.EntityID).ToListAsync();
+
+                var viewDebtPOs = pos.Select(po => new ViewDebtPODTO
+                {
+                    poid = po.POID,
+                    toatlPo = po.Total
+                }).ToList();
+
+                var result = new DebtReportDTO
+                {
+                    EntityID = pharmacy.EntityID,
+                    CreatedDate = pharmacy.CreatedDate,
+                    CurrentDebt = pharmacy.CurrentDebt,
+                    DebtName = sup.Name,
+                    EntityType = pharmacy.EntityType,
+                    Payables = pharmacy.Payables,
+                    Payday = pharmacy.Payday,
+                    ReportID = pharmacy.ReportID,
+                    Status = pharmacy.Status,
+                    viewDebtPODTOs = viewDebtPOs
+                };
+
+                return new ServiceResult<DebtReportDTO>
                 {
                     Success = true,
-                    Data = pharmacy,
+                    Data = result,
                     Message = "Lấy dữ liệu thành công",
                     StatusCode = 200,
                 };
             }
             catch (Exception ex)
             {
-                return ServiceResult<DebtReport>.Fail($"Lỗi khi lấy thông tin tài chính thất bại: {ex.Message}", 500);
+                return ServiceResult<DebtReportDTO>.Fail($"Lỗi khi lấy thông tin tài chính: {ex.Message}", 500);
             }
         }
+
     }
 }

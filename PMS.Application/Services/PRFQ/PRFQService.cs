@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Globalization;
 using System.Text;
+using System.Xml.Linq;
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -206,7 +207,7 @@ namespace PMS.API.Services.PRFQService
                     StatusCode = 200,
                     Success = true
                 };
-                
+
             }
             catch (Exception ex)
             {
@@ -364,12 +365,12 @@ namespace PMS.API.Services.PRFQService
                         var description = worksheet.Cells[row, 4].Text?.Trim();
                         var dvt = worksheet.Cells[row, 5].Text?.Trim();
                         var unitPriceText = worksheet.Cells[row, 6].Text?.Trim();
-
-                        var expiredCell = worksheet.Cells[row, 7];
+                        var tax = worksheet.Cells[row, 7].Text?.Trim();
+                        var expiredCell = worksheet.Cells[row, 8];
                         var expiredDateDisplay = expiredCell.Text?.Trim();
 
                         decimal.TryParse(unitPriceText, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal unitPrice);
-
+                        decimal taxPerProduct = ParseTax(tax);
                         var approvedQty = approvedOrderedQuantities.TryGetValue(productId, out var orderedQty) ? orderedQty : 0;
                         var info = productInfoDict.TryGetValue(productId, out var product) ? product : null;
 
@@ -388,11 +389,13 @@ namespace PMS.API.Services.PRFQService
                             Description = description,
                             DVT = dvt,
                             UnitPrice = unitPrice,
+                            tax = taxPerProduct,
                             ExpiredDateDisplay = expiredDateDisplay,
                             CurrentQuantity = info?.TotalCurrentQuantity ?? 0,
                             MinQuantity = info?.MinQuantity ?? 0,
                             MaxQuantity = info?.MaxQuantity ?? 0,
-                            SuggestedQuantity = suggestedQuantity
+                            SuggestedQuantity = suggestedQuantity,
+
                         });
                     }
                     catch (Exception ex)
@@ -721,7 +724,7 @@ namespace PMS.API.Services.PRFQService
             foreach (var d in details)
             {
                 decimal lineTotal = d.Quantity * d.UnitPrice;
-                decimal tax = lineTotal * 0.1m;
+                decimal tax = lineTotal * d.Tax;
                 totalAmount += lineTotal;
                 totalTax += tax;
 
@@ -733,7 +736,7 @@ namespace PMS.API.Services.PRFQService
                 ws.Cells[row, 5].Style.Numberformat.Format = "#,##0.00";
                 ws.Cells[row, 6].Value = lineTotal;
                 ws.Cells[row, 6].Style.Numberformat.Format = "#,##0.00";
-                ws.Cells[row, 7].Value = "10%";
+                ws.Cells[row, 7].Value = $"{d.Tax * 100}%";
                 ws.Cells[row, 8].Value = tax;
                 ws.Cells[row, 8].Style.Numberformat.Format = "#,##0.00";
                 ws.Cells[row, 9].Value = d.Description;
@@ -751,7 +754,7 @@ namespace PMS.API.Services.PRFQService
 
             ws.Cells[row + 1, 9].Value = "Tổng tiền chưa thuế:";
             ws.Cells[row + 1, 10].Value = totalAmount;
-            ws.Cells[row + 2, 9].Value = "Tiền thuế (10%):";
+            ws.Cells[row + 2, 9].Value = "Tiền thuế:";
             ws.Cells[row + 2, 10].Value = totalTax;
             ws.Cells[row + 3, 9].Value = "Tổng cộng:";
             ws.Cells[row + 3, 10].Value = totalAmount + totalTax;
@@ -1161,7 +1164,7 @@ namespace PMS.API.Services.PRFQService
                 QID = qId,
                 SendDate = sendDate,
                 ExpiredDate = expiredDate,
-                PaymentDueDate= PayDD
+                PaymentDueDate = PayDD
             };
         }
 
@@ -1208,7 +1211,7 @@ namespace PMS.API.Services.PRFQService
                 UserId = userId,
                 Total = 0,
                 Status = PurchasingOrderStatus.sent,
-                PaymentDueDate= PaymentDueDate
+                PaymentDueDate = PaymentDueDate
             };
 
             await _unitOfWork.PurchasingOrder.AddAsync(po);
@@ -1238,10 +1241,12 @@ namespace PMS.API.Services.PRFQService
                     var description = worksheet.Cells[currentRow, 4].Text?.Trim();
                     var dvt = worksheet.Cells[currentRow, 5].Text?.Trim();
                     var unitPriceText = worksheet.Cells[currentRow, 6].Text?.Trim();
-                    var expiredDateText = worksheet.Cells[currentRow, 7].Text?.Trim();
-                   
+                    var tax = worksheet.Cells[currentRow, 7].Text?.Trim();
+                    var expiredDateText = worksheet.Cells[currentRow, 8].Text?.Trim();
+
 
                     decimal.TryParse(unitPriceText, out decimal unitPrice);
+                    decimal taxPerProduct = ParseTax(tax);
                     DateTime expiredDate = DateTime.MinValue;
                     try { expiredDate = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(expiredDateText, currentRow); } catch { }
 
@@ -1257,7 +1262,8 @@ namespace PMS.API.Services.PRFQService
                             ? (dvt ?? string.Empty).Substring(0, 100)
                             : (dvt ?? string.Empty),
                         UnitPrice = unitPrice,
-                        ProductDate = expiredDate
+                        ProductDate = expiredDate,
+                        Tax = taxPerProduct
                     });
 
                     currentRow++;
@@ -1280,15 +1286,17 @@ namespace PMS.API.Services.PRFQService
                 var description = worksheet.Cells[row, 4].Text?.Trim();
                 var dvt = worksheet.Cells[row, 5].Text?.Trim();
                 var unitPriceText = worksheet.Cells[row, 6].Text?.Trim();
-                var expiredDateText = worksheet.Cells[row, 7].Text?.Trim();
+                var tax = worksheet.Cells[row, 7].Text?.Trim();
+                var expiredDateText = worksheet.Cells[row, 8].Text?.Trim();
 
                 decimal.TryParse(unitPriceText, out decimal unitPrice);
+                decimal taxPerProduct = ParseTax(tax);
                 DateTime expiredDate = DateTime.MinValue;
                 try { expiredDate = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(expiredDateText, row); } catch { }
 
                 var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
-                decimal total = item.Quantity * unitPrice * 1.1m;
-
+                decimal taxlast = item.Quantity * unitPrice * taxPerProduct;
+                decimal total = item.Quantity * unitPrice + taxlast;
                 poDetails.Add(new PurchasingOrderDetail
                 {
                     POID = po.POID,
@@ -1299,7 +1307,8 @@ namespace PMS.API.Services.PRFQService
                     Quantity = item.Quantity,
                     UnitPrice = unitPrice,
                     UnitPriceTotal = total,
-                    ExpiredDate = expiredDate
+                    ExpiredDate = expiredDate,
+                    Tax = taxPerProduct
                 });
 
                 po.Total += total;
@@ -1313,6 +1322,27 @@ namespace PMS.API.Services.PRFQService
             await _unitOfWork.CommitAsync();
 
             return po;
+        }
+
+
+        private decimal ParseTax(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return 0;
+
+
+            input = input.Replace("%", "").Trim();
+
+
+            if (!decimal.TryParse(input, out decimal value))
+                return 0;
+
+
+            if (value > 1)
+                return value / 100m;
+
+
+            return value;
         }
 
 
@@ -1414,8 +1444,8 @@ namespace PMS.API.Services.PRFQService
 
                     if (matchedDetail == null)
                         throw new Exception($"Sản phẩm {item.ProductID} với ngày {item.Date:yyyy-MM-dd} không tồn tại trong báo giá {quotation.QID}");
-
-                    decimal total = item.Quantity * matchedDetail.UnitPrice * 1.1m;
+                    decimal taxlast = item.Quantity * matchedDetail.UnitPrice * matchedDetail.Tax;
+                    decimal total = item.Quantity * matchedDetail.UnitPrice + taxlast;
 
                     poDetails.Add(new PurchasingOrderDetail
                     {
@@ -1427,7 +1457,8 @@ namespace PMS.API.Services.PRFQService
                         Quantity = item.Quantity,
                         UnitPrice = matchedDetail.UnitPrice,
                         UnitPriceTotal = total,
-                        ExpiredDate = matchedDetail.ProductDate
+                        ExpiredDate = matchedDetail.ProductDate,
+                        Tax = matchedDetail.Tax,
                     });
 
                     po.Total += total;
@@ -1598,7 +1629,8 @@ namespace PMS.API.Services.PRFQService
                         q.ProductDescription,
                         q.ProductUnit,
                         q.UnitPrice,
-                        q.ProductDate
+                        q.ProductDate,
+                        q.Tax
                     }).ToList();
 
                 var productIds = quotationProducts.Select(x => x.ProductID).ToList();
@@ -1645,13 +1677,14 @@ namespace PMS.API.Services.PRFQService
                     }
                     products.Add(new PreviewProductDto
                     {
-                        STT= stt++,
+                        STT = stt++,
                         ProductID = qProd.ProductID,
                         ProductName = qProd.ProductName,
                         Description = qProd.ProductDescription,
                         DVT = qProd.ProductUnit,
                         UnitPrice = qProd.UnitPrice,
                         ExpiredDateDisplay = qProd.ProductDate.ToString("dd/MM/yyyy"),
+                        tax = qProd.Tax,
                         CurrentQuantity = info?.TotalCurrentQuantity ?? 0,
                         MinQuantity = info?.MinQuantity ?? 0,
                         MaxQuantity = info?.MaxQuantity ?? 0,
@@ -1661,9 +1694,9 @@ namespace PMS.API.Services.PRFQService
                 return new ServiceResult<IEnumerable<PreviewProductDto>>
                 {
                     Data = products,
-                    StatusCode=200,
-                    Message="Thành công",
-                    Success=true,
+                    StatusCode = 200,
+                    Message = "Thành công",
+                    Success = true,
                 };
             }
             catch (Exception ex)
