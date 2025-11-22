@@ -66,6 +66,7 @@ namespace PMS.Application.Automapper
             CreateMap<StockExportOrderDetails, DetailsStockExportOrderDTO>()
                 .ForMember(dest => dest.LotId, opt => opt.MapFrom(src => src.LotProduct.LotID))
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.LotProduct.Product.ProductName))
+                .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => src.LotProduct.Product.Unit))
                 .ForMember(dest => dest.ExpiredDate, opt => opt.MapFrom(src => src.LotProduct.ExpiredDate))
                 .ForMember(dest => dest.LocationName, opt => opt.MapFrom(src => src.LotProduct.WarehouseLocation.LocationName))
                 .ForMember(dest => dest.WarehouseName, opt => opt.MapFrom(src => src.LotProduct.WarehouseLocation.Warehouse.Name));
