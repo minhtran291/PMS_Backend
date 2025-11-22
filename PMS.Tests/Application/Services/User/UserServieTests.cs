@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Moq;
 using PMS.Application.Services.ExternalService;
@@ -14,7 +15,7 @@ namespace PMS.Tests
     public class RegisterServiceTests : ServiceTestBase
     {
         private UserService _userService;
-
+        private IWebHostEnvironment webEnv;
         [SetUp]
         public override void BaseSetup()
         {
@@ -29,7 +30,8 @@ namespace PMS.Tests
                 MapperMock.Object,
                 emailServiceMock.Object,
                 loggerMock.Object,
-                notificationServiceMock.Object
+                notificationServiceMock.Object,
+                webEnv
             );
         }
 

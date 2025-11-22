@@ -5,7 +5,7 @@ namespace PMS.Application.Services.Product
 {
     public interface IProductService
     {
-        Task<ServiceResult<bool>> AddProductAsync(ProductDTO product);
+        Task<ServiceResult<bool>> AddProductAsync(ProductDTOView product);
         Task<ServiceResult<IEnumerable<ProductDTO>>> GetAllProductsAsync();
         Task<ServiceResult<List<ProductDTO>>> GetAllProductsWithStatusAsync();
         Task<ServiceResult<ProductDTO?>> GetProductByIdAsync(int id);

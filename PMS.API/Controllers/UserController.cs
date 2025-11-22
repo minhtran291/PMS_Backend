@@ -12,6 +12,7 @@ using PMS.Core.Domain.Identity;
 using PMS.Data.UnitOfWork;
 using Microsoft.AspNetCore.Hosting;
 using System.IO;
+using PMS.Application.DTOs.Profile;
 
 namespace PMS.API.Controllers
 {
@@ -140,12 +141,12 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="request">Thông tin hồ sơ khách hàng cần cập nhật</param>
         [HttpPut("CustomerProfileUpdate")]
-        public async Task<IActionResult> UpdateCustomerProfile([FromBody] CustomerProfileDTO request)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UpdateCustomerProfile([FromForm] PMS.Application.DTOs.Customer.CustomerProfileDTO request)
         {
             if (!ModelState.IsValid)
             {
-                var errors = ModelState
-                    .Where(e => e.Value?.Errors.Count > 0)
+                var errors = ModelState.Where(e => e.Value?.Errors.Count > 0)
                     .Select(e => new
                     {
                         Field = e.Key,
@@ -158,14 +159,14 @@ namespace PMS.API.Controllers
                     Errors = errors
                 });
             }
+
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+
             var result = await _userService.UpdateCustomerProfile(userId, request);
-            if (result.Data)
-                return Ok(result);
-            else
-                return BadRequest(result);
+
+            return StatusCode(result.StatusCode, result);
         }
 
 

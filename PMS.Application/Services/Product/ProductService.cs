@@ -1,18 +1,49 @@
 ﻿using System.Linq;
 using AutoMapper;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using PMS.Application.DTOs.Product;
 using PMS.Application.Services.Base;
 using PMS.Core.Domain.Constant;
 using PMS.Data.UnitOfWork;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace PMS.Application.Services.Product
 {
-    public class ProductService(IUnitOfWork unitOfWork, IMapper mapper) : Service(unitOfWork, mapper), IProductService
+    public class ProductService(IUnitOfWork unitOfWork, IMapper mapper, IWebHostEnvironment webEnv) : Service(unitOfWork, mapper), IProductService
 
     {
-        public async Task<ServiceResult<bool>> AddProductAsync(ProductDTO product)
+
+
+        public async Task<string> SaveAsync(IFormFile file, string folder)
+        {
+            if (file == null || file.Length == 0)
+                throw new Exception("File upload không hợp lệ");
+
+
+            var rootPath = webEnv.WebRootPath;
+
+
+            var folderPath = Path.Combine(rootPath, folder);
+
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var filePath = Path.Combine(folderPath, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+
+            return $"/{folder}/{fileName}".Replace("\\", "/");
+        }
+
+        public async Task<ServiceResult<bool>> AddProductAsync(ProductDTOView product)
         {
             try
             {
@@ -37,15 +68,15 @@ namespace PMS.Application.Services.Product
                     };
                 }
 
-                if (product.TotalCurrentQuantity < 0)
-                {
-                    return new ServiceResult<bool>
-                    {
-                        StatusCode = 200,
-                        Message = "Đảm bảo là số nguyên dương",
-                        Data = false,
-                    };
-                }
+                //if (product.TotalCurrentQuantity < 0)
+                //{
+                //    return new ServiceResult<bool>
+                //    {
+                //        StatusCode = 200,
+                //        Message = "Đảm bảo là số nguyên dương",
+                //        Data = false,
+                //    };
+                //}
 
                 var category = await _unitOfWork.Category.Query().FirstOrDefaultAsync(c => c.CategoryID == product.CategoryID);
                 if (category == null)
@@ -69,7 +100,9 @@ namespace PMS.Application.Services.Product
                     };
                 }
 
-
+                string imageUrl = product.Image != null
+            ? await SaveAsync(product.Image, "images/products/")
+            : null;
                 var newProduct = new PMS.Core.Domain.Entities.Product
                 {
                     ProductName = product.ProductName,
@@ -78,10 +111,9 @@ namespace PMS.Application.Services.Product
                     CategoryID = product.CategoryID,
                     MinQuantity = product.MinQuantity,
                     MaxQuantity = product.MaxQuantity,
-                    TotalCurrentQuantity = product.TotalCurrentQuantity,
+                    TotalCurrentQuantity =0,
                     Status = false,
-                    Image = product.Image,
-
+                    Image = imageUrl
                 };
                 await _unitOfWork.Product.AddAsync(newProduct);
                 await _unitOfWork.CommitAsync();
