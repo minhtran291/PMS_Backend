@@ -23,7 +23,7 @@ namespace PMS.API.Controllers
             _adminService = adminService;
             _userService = userService;
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("create-staff-account")]
         public async Task<IActionResult> CreateStaffAccountAsync([FromBody] CreateAccountRequest request)
         {
@@ -39,7 +39,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpGet("get-account-list")]
         public async Task<IActionResult> AccountListAsync(string? keyword)
         {
@@ -53,7 +53,7 @@ namespace PMS.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        
         /// <summary>
         /// https://localhost:7213/api/Admin/get-account-details
         /// get ....
@@ -61,6 +61,7 @@ namespace PMS.API.Controllers
         /// <param name="userId"></param>
         /// <returns></returns>
         [HttpGet("get-account-details")]
+        [Authorize(Roles = UserRoles.ADMIN)]
         public async Task<IActionResult> AccountDetailAsync(string userId)
         {
             var result = await _adminService.GetAccountDetailAsync(userId);
@@ -72,7 +73,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPut("update-staff-account")]
         public async Task<IActionResult> UpdateAccountAsync([FromBody] UpdateAccountRequest request)
         {
@@ -88,7 +89,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("suspend-account")]
         public async Task<IActionResult> SuspendAccountAsync(string userId)
         {
@@ -101,7 +102,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("active-account")]
         public async Task<IActionResult> ActiveAccountAsync(string userID)
         {
@@ -127,7 +128,7 @@ namespace PMS.API.Controllers
         [ProducesResponseType(401)]
         [ProducesResponseType(403)]
         [ProducesResponseType(500)]
-        [Authorize(Roles = UserRoles.MANAGER)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         public async Task<IActionResult> UpdateCustomerStatus(string userId)
         {
             var Admin = User.FindFirstValue(ClaimTypes.NameIdentifier);
