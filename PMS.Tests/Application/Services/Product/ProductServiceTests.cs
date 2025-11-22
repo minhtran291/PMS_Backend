@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Castle.Core.Configuration;
+using Microsoft.AspNetCore.Hosting;
 using Moq;
 using PMS.Application.DTOs.Product;
 using PMS.Application.Services.Category;
@@ -17,13 +18,13 @@ namespace PMS.Tests.Application.Services.Product
     public class ProductServiceTests : ServiceTestBase
     {
         private ProductService _productService;
-
+        private IWebHostEnvironment _webEnv;
 
         [SetUp]
         public override void BaseSetup()
         {
             base.BaseSetup();
-            _productService = new ProductService(UnitOfWorkMock.Object, MapperMock.Object);
+            _productService = new ProductService(UnitOfWorkMock.Object, MapperMock.Object, _webEnv);
         }
 
         [Test]
@@ -43,15 +44,14 @@ namespace PMS.Tests.Application.Services.Product
         public async Task AddProductAsync_MinQuantityGreaterThanMax_ShouldReturn200()
         {
             // Arrange
-            var dto = new ProductDTO
+            var dto = new ProductDTOView
             {
                 ProductName = "Sản phẩm test",
                 MinQuantity = 10,
                 MaxQuantity = 5,
-                TotalCurrentQuantity = 10,
                 CategoryID = 1,
                 Unit = "Hộp",
-                Image = "",
+                Image = null,
                 ProductDescription = "abc",
                 Status = true,
             };
@@ -69,15 +69,14 @@ namespace PMS.Tests.Application.Services.Product
         public async Task AddProductAsync_NegativeTotalCurrentQuantity_ShouldReturn200()
         {
             // Arrange
-            var dto = new ProductDTO
+            var dto = new ProductDTOView
             {
                 ProductName = "Sản phẩm test",
                 MinQuantity = 1,
                 MaxQuantity = 5,
-                TotalCurrentQuantity = -1,
                 CategoryID = 1,
                 Unit = "Hộp",
-                Image = "",
+                Image = null,
                 ProductDescription = "abc",
                 Status = true,
             };
@@ -95,15 +94,14 @@ namespace PMS.Tests.Application.Services.Product
         public async Task AddProductAsync_CategoryNotFound_ShouldReturn200()
         {
             // Arrange
-            var dto = new ProductDTO
+            var dto = new ProductDTOView
             {
                 ProductName = "Sản phẩm test",
                 MinQuantity = 1,
                 MaxQuantity = 5,
-                TotalCurrentQuantity = 10,
                 CategoryID = 999,
                 Unit = "Hộp",
-                Image = "",
+                Image = null,
                 ProductDescription = "abc",
                 Status = true,
 
@@ -126,15 +124,14 @@ namespace PMS.Tests.Application.Services.Product
         public async Task AddProductAsync_ProductNameExists_ShouldReturn200()
         {
             // Arrange
-            var dto = new ProductDTO
+            var dto = new ProductDTOView
             {
                 ProductName = "Trùng tên",
                 MinQuantity = 1,
                 MaxQuantity = 10,
-                TotalCurrentQuantity = 10,
                 CategoryID = 1,
                 Unit = "Hộp",
-                Image = "",
+                Image = null,
                 ProductDescription = "abc",
                 Status = true,
             };
@@ -166,7 +163,7 @@ namespace PMS.Tests.Application.Services.Product
         public async Task AddProductAsync_ValidData_ShouldReturnSuccess()
         {
             // Arrange
-            var dto = new ProductDTO
+            var dto = new ProductDTOView
             {
                 ProductName = "Sản phẩm mới",
                 Unit = "Cái",
@@ -174,8 +171,7 @@ namespace PMS.Tests.Application.Services.Product
                 CategoryID = 1,
                 MinQuantity = 1,
                 MaxQuantity = 10,
-                TotalCurrentQuantity = 5,
-                Image = "",
+                Image = null,
                 Status = true
             };
 

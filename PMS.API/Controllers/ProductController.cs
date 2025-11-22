@@ -100,7 +100,7 @@ namespace PMS.API.Controllers
         /// <returns><Product></returns>
         [HttpPost("create")]
         [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> AddProduct([FromBody] ProductDTO product)
+        public async Task<IActionResult> AddProduct([FromForm] ProductDTOView product)
         {
 
 
