@@ -16,7 +16,7 @@ namespace PMS.Application.Services.User
         Task<ServiceResult<bool>> ResetPasswordAsync(ResetPasswordRequest request);
         Task<ServiceResult<bool>> UpdateCustomerProfile(string userId, CustomerProfileDTO request);
         Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus();
-        Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string managerId);
+        Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string Admin);
         Task<ServiceResult<CustomerViewDTO>> GetCustomerByIdAsync(string userId);
         Task<ServiceResult<bool>> ChangePasswordAsync(string userId, string oldPasword, string newpassword);
         Task<ServiceResult<object>> GetProfile(string userId, List<string> roles);

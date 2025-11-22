@@ -511,7 +511,7 @@ namespace PMS.Application.Services.User
             }
         }
 
-        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string managerId)
+        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string Admin)
         {
             var exuser = await _unitOfWork.Users.Query()
                     .Include(u => u.CustomerProfile).FirstOrDefaultAsync(u => u.Id == userId);
@@ -524,7 +524,7 @@ namespace PMS.Application.Services.User
             await _unitOfWork.CommitAsync();
 
             await _notificationService.SendNotificationToCustomerAsync(
-                senderId: managerId,
+                senderId: Admin,
                 userId,
                 title: "Thông báo duyệt tài khoản",
                 message: $"Tài khoản đã cập nhật ",
