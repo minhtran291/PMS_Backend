@@ -8,11 +8,10 @@ namespace PMS.Core.Domain.Enums
 {
     public enum PaymentStatus : byte
     {
-        Pending = 0,
-        Deposited = 1,
-        Paid = 2,
-        Success = 3,
-        Failed = 4,
-        Refunded = 5
+        NotPaymentYet = 0, //Khách hàng chưa thanh toán bất cứ khoản nào
+        Deposited = 1, //Khách hàng thanh toán số tiền cọc
+        PartiallyPaid = 2, // khách trả tiền nhưng chưa đủ tổng giá trị đơn hàng
+        Paid = 3, //Khách hàng thanh toán toàn bộ hoặc thanh toán đủ tiền
+        Refunded = 4 //Trường hợp lỗi bên mình và khách hàng không chấp nhận thì cần trả lại tiền cho khách
     }
 }

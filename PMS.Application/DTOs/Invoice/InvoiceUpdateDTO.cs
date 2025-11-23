@@ -8,6 +8,6 @@ namespace PMS.Application.DTOs.Invoice
 {
     public class InvoiceUpdateDTO
     {
-        public List<int> PaymentRemainIds { get; set; } = new();
+        public List<string> GoodsIssueNoteCodes { get; set; } = new();
     }
 }

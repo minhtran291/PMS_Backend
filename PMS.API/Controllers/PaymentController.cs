@@ -24,11 +24,10 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// Post: https://localhost:7213/api/Payment/init
+        /// Post: http://localhost:5137/api/Payment/init
         /// Khởi tạo thanh toán VNPay (deposit/full). Trả về link và QR.
         /// </summary>
         [HttpPost("init")]
-        [ProducesResponseType(typeof(ServiceResult<VnPayInitResponseDTO>), StatusCodes.Status200OK)]
         public async Task<IActionResult> Init([FromBody] VnPayInitRequestDTO req)
         {
             var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
@@ -42,7 +41,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// Get: https://localhost:7213/api/Payment/return
+        /// Get: http://localhost:5137/api/Payment/return
         /// ReturnUrl cho web (VNPay redirect sau khi thanh toán).
         /// </summary>
         [HttpGet("return")]
@@ -61,7 +60,7 @@ namespace PMS.API.Controllers
         /// <summary>
         /// IPN (Instant Payment Notification) - server to server.
         /// VNPay sẽ gọi endpoint này để confirm trạng thái thanh toán.
-        /// Get: https://localhost:7213/api/Payment/vnpay/ipn
+        /// Get: http://localhost:5137/api/Payment/vnpay/ipn
         /// </summary>
         [HttpGet("vnpay/ipn")]
         public async Task<IActionResult> VnPayIpn()
