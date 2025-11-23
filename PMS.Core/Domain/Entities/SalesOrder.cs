@@ -22,7 +22,7 @@ namespace PMS.Core.Domain.Entities
         public bool IsDeposited { get; set; }
         public required DateTime SalesOrderExpiredDate { get; set; }
         public decimal PaidAmount { get; set; }
-        public DateTime PaidFullAt { get; set; }
+        public DateTime? PaidFullAt { get; set; }
         public virtual ICollection<SalesOrderDetails> SalesOrderDetails { get; set; } = [];
         public virtual CustomerDebt CustomerDebts { get; set; }
         public virtual SalesQuotation SalesQuotation { get; set; } = null!;

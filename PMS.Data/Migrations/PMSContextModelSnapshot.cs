@@ -517,6 +517,9 @@ namespace PMS.Data.Migrations
                     b.Property<DateTime>("IssuedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<byte>("PaymentStatus")
+                        .HasColumnType("TINYINT");
+
                     b.Property<int>("SalesOrderId")
                         .HasColumnType("int");
 
@@ -694,8 +697,16 @@ namespace PMS.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("GoodsIssueNoteId")
+                    b.Property<string>("InvoiceCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("InvoiceId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<byte>("PaymentMethod")
                         .HasColumnType("TINYINT");
@@ -706,14 +717,12 @@ namespace PMS.Data.Migrations
                     b.Property<int>("SalesOrderId")
                         .HasColumnType("int");
 
-                    b.Property<byte>("Status")
+                    b.Property<byte>("VNPayStatus")
                         .HasColumnType("TINYINT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("GoodsIssueNoteId")
-                        .IsUnique()
-                        .HasFilter("[GoodsIssueNoteId] IS NOT NULL");
+                    b.HasIndex("InvoiceId");
 
                     b.HasIndex("SalesOrderId");
 
@@ -1102,8 +1111,8 @@ namespace PMS.Data.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime>("PaidFullAt")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTime?>("PaidFullAt")
+                        .HasColumnType("date");
 
                     b.Property<byte>("PaymentStatus")
                         .HasColumnType("TINYINT");
@@ -1799,7 +1808,7 @@ namespace PMS.Data.Migrations
                     b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
                         .WithMany("Invoice")
                         .HasForeignKey("SalesOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("SalesOrder");
@@ -1872,10 +1881,11 @@ namespace PMS.Data.Migrations
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.PaymentRemain", b =>
                 {
-                    b.HasOne("PMS.Core.Domain.Entities.GoodsIssueNote", "GoodsIssueNote")
-                        .WithOne("PaymentRemain")
-                        .HasForeignKey("PMS.Core.Domain.Entities.PaymentRemain", "GoodsIssueNoteId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                    b.HasOne("PMS.Core.Domain.Entities.Invoice", "Invoice")
+                        .WithMany("PaymentRemains")
+                        .HasForeignKey("InvoiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
                         .WithMany("PaymentRemains")
@@ -1883,7 +1893,7 @@ namespace PMS.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("GoodsIssueNote");
+                    b.Navigation("Invoice");
 
                     b.Navigation("SalesOrder");
                 });
@@ -2226,8 +2236,6 @@ namespace PMS.Data.Migrations
                     b.Navigation("GoodsIssueNoteDetails");
 
                     b.Navigation("InvoiceDetails");
-
-                    b.Navigation("PaymentRemain");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.InventorySession", b =>
@@ -2238,6 +2246,8 @@ namespace PMS.Data.Migrations
             modelBuilder.Entity("PMS.Core.Domain.Entities.Invoice", b =>
                 {
                     b.Navigation("InvoiceDetails");
+
+                    b.Navigation("PaymentRemains");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.LotProduct", b =>

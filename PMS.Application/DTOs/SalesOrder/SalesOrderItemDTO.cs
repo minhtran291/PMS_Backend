@@ -20,7 +20,7 @@ namespace PMS.Application.DTOs.SalesOrder
         public decimal TotalPrice { get; set; }
         public DateTime CreateAt { get; set; }
         public DateTime SalesOrderExpiredDate { get; set; }
-        public DateTime PaidFullAt { get; set; }
+        public DateTime? PaidFullAt { get; set; }
         public decimal PaidAmount { get; set; }
     }
 }

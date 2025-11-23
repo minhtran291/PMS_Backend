@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.Invoice;
 using PMS.Application.Services.Invoice;
@@ -18,23 +19,23 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: http://localhost:5137/api/Invoice/generate-from-payment-remains
+        /// POST: http://localhost:5137/api/Invoice/generate-from-goods-issue-note
         /// Tạo hóa đơn từ danh sách PaymentRemainId (cùng 1 SalesOrder).
         /// </summary>
         /// <remarks>
         /// Body ví dụ:
         /// {
-        ///   "salesOrderId": 123,
-        ///   "paymentRemainIds": [ 10, 11, 12 ]
+        ///   "salesOrderCode": 123,
+        ///   "GoodsIssueNoteCodes": [ 10, 11, 12 ]
         /// }
         /// </remarks>
-        [HttpPost("generate-from-payment-remains")]
-        [ProducesResponseType(typeof(ServiceResult<InvoiceDTO>), StatusCodes.Status201Created)]
+        [HttpPost("generate-from-goods-issue-note")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> GenerateFromPaymentRemains(
-            [FromBody] GenerateInvoiceFromPaymentRemainsRequestDTO request)
+            [FromBody] GenerateInvoiceFromGINRequestDTO request)
         {
             var result = await _invoiceService
-                .GenerateInvoiceFromPaymentRemainsAsync(request);
+                .GenerateInvoiceFromGINAsync(request);
 
             return StatusCode(result.StatusCode, new
             {
@@ -49,6 +50,7 @@ namespace PMS.API.Controllers
         /// Tạo PDF hóa đơn để in / tải về.
         /// </summary>
         [HttpGet("{id}/pdf")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + UserRoles.CUSTOMER)]
         public async Task<IActionResult> GetInvoicePdf(int id)
         {
             var result = await _invoiceService.GenerateInvoicePdfAsync(id);
@@ -77,6 +79,7 @@ namespace PMS.API.Controllers
         /// Gửi hóa đơn cho khách hàng qua email (đính kèm PDF) và đổi trạng thái sang Send.
         /// </summary>
         [HttpPost("{id}/send-email")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> SendInvoiceEmail(int id)
         {
             var result = await _invoiceService.SendInvoiceEmailAsync(id);
@@ -94,6 +97,7 @@ namespace PMS.API.Controllers
         /// Lấy toàn bộ danh sách Invoice
         /// </summary>
         [HttpGet("get-all/invoices")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> GetAll()
         {
             var result = await _invoiceService.GetAllInvoicesAsync();
@@ -110,6 +114,7 @@ namespace PMS.API.Controllers
         /// Xem chi tiết 1 Invoice
         /// </summary>
         [HttpGet("{id}/invoice/details")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + UserRoles.CUSTOMER)]
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _invoiceService.GetInvoiceByIdAsync(id);
@@ -126,11 +131,12 @@ namespace PMS.API.Controllers
         /// Sửa Invoice (thêm/bớt PaymentRemain) khi Invoice còn Draft
         /// </summary>
         [HttpPut("{id}/update/draft-invoice")]
-        public async Task<IActionResult> UpdatePaymentRemains(
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> UpdateInvoiceDraft(
             int id,
             [FromBody] InvoiceUpdateDTO request)
         {
-            var result = await _invoiceService.UpdateInvoicePaymentRemainsAsync(id, request);
+            var result = await _invoiceService.UpdateInvoiceGoodsIssueNotesAsync(id, request);
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,

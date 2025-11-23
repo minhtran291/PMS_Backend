@@ -27,6 +27,5 @@ namespace PMS.Core.Domain.Entities
         public virtual Warehouse Warehouse {  get; set; } = null!;
         public virtual ICollection<InvoiceDetail> InvoiceDetails { get; set; }
         = new List<InvoiceDetail>();
-        public virtual PaymentRemain? PaymentRemain { get; set; }
     }
 }

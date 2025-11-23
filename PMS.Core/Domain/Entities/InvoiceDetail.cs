@@ -15,7 +15,7 @@ namespace PMS.Core.Domain.Entities
         public decimal AllocatedDeposit { get; set; }      // phần cọc chia cho phiếu này
         public decimal PaidRemain { get; set; }            // tiền remain đã trả cho phiếu này
         public decimal TotalPaidForNote { get; set; }      // = AllocatedDeposit + PaidRemain
-        public decimal NoteBalance { get; set; }           // còn thiếu (thường = 0 nếu ra Invoice lúc đã full paid)
+        public decimal NoteBalance { get; set; }           // còn thiếu = GoodsIssueAmount - TotalPaidForNote
 
         public virtual Invoice Invoice { get; set; } = null!;
         public virtual GoodsIssueNote GoodsIssueNote { get; set; } = null!;

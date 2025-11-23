@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace PMS.Application.DTOs.Invoice
 {
-    public class GenerateInvoiceFromPaymentRemainsRequestDTO
+    public class GenerateInvoiceFromGINRequestDTO
     {
-        public int SalesOrderId { get; set; }
-        public List<int> PaymentRemainIds { get; set; } = new();
+        public string SalesOrderCode { get; set; }
+        public List<string> GoodsIssueNoteCodes { get; set; } = new();
     }
 }
