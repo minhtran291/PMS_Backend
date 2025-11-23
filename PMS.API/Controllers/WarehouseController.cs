@@ -133,7 +133,7 @@ namespace PMS.API.Controllers
         /// <param name="newSalePrice"></param>
         /// <returns></returns>
         [HttpPut("warehouse-location/{whlcid}/lot/{lotid}/update-saleprice")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = $"{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF}")]
         public async Task<IActionResult> UpdateSalePrice(int whlcid, int lotid, [FromBody] decimal newSalePrice)
         {
             var result = await _warehouseService.UpdateSalePriceAsync(whlcid, lotid, newSalePrice);

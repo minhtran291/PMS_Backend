@@ -48,7 +48,7 @@ namespace PMS.API.Controllers
         /// <param name="id"></param>
         /// <returns></returns>
         [HttpGet("detailSupplierResponseQuotation/{id}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetQuotationById(int id)
         {
             var result = await _quotationService.GetQuotationByIdAsync(id);

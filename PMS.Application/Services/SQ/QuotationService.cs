@@ -1,4 +1,5 @@
-﻿using AutoMapper;
+﻿using System.Globalization;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using PMS.Application.DTOs.SQ;
 using PMS.Application.Services.Base;
@@ -33,7 +34,7 @@ namespace PMS.API.Services.QuotationService
                                  SendDate = q.SendDate,
                                  SupplierID = q.SupplierID,
                                  SupplierName = s.Name,
-                                 QuotationExpiredDate = q.QuotationExpiredDate,
+                                 QuotationExpiredDate = q.QuotationExpiredDate.ToString("dd/MM/yyyy"),
                                  Status = q.QuotationExpiredDate >= now
                                      ? SupplierQuotationStatus.InDate
                                      : SupplierQuotationStatus.OutOfDate
@@ -80,7 +81,7 @@ namespace PMS.API.Services.QuotationService
                         SendDate = q.SendDate,
                         SupplierID = q.SupplierID,
                         SupplierName = supplier?.Name ?? "Không xác định",
-                        QuotationExpiredDate = q.QuotationExpiredDate,
+                        QuotationExpiredDate = q.QuotationExpiredDate.ToString("dd/MM/yyyy"),
                         Status = q.QuotationExpiredDate >= now
                             ? SupplierQuotationStatus.InDate
                             : SupplierQuotationStatus.OutOfDate
@@ -126,7 +127,7 @@ namespace PMS.API.Services.QuotationService
                     SendDate = quotation.SendDate,
                     SupplierID = supplier.Id,
                     SupplierName = supplier.Name,
-                    QuotationExpiredDate = quotation.QuotationExpiredDate,
+                    QuotationExpiredDate = quotation.QuotationExpiredDate.ToString("dd/MM/yyyy"),
                     Status = quotation.QuotationExpiredDate >= now
                         ? SupplierQuotationStatus.InDate
                         : SupplierQuotationStatus.OutOfDate,
@@ -139,7 +140,8 @@ namespace PMS.API.Services.QuotationService
                         ProductDescription = d.ProductDescription,
                         ProductUnit = d.ProductUnit,
                         UnitPrice = d.UnitPrice,
-                        ProductDate = d.ProductDate
+                        ProductDate = d.ProductDate.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+                        tax=d.Tax,
                     }).ToList()
                 };
 

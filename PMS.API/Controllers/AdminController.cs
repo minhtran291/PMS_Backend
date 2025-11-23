@@ -1,10 +1,12 @@
-
+﻿
 using System.Data;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PMS.Application.Services.Admin;
-using PMS.Core.Domain.Constant;
 using PMS.Application.DTOs.Admin;
+using PMS.Application.Services.Admin;
+using PMS.Application.Services.User;
+using PMS.Core.Domain.Constant;
 
 namespace PMS.API.Controllers
 {
@@ -14,12 +16,14 @@ namespace PMS.API.Controllers
 
     {
         private readonly IAdminService _adminService;
+        private readonly IUserService _userService;
 
-        public AdminController(IAdminService adminService)
+        public AdminController(IAdminService adminService, IUserService userService)
         {
             _adminService = adminService;
+            _userService = userService;
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("create-staff-account")]
         public async Task<IActionResult> CreateStaffAccountAsync([FromBody] CreateAccountRequest request)
         {
@@ -35,7 +39,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpGet("get-account-list")]
         public async Task<IActionResult> AccountListAsync(string? keyword)
         {
@@ -49,7 +53,7 @@ namespace PMS.API.Controllers
                 return BadRequest(ex.Message);
             }
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        
         /// <summary>
         /// https://localhost:7213/api/Admin/get-account-details
         /// get ....
@@ -57,6 +61,7 @@ namespace PMS.API.Controllers
         /// <param name="userId"></param>
         /// <returns></returns>
         [HttpGet("get-account-details")]
+        [Authorize(Roles = UserRoles.ADMIN)]
         public async Task<IActionResult> AccountDetailAsync(string userId)
         {
             var result = await _adminService.GetAccountDetailAsync(userId);
@@ -68,7 +73,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPut("update-staff-account")]
         public async Task<IActionResult> UpdateAccountAsync([FromBody] UpdateAccountRequest request)
         {
@@ -84,7 +89,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("suspend-account")]
         public async Task<IActionResult> SuspendAccountAsync(string userId)
         {
@@ -97,7 +102,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        //[Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN)]
         [HttpPost("active-account")]
         public async Task<IActionResult> ActiveAccountAsync(string userID)
         {
@@ -112,5 +117,30 @@ namespace PMS.API.Controllers
         }
 
 
+        /// <summary>
+        /// Duyệt và kích hoạt tài khoản khách hàng (chuyển trạng thái sang Active).
+        /// https://localhost:7213/api/Admin/activate/{userId}
+        /// </summary>
+        /// <param name="userId">ID của khách hàng cần duyệt</param>
+        /// <returns>Kết quả cập nhật trạng thái</returns>
+        [HttpPut("activate/{userId}")]
+        [ProducesResponseType(typeof(ServiceResult<bool>), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        [ProducesResponseType(500)]
+        [Authorize(Roles = UserRoles.ADMIN)]
+        public async Task<IActionResult> UpdateCustomerStatus(string userId)
+        {
+            var Admin = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(Admin))
+                return Unauthorized(new { message = "Không thể xác thực người dùng." });
+
+            var result = await _userService.UpdateCustomerStatus(userId, Admin);
+
+            if (result.Data)
+                return Ok(result);
+
+            return BadRequest(result);
+        }
     }
 }

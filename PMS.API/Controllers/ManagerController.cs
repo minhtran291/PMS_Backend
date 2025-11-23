@@ -38,30 +38,5 @@ namespace PMS.API.Controllers
             return StatusCode(result.StatusCode, result);
         }
 
-        /// <summary>
-        /// Duyệt và kích hoạt tài khoản khách hàng (chuyển trạng thái sang Active).
-        /// https://localhost:7213/api/Manager/activate/{userId}
-        /// </summary>
-        /// <param name="userId">ID của khách hàng cần duyệt</param>
-        /// <returns>Kết quả cập nhật trạng thái</returns>
-        [HttpPut("activate/{userId}")]
-        [ProducesResponseType(typeof(ServiceResult<bool>), 200)]
-        [ProducesResponseType(401)]
-        [ProducesResponseType(403)]
-        [ProducesResponseType(500)]
-        [Authorize(Roles = UserRoles.MANAGER)]
-        public async Task<IActionResult> UpdateCustomerStatus(string userId)
-        {
-            var managerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(managerId))
-                return Unauthorized(new { message = "Không thể xác thực người dùng." });
-
-            var result = await _userService.UpdateCustomerStatus(userId, managerId);
-
-            if (result.Data)
-                return Ok(result);
-
-            return BadRequest(result);
-        }
     }
 }

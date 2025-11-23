@@ -36,9 +36,9 @@ namespace PMS.Application.Services.PO
         Task<ServiceResult<List<PharmacySecretInfor>>> PharmacySecretInfor();
 
 
-        Task<ServiceResult<List<DebtReport>>> GetAllDebtReport();
+        Task<ServiceResult<List<DebtReportDTO>>> GetAllDebtReport();
 
-        Task<ServiceResult<DebtReport>> GetDebtReportDetail(int dbid);
+        Task<ServiceResult<DebtReportDTO>> GetDebtReportDetail(int dbid);
 
         Task<ServiceResult<POViewDTO2>> ViewDetailPObyID2(int poid);
 

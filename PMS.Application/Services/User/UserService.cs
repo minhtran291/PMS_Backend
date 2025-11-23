@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -17,11 +19,12 @@ namespace PMS.Application.Services.User
     public class UserService(IUnitOfWork unitOfWork,
         IMapper mapper,
         IEmailService emailService,
-        ILogger<UserService> logger, INotificationService notificationService) : Service(unitOfWork, mapper), IUserService
+        ILogger<UserService> logger, INotificationService notificationService, IWebHostEnvironment webEnv) : Service(unitOfWork, mapper), IUserService
     {
         private readonly IEmailService _emailService = emailService;
         private readonly ILogger<UserService> _logger = logger;
         private readonly INotificationService _notificationService = notificationService;
+        private readonly IWebHostEnvironment _webEnv = webEnv;
 
         public async Task<Core.Domain.Identity.User?> GetUserById(string userId)
         {
@@ -384,52 +387,88 @@ namespace PMS.Application.Services.User
 
         public async Task<ServiceResult<bool>> UpdateCustomerProfile(string userId, CustomerProfileDTO request)
         {
+               await _unitOfWork.BeginTransactionAsync();
+
             try
             {
-                var exUser = await _unitOfWork.CustomerProfile.Query()
+                var profile = await _unitOfWork.CustomerProfile
+                    .Query()
                     .FirstOrDefaultAsync(u => u.UserId == userId);
 
-                if (exUser == null)
-                {
-                    return new ServiceResult<bool>
-                    {
-                        Data = false,
-                        Message = "Không tìm thấy userId hoặc đã bị khóa",
-                        StatusCode = 200,
-                    };
-                }
-                //
-                var username = await _unitOfWork.Users.Query().FirstOrDefaultAsync(un => un.Id == exUser.UserId);
-                if (username == null) { return new ServiceResult<bool> { Data = false, Message = "không tìm thấy userId hoặc đã bị khóa", StatusCode = 200 }; }
-                //
-                exUser.Mst = request.Mst;
-                exUser.Mshkd = request.Mshkd;
-                exUser.ImageCnkd = request.ImageCnkd;
-                exUser.ImageByt = request.ImageByt;
-                _unitOfWork.CustomerProfile.Update(exUser);
+                if (profile == null)
+                    return ServiceResult<bool>.Fail("Không tìm thấy hồ sơ khách hàng.", 404);
+
+                var user = await _unitOfWork.Users.Query()
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
+                    return ServiceResult<bool>.Fail("Không tìm thấy tài khoản người dùng.", 404);
+
+                
+                string cnkdUrl = request.ImageCnkd != null
+             ? await SaveAsync(request.ImageCnkd, "customer/cnkd/")
+             : profile.ImageCnkd;
+                string bytUrl = request.ImageByt != null
+            ? await SaveAsync(request.ImageByt, "customer/byt/")
+            : profile.ImageByt;
+
+              
+                profile.Mst = request.Mst;
+                profile.Mshkd = request.Mshkd;
+                profile.ImageCnkd = cnkdUrl;
+                profile.ImageByt = bytUrl;
+
+                _unitOfWork.CustomerProfile.Update(profile);
                 await _unitOfWork.CommitAsync();
-                //
+
+                
                 await _notificationService.SendNotificationToRolesAsync(
                     senderId: userId,
                     targetRoles: new List<string> { "ADMIN" },
-                    title: "Thông báo duyệt tài khoản",
-                    message: $"Khách hàng {username.UserName} đã cập nhật thông tin hồ sơ." +
-                    $" Vui lòng kiểm tra và xác nhận.",
+                    title: "Yêu cầu duyệt hồ sơ",
+                    message: $"Khách hàng {user.UserName} có id {user.Id} vừa cập nhật hồ sơ và cần duyệt.",
                     type: NotificationType.System
                 );
-                return new ServiceResult<bool>
-                {
-                    StatusCode = 200,
-                    Data = true,
-                    Message = "Thành công vui lòng chờ xác nhận của quản lý để mở khóa tài khoản"
-                };
 
+                await _unitOfWork.CommitTransactionAsync();
+
+                return ServiceResult<bool>.SuccessResult(
+                    true,
+                    "Cập nhật hồ sơ thành công. Vui lòng chờ quản lý duyệt."
+                );
             }
             catch (Exception ex)
             {
-                throw new ArgumentException($"Lỗi khi cập nhật sản phẩm: {ex.Message}", ex);
+                await _unitOfWork.RollbackTransactionAsync();
+                return ServiceResult<bool>.Fail($"Lỗi khi cập nhật hồ sơ: {ex.Message}", 500);
             }
 
+        }
+
+        public async Task<string> SaveAsync(IFormFile file, string folder)
+        {
+            if (file == null || file.Length == 0)
+                throw new Exception("File upload không hợp lệ");
+
+           
+            var rootPath = _webEnv.WebRootPath;
+
+            
+            var folderPath = Path.Combine(rootPath, folder);
+
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var filePath = Path.Combine(folderPath, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+
+            return $"/{folder}/{fileName}".Replace("\\", "/");
         }
 
         public async Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus()
@@ -471,7 +510,7 @@ namespace PMS.Application.Services.User
             }
         }
 
-        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string managerId)
+        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string Admin)
         {
             var exuser = await _unitOfWork.Users.Query()
                     .Include(u => u.CustomerProfile).FirstOrDefaultAsync(u => u.Id == userId);
@@ -484,7 +523,7 @@ namespace PMS.Application.Services.User
             await _unitOfWork.CommitAsync();
 
             await _notificationService.SendNotificationToCustomerAsync(
-                senderId: managerId,
+                senderId: Admin,
                 userId,
                 title: "Thông báo duyệt tài khoản",
                 message: $"Tài khoản đã cập nhật ",
