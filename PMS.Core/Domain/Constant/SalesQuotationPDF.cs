@@ -261,6 +261,8 @@ namespace PMS.Core.Domain.Constant
         <div>Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá</div>
         <div>Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế</div>
         <div>Tạm ứng {sq.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {sq.DepositDueDays} ngày kể từ khi ký hợp đồng</div>
+        <div>Hàng hóa dự kiến giao trong thời gian 30 ngày kể từ ngày ký kết hợp đồng và cọc</div>
+        <div>Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN QUANG TRUNG</div>
     </div>
 
     <div class=""footer"">

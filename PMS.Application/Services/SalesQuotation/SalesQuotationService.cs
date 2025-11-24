@@ -1282,7 +1282,9 @@ namespace PMS.Application.Services.SalesQuotation
                     ReceiverAddress = salesQuotation.RequestSalesQuotation.CustomerProfile.User.Address,
                     note = $@"Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá.
 Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế.
-Tạm ứng {salesQuotation.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {salesQuotation.DepositDueDays} ngày kể từ khi ký hợp đồng"
+Tạm ứng {salesQuotation.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {salesQuotation.DepositDueDays} ngày kể từ khi ký hợp đồng.
+Hàng hóa dự kiến giao trong thời gian 30 ngày kể từ ngày ký kết hợp đồng và cọc.
+Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN QUANG TRUNG."
                 };
 
                 return new ServiceResult<object>
