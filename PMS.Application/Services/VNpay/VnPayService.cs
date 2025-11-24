@@ -82,10 +82,18 @@ namespace PMS.Application.Services.VNpay
                 // ========================================================
                 // 2) deposit / full  -> thanh toán theo SalesOrder
                 // ========================================================
-                if (req.SalesOrderId != null)
+                if (type == "deposit" || type == "full")
+                {
+                    if (req.SalesOrderId == null || req.SalesOrderId <= 0)
+                    {
+                        return ServiceResult<VnPayInitResponseDTO>.Fail(
+                            "Thiếu SalesOrderId cho kiểu thanh toán 'deposit' hoặc 'full'.", 400);
+                    }
+                }
+                else
                 {
                     return ServiceResult<VnPayInitResponseDTO>.Fail(
-                        "Thiếu SalesOrderId cho kiểu thanh toán 'deposit' hoặc 'full'.", 400);
+                        "PaymentType không hợp lệ. (deposit / full / remain)", 400);
                 }
 
                 var order = await _unitOfWork.SalesOrder.Query()

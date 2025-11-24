@@ -549,7 +549,7 @@ namespace PMS.Application.Services.PaymentRemainService
                 {
                     if (orderPaid < depositRequired)
                     {
-                        order.PaymentStatus = PaymentStatus.PartiallyPaid; // chưa đủ cọc
+                        order.PaymentStatus = PaymentStatus.NotPaymentYet; // chưa đủ cọc
                         order.IsDeposited = false;
                     }
                     else if (orderPaid == depositRequired && orderPaid < order.TotalPrice)
@@ -595,7 +595,6 @@ namespace PMS.Application.Services.PaymentRemainService
 
                     if (debt.DebtAmount <= 0)
                     {
-                        // đã hết nợ → coi như OnTime (hoặc nếu bạn có thêm trạng thái riêng thì chỉnh lại)
                         debt.status = CustomerDebtStatus.NoDebt;
                     }
                     else

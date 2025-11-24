@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.Invoice;
 using PMS.Application.Services.Invoice;
 using PMS.Core.Domain.Constant;
+using System.Security.Claims;
 
 namespace PMS.API.Controllers
 {
@@ -145,5 +146,71 @@ namespace PMS.API.Controllers
             });
         }
 
+
+        /// <summary>
+        /// GET: http://localhost:5137/api/Invoice/sales-order-codes
+        /// Lấy danh sách tất cả SalesOrderCode (distinct, sort tăng dần).
+        /// </summary>
+        [HttpGet("sales-order-codes")]
+        public async Task<IActionResult> GetAllSalesOrderCodes()
+        {
+            var result = await _invoiceService.GetAllSalesOrderCodesAsync();
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// GET: http://localhost:5137/api/Invoice/{salesOrderCode}/goods-issue-note-codes
+        /// Lấy toàn bộ GoodsIssueNoteCode thuộc về một SalesOrderCode.
+        /// </summary>
+        /// <param name="salesOrderCode">Mã SalesOrder</param>
+        [HttpGet("{salesOrderCode}/goods-issue-note-codes")]
+        public async Task<IActionResult> GetGoodsIssueNoteCodesBySalesOrderCode(string salesOrderCode)
+        {
+            var result = await _invoiceService
+                .GetGoodsIssueNoteCodesBySalesOrderCodeAsync(salesOrderCode);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+
+        /// <summary>
+        /// GET:  http://localhost:5137/api/Invoice/my-invoices
+        /// Lấy danh sách hóa đơn của customer đang đăng nhập.
+        /// </summary>
+        [HttpGet("my-invoices")]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
+        public async Task<IActionResult> GetMyInvoices()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Không xác định được user hiện tại.",
+                    data = (object?)null
+                });
+            }
+
+            var result = await _invoiceService.GetInvoicesForCurrentCustomerAsync(userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
     }
 }

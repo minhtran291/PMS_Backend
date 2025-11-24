@@ -580,14 +580,14 @@ namespace PMS.Application.Services.SalesOrder
                 {
                     var msg = string.Join("; ", warnings);
                     await _noti.SendNotificationToRolesAsync(
-                        "261b6651-7d07-4267-bc71-d70b32bae334",
+                        so.CreateBy,
                         new List<string> { "PURCHASES_STAFF" },
                         "Thiếu hàng khi khách gửi SalesOrder",
                         $"Các mặt hàng thiếu/sắp hết: {msg}",
                         NotificationType.Warning
                     );
                     await _noti.SendNotificationToRolesAsync(
-                        "261b6651-7d07-4267-bc71-d70b32bae334",
+                        so.CreateBy,
                         new List<string> { "SALES_STAFF" },
                         "Thiếu hàng khi khách gửi SalesOrder",
                         $"Liên hệ nhân viên mua hàng để có thể ra quyết định chấp nhận hoặc từ chối",
@@ -618,7 +618,7 @@ namespace PMS.Application.Services.SalesOrder
                 await _unitOfWork.CommitAsync();
 
                 await _noti.SendNotificationToRolesAsync(
-                    "261b6651-7d07-4267-bc71-d70b32bae334",
+                    so.CreateBy,
                     new List<string> { "SALES_STAFF" },
                     "Có đơn hàng mới từ khách hàng",
                     $"Đơn hàng #{so.SalesOrderId} vừa được khách hàng gửi, vui lòng kiểm tra và xử lý.",
