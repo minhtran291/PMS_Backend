@@ -352,22 +352,11 @@ namespace PMS.Application.Services.SalesOrder
             {
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                        //.ThenInclude(d => d.Product)
-                    .Include(o => o.SalesOrderDetails)
                         .ThenInclude(d => d.LotProduct)
-
-                    .Include(o => o.SalesQuotation)
-                        .ThenInclude(q => q.SalesQuotaionDetails)
-                            .ThenInclude(qd => qd.Product)
-                    .Include(o => o.SalesQuotation)
-                        .ThenInclude(q => q.SalesQuotaionDetails)
-                            .ThenInclude(qd => qd.LotProduct)
                     .Include(o => o.SalesQuotation)
                         .ThenInclude(q => q.SalesQuotaionDetails)
                             .ThenInclude(qd => qd.TaxPolicy)
-
-                    .Include(o => o.CustomerDebts)
-
+                    .AsNoTracking()
                     .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (order == null)
@@ -385,7 +374,7 @@ namespace PMS.Application.Services.SalesOrder
                     d.SalesOrderId,
                     //d.ProductId,
                     d.LotId,
-                    //ProductName = d.Product?.ProductName,
+                    ProductName = d.LotProduct.Product.ProductName,
                     d.Quantity,
                     d.UnitPrice,
                     d.SubTotalPrice,
@@ -404,12 +393,14 @@ namespace PMS.Application.Services.SalesOrder
                     order.CreateBy,
                     order.CreateAt,
                     order.SalesOrderStatus,
+                    order.PaymentStatus,
+                    CustomerName = order.Customer.FullName,
+                    DepositPercent = order.SalesQuotation.DepositPercent,
+                    DepositAmount = order.TotalPrice * order.SalesQuotation.DepositPercent,
+                    DepositExpiredDay = order.CreateAt.AddDays(order.SalesQuotation.DepositDueDays),
                     order.TotalPrice,
                     order.PaidAmount,
                     order.SalesOrderExpiredDate,
-
-                    CustomerDebt = order.CustomerDebts,
-
                     Details = orderDetailsDto
                 };
 
@@ -589,14 +580,14 @@ namespace PMS.Application.Services.SalesOrder
                 {
                     var msg = string.Join("; ", warnings);
                     await _noti.SendNotificationToRolesAsync(
-                        "261b6651-7d07-4267-bc71-d70b32bae334",
+                        so.CreateBy,
                         new List<string> { "PURCHASES_STAFF" },
                         "Thiếu hàng khi khách gửi SalesOrder",
                         $"Các mặt hàng thiếu/sắp hết: {msg}",
                         NotificationType.Warning
                     );
                     await _noti.SendNotificationToRolesAsync(
-                        "261b6651-7d07-4267-bc71-d70b32bae334",
+                        so.CreateBy,
                         new List<string> { "SALES_STAFF" },
                         "Thiếu hàng khi khách gửi SalesOrder",
                         $"Liên hệ nhân viên mua hàng để có thể ra quyết định chấp nhận hoặc từ chối",
@@ -625,6 +616,15 @@ namespace PMS.Application.Services.SalesOrder
                 }
 
                 await _unitOfWork.CommitAsync();
+
+                await _noti.SendNotificationToRolesAsync(
+                    so.CreateBy,
+                    new List<string> { "SALES_STAFF" },
+                    "Có đơn hàng mới từ khách hàng",
+                    $"Đơn hàng #{so.SalesOrderId} vừa được khách hàng gửi, vui lòng kiểm tra và xử lý.",
+                    NotificationType.Message
+        );
+
                 await _unitOfWork.CommitTransactionAsync();
 
                 var data = new

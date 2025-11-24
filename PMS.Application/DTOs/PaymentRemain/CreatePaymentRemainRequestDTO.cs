@@ -9,5 +9,11 @@ namespace PMS.Application.DTOs.PaymentRemain
 {
     public class CreatePaymentRemainRequestDTO
     {
+        public int InvoiceId { get; set; }
+        public PaymentMethod PaymentMethod { get; set; } // VnPay, Cash, BankTransfer...
+
+        public PaymentType PaymentType { get; set; } = PaymentType.Remain;
+
+        public decimal? Amount { get; set; } //Số tiền khách sẽ thanh toán. Nếu null thì mặc định = phần còn lại của Invoice (TotalRemain).
     }
 }

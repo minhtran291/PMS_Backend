@@ -916,6 +916,10 @@ namespace PMS.Data.DatabaseConfig
                     .HasPrecision(18, 2)
                     .IsRequired();
 
+                entity.Property(so => so.PaidFullAt)
+                    .HasColumnType("date")
+                    .IsRequired(false);
+
                 entity.Property(so => so.TotalPrice)
                     .HasPrecision(18, 2)
                     .IsRequired();
@@ -959,13 +963,13 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasMany(so => so.Invoice)
                     .WithOne(inv => inv.SalesOrder)
                     .HasForeignKey(inv => inv.SalesOrderId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 //1-n (1 SalesOrder - n PaymentRemains)
                 entity.HasMany(so => so.PaymentRemains)
                     .WithOne(pr => pr.SalesOrder)
                     .HasForeignKey(pr => pr.SalesOrderId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SalesOrderDetails>(entity =>
@@ -1172,12 +1176,6 @@ namespace PMS.Data.DatabaseConfig
                     .WithOne(id => id.GoodsIssueNote)
                     .HasForeignKey(id => id.GoodsIssueNoteId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                // 1 - 1: 1 GoodsIssueNote - 1 PaymentRemain
-                entity.HasOne(gin => gin.PaymentRemain)
-                    .WithOne(pr => pr.GoodsIssueNote)
-                    .HasForeignKey<PaymentRemain>(pr => pr.GoodsIssueNoteId)
-                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<GoodsIssueNoteDetails>(entity =>
@@ -1220,6 +1218,11 @@ namespace PMS.Data.DatabaseConfig
                     .HasColumnType("TINYINT")
                     .IsRequired();
 
+                entity.Property(inv => inv.PaymentStatus)
+                    .HasConversion<byte>()
+                    .HasColumnType("TINYINT")
+                    .IsRequired();
+
                 entity.Property(inv => inv.TotalAmount)
                     .HasPrecision(18, 2)
                     .IsRequired();
@@ -1240,7 +1243,7 @@ namespace PMS.Data.DatabaseConfig
                 entity.HasOne(inv => inv.SalesOrder)
                     .WithMany(so => so.Invoice)
                     .HasForeignKey(inv => inv.SalesOrderId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 // 1 - n (Invoice -> InvoiceDetails)
                 entity.HasMany(inv => inv.InvoiceDetails)
@@ -1273,6 +1276,16 @@ namespace PMS.Data.DatabaseConfig
                     .HasPrecision(18, 2)
                     .IsRequired();
 
+                entity.HasOne(d => d.Invoice)
+                    .WithMany(inv => inv.InvoiceDetails)
+                    .HasForeignKey(d => d.InvoiceId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(d => d.GoodsIssueNote)
+                    .WithMany(n => n.InvoiceDetails)
+                    .HasForeignKey(d => d.GoodsIssueNoteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 entity.HasIndex(d => d.GoodsIssueNoteId);
             });
 
@@ -1282,6 +1295,10 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.Property(p => p.Id)
                     .ValueGeneratedOnAdd();
+
+                entity.Property(p => p.InvoiceCode)
+                    .HasMaxLength(50)  
+                    .IsRequired();
 
                 entity.Property(p => p.Amount)
                     .HasPrecision(18, 2)
@@ -1300,7 +1317,7 @@ namespace PMS.Data.DatabaseConfig
                     .HasColumnType("TINYINT")
                     .IsRequired();
 
-                entity.Property(p => p.Status)
+                entity.Property(p => p.VNPayStatus)
                     .HasConversion<byte>()
                     .HasColumnType("TINYINT")
                     .IsRequired();
@@ -1317,16 +1334,16 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(p => p.SalesOrderId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // 1 - 1: 1 GoodsIssueNote - 1 PaymentRemain 
-                entity.HasOne(p => p.GoodsIssueNote)
-                    .WithOne(g => g.PaymentRemain)
-                    .HasForeignKey<PaymentRemain>(p => p.GoodsIssueNoteId)
+                // n - 1: n PaymentRemain - 1 Invoice
+                // Mỗi PaymentRemain gắn với đúng 1 Invoice
+                entity.HasOne(p => p.Invoice)
+                    .WithMany(inv => inv.PaymentRemains)
+                    .HasForeignKey(p => p.InvoiceId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // only 1 PaymentRemain - 1 GoodsIssueNote:
-                entity.HasIndex(p => p.GoodsIssueNoteId)
-                    .IsUnique()
-                    .HasFilter("[GoodsIssueNoteId] IS NOT NULL");
+                // (Tùy chọn) Index hỗ trợ query nhanh theo Invoice hoặc Order
+                entity.HasIndex(p => p.InvoiceId);
+                entity.HasIndex(p => p.SalesOrderId);
             });
         }
     }
