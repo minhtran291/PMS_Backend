@@ -192,7 +192,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// https://localhost:7213/api/User/changePassword
+        /// http://localhost:5137/api/User/changePassword
         /// Đổi mật khẩu người dùng (yêu cầu nhập mật khẩu cũ)
         /// </summary>
         [HttpPost("changePassword")]
@@ -320,7 +320,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// https://localhost:7213/api/User/submit-additional-info
+        /// http://localhost:5137/api/User/submit-additional-info
         /// Customer submit thông tin bổ sung (mã số thuế, mã số kinh doanh, địa chỉ)
         /// </summary>
         [HttpPost("submit-additional-info")]

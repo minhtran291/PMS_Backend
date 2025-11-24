@@ -472,11 +472,11 @@ namespace PMS.Application.Services.Product
                 var result = products.Select(p => new LotProductDTO2
                 {
                     LotID = p.LotID,
-                    InputDate = p.InputDate,
+                    InputDate = p.InputDate.ToString("dd/MM/yyyy"),
                     SalePrice = p.SalePrice,
                     InputPrice = p.InputPrice,
                     ProductName = p.Product?.ProductName ?? "Unknown",
-                    ExpiredDate = p.ExpiredDate,
+                    ExpiredDate = p.ExpiredDate.ToString("dd/MM/yyyy"),
                     LotQuantity = p.LotQuantity,
                     SupplierID = p.SupplierID,
                     ProductID = p.ProductID,
