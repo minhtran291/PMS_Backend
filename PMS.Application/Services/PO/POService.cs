@@ -301,6 +301,7 @@ namespace PMS.API.Services.POService
                             CreatedDate = DateTime.Now,
                             CurrentDebt = pharma.DebtCeiling - existingPO.Total,
                             EntityType = DebtEntityType.Supplier,
+                            Status= DebtStatus.Debt
                         };
                         await _unitOfWork.DebtReport.AddAsync(newdebt);
                         await _unitOfWork.CommitAsync();
