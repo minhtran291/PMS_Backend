@@ -119,7 +119,7 @@ namespace PMS.API.Controllers
 
         /// <summary>
         /// Duyệt và kích hoạt tài khoản khách hàng (chuyển trạng thái sang Active).
-        /// https://localhost:7213/api/Admin/activate/{userId}
+        /// http://localhost:5137/api/Admin/activate/{userId}
         /// </summary>
         /// <param name="userId">ID của khách hàng cần duyệt</param>
         /// <returns>Kết quả cập nhật trạng thái</returns>

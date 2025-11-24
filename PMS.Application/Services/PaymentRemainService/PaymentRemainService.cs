@@ -25,191 +25,177 @@ namespace PMS.Application.Services.PaymentRemainService
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<PaymentRemainService> _logger = logger;
 
-
-        public async Task<ServiceResult<Core.Domain.Entities.PaymentRemain>> 
-            CreatePaymentRemainForGoodsIssueNoteAsync(int goodsIssueNoteId)
+        public async Task<ServiceResult<PaymentRemainItemDTO>> CreatePaymentRemainForInvoiceAsync(CreatePaymentRemainRequestDTO request)
         {
             try
             {
-                // Lấy phiếu xuất + SalesOrder + SalesOrderDetails + GoodsIssueNoteDetails + SalesQuotation (để lấy DepositPercent)
-                var note = await _unitOfWork.GoodsIssueNote.Query()
-                    .Include(g => g.StockExportOrder)
-                        .ThenInclude(seo => seo.SalesOrder)
-                            .ThenInclude(o => o.SalesOrderDetails)
-                    .Include(g => g.StockExportOrder)
-                        .ThenInclude(seo => seo.SalesOrder)
-                            .ThenInclude(o => o.SalesQuotation)
-                    .Include(g => g.GoodsIssueNoteDetails)
-                    .FirstOrDefaultAsync(g => g.Id == goodsIssueNoteId);
-
-                if (note == null)
+                if (request == null)
                 {
-                    return new ServiceResult<PaymentRemain>
+                    return new ServiceResult<PaymentRemainItemDTO>
+                    {
+                        StatusCode = 400,
+                        Success = false,
+                        Message = "Payload trống.",
+                        Data = null
+                    };
+                }
+
+                if (request.InvoiceId <= 0)
+                {
+                    return new ServiceResult<PaymentRemainItemDTO>
+                    {
+                        StatusCode = 400,
+                        Success = false,
+                        Message = "InvoiceId là bắt buộc.",
+                        Data = null
+                    };
+                }
+
+                // Lấy Invoice + SalesOrder + PaymentRemains
+                var invoice = await _unitOfWork.Invoices.Query()
+                    .Include(i => i.SalesOrder)
+                        .ThenInclude(so => so.PaymentRemains)
+                    .Include(i => i.PaymentRemains)
+                    .FirstOrDefaultAsync(i => i.Id == request.InvoiceId);
+
+                if (invoice == null)
+                {
+                    return new ServiceResult<PaymentRemainItemDTO>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy phiếu xuất.",
+                        Success = false,
+                        Message = "Không tìm thấy hóa đơn.",
                         Data = null
                     };
                 }
 
-                if (note.StockExportOrder == null || note.StockExportOrder.SalesOrder == null)
+                var order = invoice.SalesOrder;
+                if (order == null)
                 {
-                    return new ServiceResult<PaymentRemain>
+                    return new ServiceResult<PaymentRemainItemDTO>
                     {
                         StatusCode = 400,
-                        Message = "Phiếu xuất chưa gắn với đơn hàng.",
+                        Success = false,
+                        Message = "Hóa đơn chưa gắn với đơn hàng.",
                         Data = null
                     };
                 }
 
-                var order = note.StockExportOrder.SalesOrder;
+                // Tính lại tổng đã thanh toán cho invoice dựa trên PaymentRemain
+                var remainPaid = invoice.PaymentRemains
+                    .Where(p => p.PaidAt != null)
+                    .Sum(p => p.Amount);
 
-                // Nếu đã có PaymentRemain gắn với phiếu này rồi thì không tạo lại
-                var existedPayment = await _unitOfWork.PaymentRemains.Query()
-                    .FirstOrDefaultAsync(p => p.GoodsIssueNoteId == note.Id
-                                              && p.Status != PaymentStatus.Failed);
+                var totalPaid = invoice.TotalDeposit + remainPaid;
+                var totalRemain = invoice.TotalAmount - totalPaid;
 
-                if (existedPayment != null)
+                if (totalRemain <= 0)
                 {
-                    return new ServiceResult<PaymentRemain>
+                    return new ServiceResult<PaymentRemainItemDTO>
                     {
                         StatusCode = 400,
-                        Message = "Đã tồn tại yêu cầu thanh toán cho phiếu xuất này.",
+                        Success = false,
+                        Message = "Hóa đơn này đã được thanh toán đủ.",
                         Data = null
                     };
                 }
 
-                // 1) Tổng tiền đơn hàng
-                var orderTotal = order.TotalPrice;
-                if (orderTotal <= 0)
+                // Số tiền lần này
+                decimal amountToPay;
+                if (request.Amount.HasValue)
                 {
-                    return new ServiceResult<PaymentRemain>
+                    amountToPay = request.Amount.Value;
+                    if (amountToPay <= 0)
                     {
-                        StatusCode = 400,
-                        Message = "Giá trị đơn hàng không hợp lệ.",
-                        Data = null
-                    };
-                }
-
-                // 2) Giá trị phiếu xuất (theo LotId)
-                decimal noteAmount = 0m;
-                foreach (var d in note.GoodsIssueNoteDetails)
-                {
-                    var soDetail = order.SalesOrderDetails.FirstOrDefault(x => x.LotId == d.LotId);
-                    if (soDetail == null)
-                    {
-                        return new ServiceResult<PaymentRemain>
+                        return new ServiceResult<PaymentRemainItemDTO>
                         {
                             StatusCode = 400,
-                            Message = $"Không tìm thấy SalesOrderDetails cho LotId={d.LotId}.",
+                            Success = false,
+                            Message = "Số tiền thanh toán phải lớn hơn 0.",
                             Data = null
                         };
                     }
 
-                    noteAmount += soDetail.UnitPrice * d.Quantity;
-                }
-
-                if (noteAmount <= 0)
-                {
-                    return new ServiceResult<PaymentRemain>
+                    if (amountToPay > totalRemain)
                     {
-                        StatusCode = 400,
-                        Message = "Giá trị phiếu xuất không hợp lệ.",
-                        Data = null
-                    };
+                        return new ServiceResult<PaymentRemainItemDTO>
+                        {
+                            StatusCode = 400,
+                            Success = false,
+                            Message = "Số tiền thanh toán vượt quá số tiền còn lại của hóa đơn.",
+                            Data = null
+                        };
+                    }
                 }
-
-                // 3) Tổng cọc theo % ở SalesQuotation (không lấy từ PaymentRemain)
-                if (order.SalesQuotation == null)
+                else
                 {
-                    return new ServiceResult<PaymentRemain>
-                    {
-                        StatusCode = 400,
-                        Message = "Đơn hàng chưa gắn với báo giá, không xác định được tỷ lệ cọc.",
-                        Data = null
-                    };
+                    // Nếu không truyền Amount, mặc định thanh toán hết phần còn lại
+                    amountToPay = totalRemain;
                 }
 
-                var depositFixed = decimal.Round(
-                    order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m),
-                    0,
-                    MidpointRounding.AwayFromZero);
-
-                // Bảo vệ: nếu PaidAmount < depositFixed thì coi như chưa cọc đủ
-                if (order.PaidAmount < depositFixed)
-                {
-                    return new ServiceResult<PaymentRemain>
-                    {
-                        StatusCode = 400,
-                        Message = "Đơn hàng chưa thanh toán đủ tiền cọc, không thể tạo thanh toán phần còn lại.",
-                        Data = null
-                    };
-                }
-
-                // 4) Tỷ lệ phiếu xuất trên đơn hàng
-                var proportion = noteAmount / orderTotal;
-
-                // 5) Phần cọc chia cho phiếu này
-                var allocatedDeposit = decimal.Round(
-                    depositFixed * proportion,
-                    0,
-                    MidpointRounding.AwayFromZero);
-
-                // 6) Các khoản Remain/Full đã trả cho phiếu này trước đó
-                var paidForThisNote = await _unitOfWork.PaymentRemains.Query()
-                    .Where(p => p.GoodsIssueNoteId == note.Id
-                                && p.Status == PaymentStatus.Success
-                                && (p.PaymentType == PaymentType.Remain || p.PaymentType == PaymentType.Full))
-                    .SumAsync(p => (decimal?)p.Amount) ?? 0m;
-
-                // 7) Số tiền cần thanh toán còn lại cho phiếu này
-                var amountDueForNote = noteAmount - allocatedDeposit - paidForThisNote;
-                if (amountDueForNote <= 0)
-                {
-                    return new ServiceResult<PaymentRemain>
-                    {
-                        StatusCode = 400,
-                        Message = "Phiếu xuất này đã được cấn trừ đủ bởi tiền cọc và các lần thanh toán trước.",
-                        Data = null
-                    };
-                }
-
-                await _unitOfWork.BeginTransactionAsync();
+                var now = DateTime.Now;
 
                 var payment = new PaymentRemain
                 {
+                    InvoiceId = invoice.Id,
+                    InvoiceCode = invoice.InvoiceCode,
                     SalesOrderId = order.SalesOrderId,
-                    GoodsIssueNoteId = note.Id,
-                    PaymentType = PaymentType.Remain,
-                    PaymentMethod = PaymentMethod.None, 
-                    Amount = amountDueForNote,
-                    CreateRequestAt = DateTime.Now,
-                    Status = PaymentStatus.Pending,
-                    Gateway = null
-                };
 
+                    PaymentType = request.PaymentType,
+                    PaymentMethod = request.PaymentMethod,
+
+                    Amount = amountToPay,
+                    CreateRequestAt = now,
+                    PaidAt = null, // sẽ set sau khi thanh toán thành công
+
+                    VNPayStatus = VNPayStatus.Pending,
+                    Gateway = request.PaymentMethod == PaymentMethod.VnPay ? "VNPAY" : null,
+                    GatewayTransactionRef = null
+                };
 
                 await _unitOfWork.PaymentRemains.AddAsync(payment);
                 await _unitOfWork.CommitAsync();
-                await _unitOfWork.CommitTransactionAsync();
 
-                return new ServiceResult<PaymentRemain>
+                var dto = new PaymentRemainItemDTO
+                {
+                    Id = payment.Id,
+                    InvoiceId = payment.InvoiceId,
+                    InvoiceCode = payment.InvoiceCode,
+                    SalesOrderId = payment.SalesOrderId,
+                    SalesOrderCode = order.SalesOrderCode,
+                    PaymentType = payment.PaymentType,
+                    PaymentMethod = payment.PaymentMethod,
+                    VNPayStatus = payment.VNPayStatus,
+                    Amount = payment.Amount,
+                    RequestCreatedAt = payment.CreateRequestAt,
+                    PaidAt = payment.PaidAt,
+                    Gateway = payment.Gateway,
+                    GatewayTransactionRef = payment.GatewayTransactionRef,
+                    SalesOrderTotalPrice = order.TotalPrice,
+                    SalesOrderPaidAmount = order.PaidAmount,
+                    CustomerId = order.CreateBy,
+                    CustomerName = order.Customer?.FullName,
+                    PaymentStatusText = $"{payment.PaymentMethod} - {payment.VNPayStatus}"
+                };
+
+                return new ServiceResult<PaymentRemainItemDTO>
                 {
                     StatusCode = 201,
-                    Message = "Tạo yêu cầu thanh toán phần còn lại thành công.",
-                    Data = payment
+                    Success = true,
+                    Message = "Tạo yêu cầu thanh toán cho hóa đơn thành công.",
+                    Data = dto
                 };
             }
             catch (Exception ex)
             {
-                await _unitOfWork.RollbackTransactionAsync();
                 _logger.LogError(ex,
-                    "Lỗi CreatePaymentRemainForGoodsIssueNoteAsync({GoodsIssueNoteId})",
-                    goodsIssueNoteId);
+                    "Lỗi CreatePaymentRemainForInvoiceAsync({InvoiceId})",
+                    request?.InvoiceId);
 
-                return new ServiceResult<PaymentRemain>
+                return new ServiceResult<PaymentRemainItemDTO>
                 {
                     StatusCode = 500,
+                    Success = false,
                     Message = "Có lỗi xảy ra khi tạo yêu cầu thanh toán.",
                     Data = null
                 };
@@ -221,18 +207,9 @@ namespace PMS.Application.Services.PaymentRemainService
             try
             {
                 var entity = await _unitOfWork.PaymentRemains.Query()
+                    .Include(p => p.Invoice)
                     .Include(p => p.SalesOrder)
                         .ThenInclude(so => so.Customer)
-                    .Include(p => p.SalesOrder)
-                        .ThenInclude(so => so.SalesQuotation)
-                            .ThenInclude(sq => sq.SalesQuotaionDetails)
-                                .ThenInclude(sqd => sqd.TaxPolicy)
-                    .Include(p => p.SalesOrder)
-                        .ThenInclude(so => so.SalesOrderDetails)
-                    .Include(p => p.GoodsIssueNote)
-                        .ThenInclude(g => g.Warehouse)
-                    .Include(p => p.GoodsIssueNote)
-                        .ThenInclude(g => g.GoodsIssueNoteDetails)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -248,116 +225,31 @@ namespace PMS.Application.Services.PaymentRemainService
                 }
 
                 var so = entity.SalesOrder;
-                var customer = so.Customer;
-                var quotation = so.SalesQuotation;
-                var note = entity.GoodsIssueNote;
-
-                decimal depositPercent = quotation?.DepositPercent ?? 0m;
-                decimal depositAmount = Math.Round(
-                    so.TotalPrice * (depositPercent / 100m),
-                    0,
-                    MidpointRounding.AwayFromZero);
-
-                decimal remainingAmount = so.TotalPrice - so.PaidAmount;
-
-                var details = new List<PaymentRemainGoodsIssueDetailDTO>();
-
-                if (note != null)
-                {
-                    int index = 1;
-
-                    foreach (var d in note.GoodsIssueNoteDetails)
-                    {
-                        // 1) Tìm SalesOrderDetail theo LotId
-                        var soDetail = so.SalesOrderDetails
-                            .FirstOrDefault(x => x.LotId == d.LotId);
-
-                        if (soDetail == null)
-                        {
-                            // Có thể log cảnh báo nếu cần
-                            continue;
-                        }
-
-                        // 2) Tìm SalesQuotationDetail tương ứng theo ProductId
-                        var sqDetail = quotation?.SalesQuotaionDetails
-                            .FirstOrDefault(x => x.ProductId == soDetail.LotProduct.Product.ProductID); 
-
-                        if (sqDetail == null)
-                        {
-                            var fallbackProductName = soDetail.LotProduct.Product.ProductName; 
-
-                            details.Add(new PaymentRemainGoodsIssueDetailDTO
-                            {
-                                Index = index++,
-                                ProductName = fallbackProductName,
-                                Quantity = d.Quantity,
-                                UnitPrice = soDetail.UnitPrice,
-                                TaxPercent = 0,
-                                UnitPriceAfterTax = soDetail.UnitPrice,
-                                ExpiredDate = soDetail.SalesOrder.SalesOrderExpiredDate, 
-                                SubTotal = soDetail.UnitPrice * d.Quantity,
-                                SubTotalAfterTax = soDetail.UnitPrice * d.Quantity
-                            });
-
-                            continue;
-                        }
-
-                        var taxPercent = sqDetail.TaxPolicy?.Rate ?? 0m; 
-
-                        // 4) Lấy các thông tin hiển thị
-                        var productName = sqDetail.Product.ProductName;   
-                        var unitPrice = soDetail.UnitPrice;    
-                        var expiredDate = soDetail.SalesOrder.SalesOrderExpiredDate;   
-
-                        var unitPriceAfterTax = unitPrice * (1 + taxPercent / 100m);
-                        var subTotal = unitPrice * d.Quantity;
-                        var subTotalAfterTax = unitPriceAfterTax * d.Quantity;
-
-                        details.Add(new PaymentRemainGoodsIssueDetailDTO
-                        {
-                            Index = index++,
-                            ProductName = productName,
-                            Quantity = d.Quantity,
-                            UnitPrice = unitPrice,
-                            TaxPercent = taxPercent,
-                            UnitPriceAfterTax = unitPriceAfterTax,
-                            ExpiredDate = expiredDate,
-                            SubTotal = subTotal,
-                            SubTotalAfterTax = subTotalAfterTax
-                        });
-                    }
-                }
+                var invoice = entity.Invoice;
 
                 var dto = new PaymentRemainItemDTO
                 {
                     Id = entity.Id,
+                    InvoiceId = entity.InvoiceId,
+                    InvoiceCode = entity.InvoiceCode,
                     SalesOrderId = entity.SalesOrderId,
-                    GoodsIssueNoteId = entity.GoodsIssueNoteId,
+                    SalesOrderCode = so?.SalesOrderCode,
                     PaymentType = entity.PaymentType,
                     PaymentMethod = entity.PaymentMethod,
-                    Status = entity.Status,
+                    VNPayStatus = entity.VNPayStatus,
                     Amount = entity.Amount,
-                    PaidAt = entity.CreateRequestAt,    
-                    GatewayTransactionRef = entity.GatewayTransactionRef,
-                    Gateway = entity.Gateway,
-
-                    SalesOrderCode = so.SalesOrderCode,
-                    SalesOrderTotalPrice = so.TotalPrice,
-                    SalesOrderPaidAmount = so.PaidAmount,
-
-                    CustomerId = customer?.Id,
-                    CustomerName = customer?.FullName,
                     RequestCreatedAt = entity.CreateRequestAt,
-                    PaymentStatusText = entity.Status.ToString(),
+                    PaidAt = entity.PaidAt,
+                    Gateway = entity.Gateway,
+                    GatewayTransactionRef = entity.GatewayTransactionRef,
 
-                    GoodsIssueNoteCode = note?.GoodsIssueNoteCode,
-                    GoodsIssueNoteCreatedAt = note?.CreateAt,
+                    SalesOrderTotalPrice = so?.TotalPrice ?? 0m,
+                    SalesOrderPaidAmount = so?.PaidAmount ?? 0m,
 
-                    DepositAmount = depositAmount,
-                    DepositPercent = depositPercent,
-                    RemainingAmount = remainingAmount,
+                    CustomerId = so?.CreateBy,
+                    CustomerName = so?.Customer?.FullName,
 
-                    GoodsIssueDetails = details
+                    PaymentStatusText = $"{entity.PaymentMethod} - {entity.VNPayStatus}"
                 };
 
                 return new ServiceResult<PaymentRemainItemDTO>
@@ -388,9 +280,8 @@ namespace PMS.Application.Services.PaymentRemainService
             {
                 var ids = await _unitOfWork.PaymentRemains.Query()
                     .Where(p => p.SalesOrderId == salesOrderId
-                                && p.Status == PaymentStatus.Success
-                                && (p.PaymentType == PaymentType.Remain
-                                    || p.PaymentType == PaymentType.Full))
+                                && p.PaidAt != null
+                                && p.VNPayStatus == VNPayStatus.Success)
                     .OrderBy(p => p.CreateRequestAt)
                     .Select(p => p.Id)
                     .ToListAsync();
@@ -425,10 +316,12 @@ namespace PMS.Application.Services.PaymentRemainService
             {
                 var query = _unitOfWork.PaymentRemains.Query()
                     .Include(p => p.SalesOrder)
+                        .ThenInclude(so => so.Customer)
+                    .Include(p => p.Invoice)
                     .AsNoTracking();
 
-                //Filter theo CustomerId
-                if (request.CustomerId != null)
+                // Filter theo CustomerId (CreateBy)
+                if (!string.IsNullOrWhiteSpace(request.CustomerId))
                 {
                     query = query.Where(p => p.SalesOrder.CreateBy == request.CustomerId);
                 }
@@ -439,16 +332,16 @@ namespace PMS.Application.Services.PaymentRemainService
                     query = query.Where(p => p.SalesOrderId == request.SalesOrderId.Value);
                 }
 
-                // Filter theo GoodsIssueNoteId
-                if (request.GoodsIssueNoteId.HasValue)
+                // Filter theo InvoiceId
+                if (request.InvoiceId.HasValue)
                 {
-                    query = query.Where(p => p.GoodsIssueNoteId == request.GoodsIssueNoteId.Value);
+                    query = query.Where(p => p.InvoiceId == request.InvoiceId.Value);
                 }
 
-                // Filter theo Status
+                // Filter theo VNPayStatus
                 if (request.Status.HasValue)
                 {
-                    query = query.Where(p => p.Status == request.Status.Value);
+                    query = query.Where(p => p.VNPayStatus == request.Status.Value);
                 }
 
                 // Filter theo PaymentMethod
@@ -468,22 +361,30 @@ namespace PMS.Application.Services.PaymentRemainService
 
                 var items = await query.ToListAsync();
 
-                var data = items.Select(p => new PaymentRemainItemDTO
+                var data = items.Select(p =>
                 {
-                    Id = p.Id,
-                    SalesOrderId = p.SalesOrderId,
-                    GoodsIssueNoteId = p.GoodsIssueNoteId,
-                    PaymentType = p.PaymentType,
-                    PaymentMethod = p.PaymentMethod,
-                    Status = p.Status,
-                    Amount = p.Amount,
-                    PaidAt = p.CreateRequestAt,
-                    GatewayTransactionRef = p.GatewayTransactionRef,
-                    Gateway = p.Gateway,
-                    SalesOrderCode = p.SalesOrder?.SalesOrderCode,
-                    SalesOrderTotalPrice = p.SalesOrder.TotalPrice,
-                    SalesOrderPaidAmount = p.SalesOrder.PaidAmount
-
+                    var so = p.SalesOrder;
+                    return new PaymentRemainItemDTO
+                    {
+                        Id = p.Id,
+                        InvoiceId = p.InvoiceId,
+                        InvoiceCode = p.InvoiceCode,
+                        SalesOrderId = p.SalesOrderId,
+                        SalesOrderCode = so?.SalesOrderCode,
+                        PaymentType = p.PaymentType,
+                        PaymentMethod = p.PaymentMethod,
+                        VNPayStatus = p.VNPayStatus,
+                        Amount = p.Amount,
+                        RequestCreatedAt = p.CreateRequestAt,
+                        PaidAt = p.PaidAt,
+                        GatewayTransactionRef = p.GatewayTransactionRef,
+                        Gateway = p.Gateway,
+                        SalesOrderTotalPrice = so?.TotalPrice ?? 0m,
+                        SalesOrderPaidAmount = so?.PaidAmount ?? 0m,
+                        CustomerId = so?.CreateBy,
+                        CustomerName = so?.Customer?.FullName,
+                        PaymentStatusText = $"{p.PaymentMethod} - {p.VNPayStatus}"
+                    };
                 }).ToList();
 
                 return new ServiceResult<List<PaymentRemainItemDTO>>
@@ -507,6 +408,217 @@ namespace PMS.Application.Services.PaymentRemainService
             }
         }
 
+        public async Task<ServiceResult<bool>> MarkPaymentSuccessAsync(int paymentRemainId, string? gatewayTransactionRef = null)
+        {
+            try
+            {
+                var payment = await _unitOfWork.PaymentRemains.Query()
+                    .FirstOrDefaultAsync(p => p.Id == paymentRemainId);
 
+                if (payment == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Success = false,
+                        Message = "Không tìm thấy PaymentRemain.",
+                        Data = false
+                    };
+                }
+
+                if (payment.PaidAt != null && payment.VNPayStatus == VNPayStatus.Success)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Success = false,
+                        Message = "PaymentRemain này đã được ghi nhận thanh toán trước đó.",
+                        Data = false
+                    };
+                }
+
+                payment.PaidAt = DateTime.Now;
+                payment.VNPayStatus = VNPayStatus.Success;
+
+                if (!string.IsNullOrWhiteSpace(gatewayTransactionRef))
+                {
+                    payment.GatewayTransactionRef = gatewayTransactionRef;
+                }
+
+                _unitOfWork.PaymentRemains.Update(payment);
+                await _unitOfWork.CommitAsync();
+
+                // Recalculate Invoice + SalesOrder + CustomerDebt
+                await RecalculateInvoiceAndOrderAsync(payment.InvoiceId);
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Success = true,
+                    Message = "Ghi nhận thanh toán thành công.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi MarkPaymentSuccessAsync({PaymentRemainId})", paymentRemainId);
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Success = false,
+                    Message = "Có lỗi xảy ra khi ghi nhận thanh toán.",
+                    Data = false
+                };
+            }
+        }
+
+        private async Task RecalculateInvoiceAndOrderAsync(int invoiceId)
+        {
+            // không throw, chỉ log nếu lỗi
+            try
+            {
+                var invoice = await _unitOfWork.Invoices.Query()
+                    .Include(i => i.PaymentRemains)
+                    .Include(i => i.SalesOrder)
+                        .ThenInclude(so => so.PaymentRemains)
+                    .Include(i => i.SalesOrder)
+                        .ThenInclude(so => so.CustomerDebts)
+                    .Include(i => i.SalesOrder)
+                        .ThenInclude(so => so.SalesQuotation)
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId);
+
+                if (invoice == null)
+                    return;
+
+                var order = invoice.SalesOrder;
+                if (order == null)
+                    return;
+
+                // 1) Tính lại Invoice
+                var remainPaid = invoice.PaymentRemains
+                    .Where(p => p.PaidAt != null)
+                    .Sum(p => p.Amount);
+
+                var totalPaid = invoice.TotalDeposit + remainPaid;
+
+                invoice.TotalPaid = totalPaid;
+                invoice.TotalRemain = Math.Max(0, invoice.TotalAmount - totalPaid);
+
+                // Map PaymentStatus theo enum mới
+                if (totalPaid <= 0)
+                {
+                    invoice.PaymentStatus = PaymentStatus.NotPaymentYet;
+                }
+                else if (totalPaid == invoice.TotalDeposit && totalPaid < invoice.TotalAmount)
+                {
+                    invoice.PaymentStatus = PaymentStatus.Deposited;
+                }
+                else if (totalPaid > invoice.TotalDeposit && totalPaid < invoice.TotalAmount)
+                {
+                    invoice.PaymentStatus = PaymentStatus.PartiallyPaid;
+                }
+                else if (totalPaid >= invoice.TotalAmount)
+                {
+                    invoice.PaymentStatus = PaymentStatus.Paid;
+                    invoice.TotalRemain = 0;
+                }
+
+                // 2) Tính lại SalesOrder
+                var orderPaid = order.PaymentRemains
+                    .Where(p => p.PaidAt != null)
+                    .Sum(p => p.Amount);
+
+                order.PaidAmount = orderPaid;
+
+                decimal depositRequired = 0m;
+                if (order.SalesQuotation != null)
+                {
+                    depositRequired = decimal.Round(
+                        order.TotalPrice * (order.SalesQuotation.DepositPercent / 100m),
+                        0,
+                        MidpointRounding.AwayFromZero);
+                }
+
+                if (orderPaid <= 0)
+                {
+                    order.PaymentStatus = PaymentStatus.NotPaymentYet;
+                    order.IsDeposited = false;
+                }
+                else if (depositRequired > 0)
+                {
+                    if (orderPaid < depositRequired)
+                    {
+                        order.PaymentStatus = PaymentStatus.NotPaymentYet; // chưa đủ cọc
+                        order.IsDeposited = false;
+                    }
+                    else if (orderPaid == depositRequired && orderPaid < order.TotalPrice)
+                    {
+                        order.PaymentStatus = PaymentStatus.Deposited;
+                        order.IsDeposited = true;
+                    }
+                    else if (orderPaid > depositRequired && orderPaid < order.TotalPrice)
+                    {
+                        order.PaymentStatus = PaymentStatus.PartiallyPaid;
+                        order.IsDeposited = true;
+                    }
+                    else if (orderPaid >= order.TotalPrice)
+                    {
+                        order.PaymentStatus = PaymentStatus.Paid;
+                        order.IsDeposited = true;
+                        if (order.PaidFullAt == default)
+                            order.PaidFullAt = DateTime.Now;
+                    }
+                }
+                else
+                {
+                    // Không có % cọc, chỉ check theo tổng
+                    if (orderPaid < order.TotalPrice)
+                    {
+                        order.PaymentStatus = PaymentStatus.PartiallyPaid;
+                        order.IsDeposited = false;
+                    }
+                    else
+                    {
+                        order.PaymentStatus = PaymentStatus.Paid;
+                        order.IsDeposited = true;
+                        if (order.PaidFullAt == default)
+                            order.PaidFullAt = DateTime.Now;
+                    }
+                }
+
+                // 3) Cập nhật CustomerDebt (nếu có)
+                if (order.CustomerDebts != null)
+                {
+                    var debt = order.CustomerDebts;
+                    debt.DebtAmount = order.TotalPrice - orderPaid;
+
+                    if (debt.DebtAmount <= 0)
+                    {
+                        debt.status = CustomerDebtStatus.NoDebt;
+                    }
+                    else
+                    {
+                        if (DateTime.Now > order.SalesOrderExpiredDate)
+                            debt.status = CustomerDebtStatus.OverTime;
+                        else
+                            debt.status = CustomerDebtStatus.UnPaid;
+                    }
+
+                    _unitOfWork.CustomerDebt.Update(debt);
+                }
+
+                _unitOfWork.Invoices.Update(invoice);
+                _unitOfWork.SalesOrder.Update(order);
+
+                await _unitOfWork.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Lỗi RecalculateInvoiceAndOrderAsync({InvoiceId})",
+                    invoiceId);
+            }
+        }
     }
 }

@@ -161,7 +161,7 @@ namespace PMS.API.Controllers
 
 
         /// <summary>
-        /// https://localhost:7213/api/Product/SearchLotProductByproductId/{poid}
+        /// http://localhost:5137/api/Product/SearchLotProductByproductId/{poid}
         /// </summary>
         /// <param name="poid"></param>
         /// <returns></returns>

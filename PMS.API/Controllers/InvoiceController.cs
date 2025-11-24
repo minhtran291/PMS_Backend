@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.Invoice;
 using PMS.Application.Services.Invoice;
 using PMS.Core.Domain.Constant;
+using System.Security.Claims;
 
 namespace PMS.API.Controllers
 {
@@ -18,23 +20,23 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// POST: http://localhost:5137/api/Invoice/generate-from-payment-remains
+        /// POST: http://localhost:5137/api/Invoice/generate-from-goods-issue-note
         /// Tạo hóa đơn từ danh sách PaymentRemainId (cùng 1 SalesOrder).
         /// </summary>
         /// <remarks>
         /// Body ví dụ:
         /// {
-        ///   "salesOrderId": 123,
-        ///   "paymentRemainIds": [ 10, 11, 12 ]
+        ///   "salesOrderCode": 123,
+        ///   "GoodsIssueNoteCodes": [ 10, 11, 12 ]
         /// }
         /// </remarks>
-        [HttpPost("generate-from-payment-remains")]
-        [ProducesResponseType(typeof(ServiceResult<InvoiceDTO>), StatusCodes.Status201Created)]
+        [HttpPost("generate-from-goods-issue-note")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> GenerateFromPaymentRemains(
-            [FromBody] GenerateInvoiceFromPaymentRemainsRequestDTO request)
+            [FromBody] GenerateInvoiceFromGINRequestDTO request)
         {
             var result = await _invoiceService
-                .GenerateInvoiceFromPaymentRemainsAsync(request);
+                .GenerateInvoiceFromGINAsync(request);
 
             return StatusCode(result.StatusCode, new
             {
@@ -49,6 +51,7 @@ namespace PMS.API.Controllers
         /// Tạo PDF hóa đơn để in / tải về.
         /// </summary>
         [HttpGet("{id}/pdf")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + UserRoles.CUSTOMER)]
         public async Task<IActionResult> GetInvoicePdf(int id)
         {
             var result = await _invoiceService.GenerateInvoicePdfAsync(id);
@@ -77,6 +80,7 @@ namespace PMS.API.Controllers
         /// Gửi hóa đơn cho khách hàng qua email (đính kèm PDF) và đổi trạng thái sang Send.
         /// </summary>
         [HttpPost("{id}/send-email")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> SendInvoiceEmail(int id)
         {
             var result = await _invoiceService.SendInvoiceEmailAsync(id);
@@ -94,6 +98,7 @@ namespace PMS.API.Controllers
         /// Lấy toàn bộ danh sách Invoice
         /// </summary>
         [HttpGet("get-all/invoices")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> GetAll()
         {
             var result = await _invoiceService.GetAllInvoicesAsync();
@@ -110,6 +115,7 @@ namespace PMS.API.Controllers
         /// Xem chi tiết 1 Invoice
         /// </summary>
         [HttpGet("{id}/invoice/details")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + UserRoles.CUSTOMER)]
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _invoiceService.GetInvoiceByIdAsync(id);
@@ -126,11 +132,12 @@ namespace PMS.API.Controllers
         /// Sửa Invoice (thêm/bớt PaymentRemain) khi Invoice còn Draft
         /// </summary>
         [HttpPut("{id}/update/draft-invoice")]
-        public async Task<IActionResult> UpdatePaymentRemains(
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> UpdateInvoiceDraft(
             int id,
             [FromBody] InvoiceUpdateDTO request)
         {
-            var result = await _invoiceService.UpdateInvoicePaymentRemainsAsync(id, request);
+            var result = await _invoiceService.UpdateInvoiceGoodsIssueNotesAsync(id, request);
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,
@@ -139,5 +146,71 @@ namespace PMS.API.Controllers
             });
         }
 
+
+        /// <summary>
+        /// GET: http://localhost:5137/api/Invoice/sales-order-codes
+        /// Lấy danh sách tất cả SalesOrderCode (distinct, sort tăng dần).
+        /// </summary>
+        [HttpGet("sales-order-codes")]
+        public async Task<IActionResult> GetAllSalesOrderCodes()
+        {
+            var result = await _invoiceService.GetAllSalesOrderCodesAsync();
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// GET: http://localhost:5137/api/Invoice/{salesOrderCode}/goods-issue-note-codes
+        /// Lấy toàn bộ GoodsIssueNoteCode thuộc về một SalesOrderCode.
+        /// </summary>
+        /// <param name="salesOrderCode">Mã SalesOrder</param>
+        [HttpGet("{salesOrderCode}/goods-issue-note-codes")]
+        public async Task<IActionResult> GetGoodsIssueNoteCodesBySalesOrderCode(string salesOrderCode)
+        {
+            var result = await _invoiceService
+                .GetGoodsIssueNoteCodesBySalesOrderCodeAsync(salesOrderCode);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+
+        /// <summary>
+        /// GET:  http://localhost:5137/api/Invoice/my-invoices
+        /// Lấy danh sách hóa đơn của customer đang đăng nhập.
+        /// </summary>
+        [HttpGet("my-invoices")]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
+        public async Task<IActionResult> GetMyInvoices()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Không xác định được user hiện tại.",
+                    data = (object?)null
+                });
+            }
+
+            var result = await _invoiceService.GetInvoicesForCurrentCustomerAsync(userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
     }
 }

@@ -11,15 +11,21 @@ namespace PMS.Application.Services.Invoice
     public interface IInvoiceService
     {
         Task<ServiceResult<InvoiceDTO>>
-            GenerateInvoiceFromPaymentRemainsAsync(GenerateInvoiceFromPaymentRemainsRequestDTO request);
+            GenerateInvoiceFromGINAsync(GenerateInvoiceFromGINRequestDTO request);
 
         Task<ServiceResult<InvoicePDFResultDTO>> GenerateInvoicePdfAsync(int invoiceId);
         Task<ServiceResult<bool>> SendInvoiceEmailAsync(int invoiceId);
 
         Task<ServiceResult<List<InvoiceDTO>>> GetAllInvoicesAsync();
         Task<ServiceResult<InvoiceDTO>> GetInvoiceByIdAsync(int invoiceId);
-        Task<ServiceResult<InvoiceDTO>> UpdateInvoicePaymentRemainsAsync(
+        Task<ServiceResult<InvoiceDTO>> UpdateInvoiceGoodsIssueNotesAsync(
             int invoiceId,
             InvoiceUpdateDTO request);
+
+        Task<ServiceResult<List<string>>> GetAllSalesOrderCodesAsync();
+        Task<ServiceResult<List<string>>> GetGoodsIssueNoteCodesBySalesOrderCodeAsync(string salesOrderCode);
+        Task<ServiceResult<List<InvoiceDTO>>> GetInvoicesForCurrentCustomerAsync(string userId);
+
+
     }
 }

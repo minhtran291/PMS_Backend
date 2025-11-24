@@ -44,7 +44,7 @@ namespace PMS.API.Controllers
         /// tới PURCHASES_STAFF nếu thiếu/sắp hết.
         /// </summary>
         [HttpPost("send/{salesOrderId}")]
-        //[Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> SendOrder(int salesOrderId)
         {
             var result = await _service.SendOrderAsync(salesOrderId);

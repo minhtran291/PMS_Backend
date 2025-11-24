@@ -32,6 +32,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Application\Services\Invoice\" />
+    <Folder Include="Application\Services\PaymentRemain\" />
     <Folder Include="Application\Services\SalesOrder\" />
   </ItemGroup>
 
