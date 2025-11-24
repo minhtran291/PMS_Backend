@@ -290,13 +290,14 @@ namespace PMS.API.Services.POService
                 if (newStatus == PurchasingOrderStatus.approved)
                 {
                     var debtReport = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(dr => dr.EntityID == supplier.Id);
-                    existingPO.Total += debtReport.Payables;
+                    debtReport.Payables += existingPO.Total;
                     _unitOfWork.DebtReport.Update(debtReport);
+                    await _unitOfWork.CommitAsync();
 
                 }
 
                 _unitOfWork.PurchasingOrder.Update(existingPO);
-                
+
                 await _unitOfWork.CommitAsync();
 
                 await notificationService.SendNotificationToRolesAsync(

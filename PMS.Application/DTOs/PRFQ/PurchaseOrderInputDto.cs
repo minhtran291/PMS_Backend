@@ -13,6 +13,7 @@ namespace PMS.Application.DTOs.PRFQ
         [Required(ErrorMessage ="Thiếu excel Key")]
         public required string ExcelKey { get; set; } = string.Empty;
         public required List<PurchaseOrderDetailInput> Details { get; set; } = new List<PurchaseOrderDetailInput>();
+
         public required PMS.Core.Domain.Enums.PurchasingOrderStatus status;
     }
 }
