@@ -273,7 +273,12 @@ namespace PMS.API.Services.POService
                     return ServiceResult<bool>.Fail(
                         $"Không thể chuyển trạng thái từ {existingPO.Status} sang {newStatus}", 400);
                 }
-
+                var quotation = await _unitOfWork.Quotation.Query().FirstOrDefaultAsync(sq => sq.QID == existingPO.QID);
+                if (quotation == null) return ServiceResult<bool>.Fail(
+                        $"Lỗi khi tìm kiếm báo giá với id {existingPO.QID}", 400);
+                var supplier = await _unitOfWork.Supplier.Query().FirstOrDefaultAsync(s => s.Id == quotation.SupplierID);
+                if (supplier == null) return ServiceResult<bool>.Fail(
+                       $"Lỗi khi tìm kiếm NCC", 400);
 
                 existingPO.Status = newStatus;
 
@@ -282,8 +287,16 @@ namespace PMS.API.Services.POService
                     existingPO.PaymentDate = DateTime.Now;
                     existingPO.Debt = 0;
                 }
+                if (newStatus == PurchasingOrderStatus.approved)
+                {
+                    var debtReport = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(dr => dr.EntityID == supplier.Id);
+                    existingPO.Total += debtReport.Payables;
+                    _unitOfWork.DebtReport.Update(debtReport);
+
+                }
 
                 _unitOfWork.PurchasingOrder.Update(existingPO);
+                
                 await _unitOfWork.CommitAsync();
 
                 await notificationService.SendNotificationToRolesAsync(

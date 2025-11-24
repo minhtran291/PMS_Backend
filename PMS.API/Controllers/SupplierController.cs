@@ -46,8 +46,7 @@ namespace PMS.API.Controllers
 
         }
 
-        [HttpGet("list")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [HttpGet("list"), Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetSupplierListAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? keyword = null)
         {
             var result = await _service.GetPagedAsync(page, pageSize, keyword);

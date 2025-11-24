@@ -155,6 +155,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách PO đã nhập đủ hàng
         /// </summary>
         [HttpGet("fully-received")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> GetFullyReceivedAsync()
         {
             var result = await _poService.GetPOByReceivingStatusAsync();
@@ -166,6 +167,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách PO mới nhập một phần hàng
         /// </summary>
         [HttpGet("partially-received")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> GetPartiallyReceivedAsync()
         {
             var result = await _poService.GetPOByReceivingStatusAsync();
@@ -179,6 +181,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách PO chưa nhập hàng nào
         /// </summary>
         [HttpGet("not-received")]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         public async Task<IActionResult> GetNotReceivedAsync()
         {
             var result = await _poService.GetPOByReceivingStatusAsync();
