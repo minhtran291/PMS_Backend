@@ -22,7 +22,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost("create")]
-        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> CreateSupplierAsync([FromBody] CreateSupplierRequestDTO dto)
         {
             if (!ModelState.IsValid)
@@ -47,7 +47,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpGet("list")]
-        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetSupplierListAsync([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? keyword = null)
         {
             var result = await _service.GetPagedAsync(page, pageSize, keyword);
@@ -61,7 +61,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpGet("detail")]
-        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetSupplierByIdAsync([FromQuery] int id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -75,7 +75,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpPut("update")]
-        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> UpdateSupplierAsync([FromQuery] int id, [FromBody] UpdateSupplierRequestDTO dto)
         {
             if (!ModelState.IsValid)
@@ -99,7 +99,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost("enable")]
-        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> EnableSupplierAsync([FromQuery] string supplierId)
         {
             var result = await _service.EnableSupplier(supplierId);
@@ -113,7 +113,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost("disable")]
-        //[Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> DisableSupplierAsync([FromQuery] string supplierId)
         {
             var result = await _service.DisableSupplier(supplierId);
