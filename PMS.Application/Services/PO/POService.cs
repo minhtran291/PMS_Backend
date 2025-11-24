@@ -289,10 +289,29 @@ namespace PMS.API.Services.POService
                 }
                 if (newStatus == PurchasingOrderStatus.approved)
                 {
+                    var pharma = await _unitOfWork.PharmacySecretInfor.Query().FirstOrDefaultAsync(p => p.PMSID==1);
                     var debtReport = await _unitOfWork.DebtReport.Query().FirstOrDefaultAsync(dr => dr.EntityID == supplier.Id);
-                    debtReport.Payables += existingPO.Total;
-                    _unitOfWork.DebtReport.Update(debtReport);
-                    await _unitOfWork.CommitAsync();
+
+                    if (debtReport == null)
+                    {
+                        var newdebt = new DebtReport
+                        {
+                            Payables = existingPO.Total,
+                            EntityID = supplier.Id,
+                            CreatedDate = DateTime.Now,
+                            CurrentDebt = pharma.DebtCeiling - existingPO.Total,
+                            EntityType = DebtEntityType.Supplier,
+                        };
+                        await _unitOfWork.DebtReport.AddAsync(newdebt);
+                        await _unitOfWork.CommitAsync();
+
+                    }
+                    else
+                    {
+                        debtReport.Payables += existingPO.Total;
+                        _unitOfWork.DebtReport.Update(debtReport);
+                        await _unitOfWork.CommitAsync();
+                    }
 
                 }
 
