@@ -21,5 +21,11 @@ namespace PMS.Application.Services.Invoice
         Task<ServiceResult<InvoiceDTO>> UpdateInvoiceGoodsIssueNotesAsync(
             int invoiceId,
             InvoiceUpdateDTO request);
+
+        Task<ServiceResult<List<string>>> GetAllSalesOrderCodesAsync();
+        Task<ServiceResult<List<string>>> GetGoodsIssueNoteCodesBySalesOrderCodeAsync(string salesOrderCode);
+        Task<ServiceResult<List<InvoiceDTO>>> GetInvoicesForCurrentCustomerAsync(string userId);
+
+
     }
 }

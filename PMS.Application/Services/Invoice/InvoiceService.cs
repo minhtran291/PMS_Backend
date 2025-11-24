@@ -728,6 +728,155 @@ namespace PMS.Application.Services.Invoice
             }
         }
 
+        /// <summary>
+        /// Lấy toàn bộ SalesOrderCode
+        /// </summary>
+        /// <returns></returns>
+        public async Task<ServiceResult<List<string>>> GetAllSalesOrderCodesAsync()
+        {
+            try
+            {
+                var codes = await _unitOfWork.SalesOrder.Query()
+                    .Where(o => !string.IsNullOrEmpty(o.SalesOrderCode))
+                    .Select(o => o.SalesOrderCode!)
+                    .Distinct()
+                    .OrderBy(c => c)
+                    .ToListAsync();
+
+                if (!codes.Any())
+                {
+                    return ServiceResult<List<string>>.Fail(
+                        "Không tìm thấy SalesOrder nào.", 404);
+                }
+
+                return ServiceResult<List<string>>.SuccessResult(
+                    codes,
+                    "Lấy danh sách SalesOrderCode thành công.",
+                    200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetAllSalesOrderCodesAsync error");
+                return ServiceResult<List<string>>.Fail(
+                    "Có lỗi xảy ra khi lấy danh sách SalesOrderCode.", 500);
+            }
+        }
+
+        /// <summary>
+        /// Lấy toàn bộ GoodsIssueNoteCode theo SalesOrderCode
+        /// </summary>
+        public async Task<ServiceResult<List<string>>> GetGoodsIssueNoteCodesBySalesOrderCodeAsync(string salesOrderCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(salesOrderCode))
+                {
+                    return ServiceResult<List<string>>.Fail(
+                        "SalesOrderCode không hợp lệ.", 400);
+                }
+
+                // Tìm SalesOrder theo code
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .FirstOrDefaultAsync(o => o.SalesOrderCode == salesOrderCode);
+
+                if (order == null)
+                {
+                    return ServiceResult<List<string>>.Fail(
+                        "Không tìm thấy SalesOrder với mã đã cung cấp.", 404);
+                }
+
+                var noteCodes = await _unitOfWork.GoodsIssueNote.Query()
+                    .Include(n => n.StockExportOrder)
+                    .Where(n => n.StockExportOrder.SalesOrderId == order.SalesOrderId)
+                    .Where(n => !string.IsNullOrEmpty(n.GoodsIssueNoteCode))
+                    .Select(n => n.GoodsIssueNoteCode!)
+                    .Distinct()
+                    .OrderBy(c => c)
+                    .ToListAsync();
+
+                if (!noteCodes.Any())
+                {
+                    return ServiceResult<List<string>>.Fail(
+                        "Không tìm thấy GoodsIssueNote nào thuộc SalesOrder này.", 404);
+                }
+
+                return ServiceResult<List<string>>.SuccessResult(
+                    noteCodes,
+                    "Lấy danh sách GoodsIssueNoteCode theo SalesOrderCode thành công.",
+                    200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetGoodsIssueNoteCodesBySalesOrderCodeAsync({SalesOrderCode}) error", salesOrderCode);
+                return ServiceResult<List<string>>.Fail(
+                    "Có lỗi xảy ra khi lấy danh sách GoodsIssueNoteCode.", 500);
+            }
+        }
+
+        public async Task<ServiceResult<List<InvoiceDTO>>> GetInvoicesForCurrentCustomerAsync(string userId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return ServiceResult<List<InvoiceDTO>>.Fail(
+                        "UserId không hợp lệ.", 400);
+                }
+
+                var invoices = await _unitOfWork.Invoices.Query()
+                    .Include(i => i.SalesOrder)
+                        .ThenInclude(so => so.Customer)  
+                    .Include(i => i.InvoiceDetails)
+                        .ThenInclude(d => d.GoodsIssueNote)
+                    .Where(i => i.SalesOrder.CreateBy == userId)
+                    .ToListAsync();
+
+                if (!invoices.Any())
+                {
+                    return ServiceResult<List<InvoiceDTO>>.Fail(
+                        "Khách hàng này chưa có hóa đơn nào.", 404);
+                }
+
+                var result = invoices.Select(inv => new InvoiceDTO
+                {
+                    Id = inv.Id,
+                    InvoiceCode = inv.InvoiceCode,
+                    SalesOrderId = inv.SalesOrderId,
+                    CreatedAt = inv.CreatedAt,
+                    IssuedAt = inv.IssuedAt,
+                    Status = inv.Status,
+                    TotalAmount = inv.TotalAmount,
+                    TotalPaid = inv.TotalPaid,
+                    TotalDeposit = inv.TotalDeposit,
+                    TotalRemain = inv.TotalRemain,
+                    Details = inv.InvoiceDetails
+                        .Select((d, index) => new InvoiceDetailDTO
+                        {
+                            GoodsIssueNoteId = d.GoodsIssueNoteId,
+                            GoodsIssueDate = d.GoodsIssueNote.DeliveryDate,
+                            GoodsIssueAmount = d.GoodsIssueAmount,
+                            AllocatedDeposit = d.AllocatedDeposit,
+                            PaidRemain = d.PaidRemain,
+                            TotalPaidForNote = d.TotalPaidForNote,
+                            NoteBalance = d.NoteBalance,
+                            ExportIndex = index + 1
+                        }).ToList()
+                }).ToList();
+
+                return ServiceResult<List<InvoiceDTO>>.SuccessResult(
+                    result,
+                    "Lấy danh sách hóa đơn cho customer hiện tại thành công.",
+                    200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetInvoicesForCurrentCustomerAsync({UserId}) error", userId);
+                return ServiceResult<List<InvoiceDTO>>.Fail(
+                    "Có lỗi xảy ra khi lấy danh sách hóa đơn của customer.", 500);
+            }
+        }
+
+
         #region Helpers
 
         private static void UpdateInvoicePaymentStatus(Core.Domain.Entities.Invoice invoice)
