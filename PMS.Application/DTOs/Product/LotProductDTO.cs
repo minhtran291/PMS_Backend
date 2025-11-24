@@ -11,7 +11,7 @@ namespace PMS.Application.DTOs.Product
     {
         public int LotID { get; set; }
 
-        public DateTime InputDate { get; set; }
+        public string? InputDate { get; set; }
 
         public decimal SalePrice { get; set; } = 0;
 
@@ -19,7 +19,7 @@ namespace PMS.Application.DTOs.Product
         public required string ProductName { get; set; }
 
         
-        public DateTime ExpiredDate { get; set; }
+        public string? ExpiredDate { get; set; }
 
         public int LotQuantity { get; set; }
 
