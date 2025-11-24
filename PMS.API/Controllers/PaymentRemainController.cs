@@ -19,42 +19,27 @@ namespace PMS.API.Controllers
 
         /// <summary>
         /// Tạo yêu cầu thanh toán phần còn lại đến Customer
-        /// POST: https://localhost:7213/api/PaymentRemain/pay-remain-request/{goodsIssueNoteId}
-        /// <param name="goodsIssueNoteId"></param>
+        /// POST: http://localhost:5137/api/PaymentRemain/pay-remain-request
+        /// /// <param name="request"></param>
         /// <returns></returns>
 
         //[Authorize(Roles = UserRoles.ACOUNTANT)]
-        [HttpPost("pay-remain-request/{goodsIssueNoteId}")]
-        public async Task<IActionResult> CreatePaymentRemainForGoodsIssueNote(int goodsIssueNoteId)
+        [HttpPost("pay-remain-request")]
+        public async Task<IActionResult> CreatePaymentRemain([FromBody] CreatePaymentRemainRequestDTO request)
         {
-            var result = await _paymentRemainService
-                .CreatePaymentRemainForGoodsIssueNoteAsync(goodsIssueNoteId);
-
-            object? data = null;
-            if (result.Data != null)
-            {
-                var p = result.Data;
-                data = new
-                {
-                    p.Id,
-                    p.SalesOrderId,
-                    p.GoodsIssueNoteId,
-                    p.Amount,
-                    Status = p.Status.ToString()
-                };
-            }
+            var result = await _paymentRemainService.CreatePaymentRemainForInvoiceAsync(request);
 
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,
                 message = result.Message,
-                data
+                data = result.Data
             });
         }
 
         /// <summary>
         /// get list payment remain
-        /// Get: https://localhost/api/PaymentRemain/list-payment-remain
+        /// Get: http://localhost:5137/api/PaymentRemain/list-payment-remain
         /// <param name="request"></param>
         /// <returns></returns>
         [HttpGet("list-payment-remain")]
@@ -72,7 +57,7 @@ namespace PMS.API.Controllers
 
         /// <summary>
         /// get details payment remain by id
-        /// Get: https://localhost/api/PaymentRemain/payment-remain-detail/{id}
+        /// Get: http://localhost:5137/api/PaymentRemain/payment-remain-detail/{id}
         /// <param name="id"></param>
         /// <returns></returns>
         [HttpGet("payment-remain-detail/{id}")]
@@ -89,7 +74,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// GET: https://localhost//api/PaymentRemain/ids-by-sales-order/{salesOrderId}
+        /// GET: http://localhost:5137/api/PaymentRemain/ids-by-sales-order/{salesOrderId}
         /// Lấy danh sách PaymentRemainId (Success, Remain/Full) theo SalesOrderId.
         /// </summary>
         [HttpGet("ids-by-sales-order/{salesOrderId:int}")]
@@ -106,6 +91,21 @@ namespace PMS.API.Controllers
             });
         }
 
+
+        /// <summary>
+        /// POST:  http://localhost:5137/api/PaymentRemain/{id}/success
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="body"></param>
+        /// <returns></returns>
+        [HttpPost("{id}/success")]
+        public async Task<IActionResult> MarkSuccess(int id, [FromBody] MarkPaymentSuccessRequestDTO body)
+        {
+            var result = await _paymentRemainService
+                .MarkPaymentSuccessAsync(id, body?.GatewayTransactionRef);
+
+            return StatusCode(result.StatusCode, result);
+        }
 
     }
 }

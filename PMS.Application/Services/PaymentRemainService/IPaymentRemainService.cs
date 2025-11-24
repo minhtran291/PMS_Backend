@@ -11,17 +11,24 @@ namespace PMS.Application.Services.PaymentRemainService
 {
     public interface IPaymentRemainService
     {
-        Task<ServiceResult<PMS.Core.Domain.Entities.PaymentRemain>> 
-            CreatePaymentRemainForGoodsIssueNoteAsync(int goodsIssueNoteId);
+        // Tạo lệnh thanh toán cho 1 Invoice
+        Task<ServiceResult<PaymentRemainItemDTO>>
+            CreatePaymentRemainForInvoiceAsync(CreatePaymentRemainRequestDTO request);
 
+        // Lấy list payment theo filter
         Task<ServiceResult<List<PaymentRemainItemDTO>>>
             GetPaymentRemainsAsync(PaymentRemainListRequestDTO request);
 
+        // Lấy chi tiết 1 payment
         Task<ServiceResult<PaymentRemainItemDTO>>
             GetPaymentRemainDetailAsync(int id);
 
+        // Lấy danh sách Id các payment (thành công) theo SalesOrder
         Task<ServiceResult<List<int>>>
             GetPaymentRemainIdsBySalesOrderIdAsync(int salesOrderId);
 
+        // Đánh dấu 1 payment đã thanh toán thành công (dùng cho VNPay callback / kế toán xác nhận)
+        Task<ServiceResult<bool>>
+            MarkPaymentSuccessAsync(int paymentRemainId, string? gatewayTransactionRef = null);
     }
 }

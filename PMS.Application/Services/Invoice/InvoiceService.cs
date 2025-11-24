@@ -29,84 +29,91 @@ namespace PMS.Application.Services.Invoice
         private readonly IEmailService _emailService = emailService;
 
         public async Task<ServiceResult<InvoiceDTO>>
-            GenerateInvoiceFromPaymentRemainsAsync(GenerateInvoiceFromPaymentRemainsRequestDTO request)
+            GenerateInvoiceFromGINAsync(GenerateInvoiceFromGINRequestDTO request)
         {
             try
             {
-                if (request.PaymentRemainIds == null || request.PaymentRemainIds.Count == 0)
+                if (request == null ||
+                    string.IsNullOrWhiteSpace(request.SalesOrderCode) ||
+                    request.GoodsIssueNoteCodes == null ||
+                    request.GoodsIssueNoteCodes.Count == 0)
                 {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "Danh sách PaymentRemainIds trống.", 400);
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesOrderCode hoặc danh sách GoodsIssueNoteCodes không hợp lệ.",
+                        Data = null
+                    };
                 }
 
-                // Load PaymentRemain + điều kiện
-                var payments = await _unitOfWork.PaymentRemains.Query()
-                    .Include(p => p.SalesOrder)
-                        .ThenInclude(o => o.SalesQuotation)
-                    .Include(p => p.GoodsIssueNote)
-                        .ThenInclude(n => n.GoodsIssueNoteDetails)
-                    .Include(p => p.SalesOrder.SalesOrderDetails)
-                    .Where(p => request.PaymentRemainIds.Contains(p.Id))
-                    .ToListAsync();
+                // 1. SalesOrder theo Code
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesQuotation)
+                    .Include(o => o.SalesOrderDetails)
+                    .FirstOrDefaultAsync(o => o.SalesOrderCode == request.SalesOrderCode);
 
-                if (!payments.Any())
+                if (order == null)
                 {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "Không tìm thấy PaymentRemain tương ứng.", 404);
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy SalesOrder.",
+                        Data = null
+                    };
                 }
-
-                // Validate cùng 1 SalesOrder
-                var soId = payments.First().SalesOrderId;
-                if (soId != request.SalesOrderId ||
-                    payments.Any(p => p.SalesOrderId != soId))
-                {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "Các PaymentRemain không thuộc cùng một SalesOrder.", 400);
-                }
-
-                var order = payments.First().SalesOrder;
 
                 if (order.SalesQuotation == null)
                 {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "SalesOrder chưa gắn với SalesQuotation, không xác định được % cọc.", 400);
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesOrder chưa gắn với SalesQuotation, không xác định được % cọc.",
+                        Data = null
+                    };
                 }
 
-                // Chỉ lấy PaymentRemain đã Success
-                if (payments.Any(p => p.Status != PaymentStatus.Success))
+                // 2. Lấy GoodsIssueNote theo Code
+                var goodsIssueNotes = await _unitOfWork.GoodsIssueNote.Query()
+                    .Include(n => n.StockExportOrder)
+                    .Include(n => n.GoodsIssueNoteDetails)
+                    .Where(n => request.GoodsIssueNoteCodes.Contains(n.GoodsIssueNoteCode))
+                    .ToListAsync();
+
+                if (!goodsIssueNotes.Any())
                 {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "Chỉ generate Invoice cho PaymentRemain ở trạng thái Success.", 400);
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy GoodsIssueNote tương ứng.",
+                        Data = null
+                    };
                 }
 
-                // Tính toán tổng cọc cố định theo SalesOrder
+                if (goodsIssueNotes.Any(n => n.StockExportOrder.SalesOrderId != order.SalesOrderId))
+                {
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 400,
+                        Message = "Các GoodsIssueNote không thuộc cùng một SalesOrder.",
+                        Data = null
+                    };
+                }
+
                 var orderTotal = order.TotalPrice;
+
+                // 3. Tổng cọc theo % trong SalesQuotation
                 var depositFixed = decimal.Round(
                     orderTotal * (order.SalesQuotation.DepositPercent / 100m),
                     0,
                     MidpointRounding.AwayFromZero);
 
-                // Group theo GoodsIssueNote, sắp xếp theo ngày xuất
-                var noteGroups = payments
-                    .GroupBy(p => p.GoodsIssueNoteId)
-                    .ToList();
+                // 4. Tính giá trị từng phiếu xuất
+                var noteInfos = new List<(PMS.Core.Domain.Entities.GoodsIssueNote Note, decimal NoteAmount)>();
 
-                var noteInfos = new List<(PMS.Core.Domain.Entities.GoodsIssueNote Note, PaymentRemain Payment, decimal NoteAmount)>();
-
-                foreach (var g in noteGroups)
+                foreach (var note in goodsIssueNotes)
                 {
-                    var payment = g.First();
-
-                    if (payment.GoodsIssueNote == null)
-                    {
-                        return ServiceResult<InvoiceDTO>.Fail(
-                            "PaymentRemain không gắn với GoodsIssueNote.", 400);
-                    }
-
-                    var note = payment.GoodsIssueNote;
-
-                    // Giá trị phiếu xuất = sum(UnitPrice * quantity) theo LotId
                     decimal noteAmount = 0m;
+
                     foreach (var d in note.GoodsIssueNoteDetails)
                     {
                         var soDetail = order.SalesOrderDetails
@@ -114,47 +121,54 @@ namespace PMS.Application.Services.Invoice
 
                         if (soDetail == null)
                         {
-                            return ServiceResult<InvoiceDTO>.Fail(
-                                $"Không tìm thấy SalesOrderDetail cho LotId={d.LotId}.", 400);
+                            return new ServiceResult<InvoiceDTO>
+                            {
+                                StatusCode = 400,
+                                Message = $"Không tìm thấy SalesOrderDetail cho LotId={d.LotId}.",
+                                Data = null
+                            };
                         }
 
                         noteAmount += soDetail.UnitPrice * d.Quantity;
                     }
 
-                    noteInfos.Add((note, payment, noteAmount));
+                    noteInfos.Add((note, noteAmount));
                 }
 
-                // Sort theo ngày xuất + Id → tạo "Lần xuất hàng"
+                // Sort theo ngày giao + Id
                 noteInfos = noteInfos
-                    .OrderBy(x => x.Note.DeliveryDate) 
+                    .OrderBy(x => x.Note.DeliveryDate)
                     .ThenBy(x => x.Note.Id)
                     .ToList();
 
-                // Tạo Invoice + InvoiceDetails
                 await _unitOfWork.BeginTransactionAsync();
 
                 var now = DateTime.Now;
-                var invoice = new PMS.Core.Domain.Entities.Invoice
+                var invoiceCode = BuildInvoiceCode(request);
+
+                // 5. Tạo Invoice
+                var invoice = new Core.Domain.Entities.Invoice
                 {
                     SalesOrderId = order.SalesOrderId,
-                    InvoiceCode = $"INV-SO{order.SalesOrderId}-{now:ddMMyyyyHHmmss}",
+                    InvoiceCode = invoiceCode,
                     CreatedAt = now,
                     IssuedAt = now,
-                    Status = InvoiceStatus.Draft, 
+                    Status = InvoiceStatus.Draft,
                     TotalAmount = 0m,
                     TotalPaid = 0m,
                     TotalDeposit = 0m,
-                    TotalRemain = 0m
+                    TotalRemain = 0m,
+                    PaymentStatus = PaymentStatus.NotPaymentYet
                 };
 
                 await _unitOfWork.Invoices.AddAsync(invoice);
                 await _unitOfWork.CommitAsync();
 
+                // 6. Tạo InvoiceDetails + tính tiền
                 var invoiceDetails = new List<InvoiceDetail>();
-
                 int exportIndex = 1;
 
-                foreach (var (note, payment, noteAmount) in noteInfos)
+                foreach (var (note, noteAmount) in noteInfos)
                 {
                     var proportion = noteAmount / orderTotal;
 
@@ -163,8 +177,7 @@ namespace PMS.Application.Services.Invoice
                         0,
                         MidpointRounding.AwayFromZero);
 
-                    var paidRemain = payment.Amount;
-
+                    var paidRemain = 0m; // chưa thanh toán phần còn lại
                     var totalPaidForNote = allocatedDeposit + paidRemain;
                     var noteBalance = noteAmount - totalPaidForNote;
 
@@ -181,14 +194,15 @@ namespace PMS.Application.Services.Invoice
 
                     invoiceDetails.Add(detail);
 
-                    // Cộng vào tổng Invoice
                     invoice.TotalAmount += noteAmount;
                     invoice.TotalDeposit += allocatedDeposit;
-                    invoice.TotalRemain += paidRemain;
                     invoice.TotalPaid += totalPaidForNote;
 
                     exportIndex++;
                 }
+
+                // 7. Cập nhật PaymentStatus + TotalRemain
+                UpdateInvoicePaymentStatus(invoice);
 
                 await _unitOfWork.InvoicesDetails.AddRangeAsync(invoiceDetails);
                 _unitOfWork.Invoices.Update(invoice);
@@ -196,12 +210,11 @@ namespace PMS.Application.Services.Invoice
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
-                // Map sang DTO cho FE
+                // 8. Map DTO trả về
                 exportIndex = 1;
                 var detailDtos = noteInfos.Select(x =>
                 {
                     var note = x.Note;
-                    var payment = x.Payment;
                     var noteAmount = x.NoteAmount;
 
                     var proportion = noteAmount / orderTotal;
@@ -209,14 +222,14 @@ namespace PMS.Application.Services.Invoice
                         depositFixed * proportion,
                         0,
                         MidpointRounding.AwayFromZero);
-                    var paidRemain = payment.Amount;
+                    var paidRemain = 0m;
                     var totalPaidForNote = allocatedDeposit + paidRemain;
                     var noteBalance = noteAmount - totalPaidForNote;
 
-                    var dto = new InvoiceDetailDTO
+                    return new InvoiceDetailDTO
                     {
                         GoodsIssueNoteId = note.Id,
-                        GoodsIssueDate = note.DeliveryDate, 
+                        GoodsIssueDate = note.DeliveryDate,
                         GoodsIssueAmount = noteAmount,
                         AllocatedDeposit = allocatedDeposit,
                         PaidRemain = paidRemain,
@@ -224,8 +237,6 @@ namespace PMS.Application.Services.Invoice
                         NoteBalance = noteBalance,
                         ExportIndex = exportIndex++
                     };
-
-                    return dto;
                 }).ToList();
 
                 var invoiceDto = new InvoiceDTO
@@ -243,17 +254,24 @@ namespace PMS.Application.Services.Invoice
                     Details = detailDtos
                 };
 
-                return ServiceResult<InvoiceDTO>.SuccessResult(
-                    invoiceDto,
-                    "Tạo hóa đơn thành công.",
-                    201);
-            } 
+                return new ServiceResult<InvoiceDTO>
+                {
+                    StatusCode = 201,
+                    Message = "Tạo hóa đơn thành công.",
+                    Data = invoiceDto
+                };
+            }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Lỗi GenerateInvoiceFromPaymentRemainsAsync");
-                return ServiceResult<InvoiceDTO>.Fail(
-                    "Có lỗi xảy ra khi tạo hóa đơn.", 500);
+                _logger.LogError(ex, "Lỗi GenerateInvoiceFromGoodsIssueNotesAsync");
+
+                return new ServiceResult<InvoiceDTO>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi xảy ra khi tạo hóa đơn.",
+                    Data = null
+                };
             }
         }
 
@@ -440,88 +458,111 @@ namespace PMS.Application.Services.Invoice
             }
         }
 
-        public async Task<ServiceResult<InvoiceDTO>> UpdateInvoicePaymentRemainsAsync(int invoiceId, InvoiceUpdateDTO request)
+        public async Task<ServiceResult<InvoiceDTO>> UpdateInvoiceGoodsIssueNotesAsync(int invoiceId, InvoiceUpdateDTO request)
         {
             try
             {
-                if (request.PaymentRemainIds == null || request.PaymentRemainIds.Count == 0)
+                if (request == null || request.GoodsIssueNoteCodes == null || request.GoodsIssueNoteCodes.Count == 0)
                 {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "Danh sách PaymentRemainIds trống.", 400);
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 400,
+                        Message = "Danh sách GoodsIssueNoteCodes trống.",
+                        Data = null
+                    };
                 }
 
+                // Lấy invoice + SalesOrder + SalesQuotation + SalesOrderDetails + InvoiceDetails
                 var invoice = await _unitOfWork.Invoices.Query()
                     .Include(i => i.SalesOrder)
                         .ThenInclude(o => o.SalesQuotation)
                     .Include(i => i.SalesOrder.SalesOrderDetails)
+                    .Include(i => i.InvoiceDetails)
                     .FirstOrDefaultAsync(i => i.Id == invoiceId);
 
                 if (invoice == null)
-                    return ServiceResult<InvoiceDTO>.Fail("Không tìm thấy hóa đơn.", 404);
+                {
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy hóa đơn.",
+                        Data = null
+                    };
+                }
 
                 if (invoice.Status != InvoiceStatus.Draft)
                 {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "Chỉ được sửa hóa đơn khi còn ở trạng thái Draft.", 400);
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được sửa hóa đơn khi còn ở trạng thái Draft.",
+                        Data = null
+                    };
                 }
 
                 var order = invoice.SalesOrder;
+                if (order == null)
+                {
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 500,
+                        Message = "Hóa đơn không gắn với SalesOrder hợp lệ.",
+                        Data = null
+                    };
+                }
 
                 if (order.SalesQuotation == null)
                 {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "SalesOrder chưa gắn với SalesQuotation, không xác định được % cọc.", 400);
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesOrder chưa gắn với SalesQuotation, không xác định được % cọc.",
+                        Data = null
+                    };
                 }
 
-                // Lấy lại list PaymentRemain theo Id vừa gửi
-                var payments = await _unitOfWork.PaymentRemains.Query()
-                    .Include(p => p.GoodsIssueNote)
-                        .ThenInclude(n => n.GoodsIssueNoteDetails)
-                    .Where(p => request.PaymentRemainIds.Contains(p.Id))
+                // Lấy GoodsIssueNote theo Code
+                var goodsIssueNotes = await _unitOfWork.GoodsIssueNote.Query()
+                    .Include(n => n.StockExportOrder)
+                    .Include(n => n.GoodsIssueNoteDetails)
+                    .Where(n => request.GoodsIssueNoteCodes.Contains(n.GoodsIssueNoteCode))
                     .ToListAsync();
 
-                if (!payments.Any())
+                if (!goodsIssueNotes.Any())
                 {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "Không tìm thấy PaymentRemain tương ứng.", 404);
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy GoodsIssueNote tương ứng với các mã đã gửi.",
+                        Data = null
+                    };
                 }
 
-                // Validate cùng salesOrder
-                if (payments.Any(p => p.SalesOrderId != order.SalesOrderId))
+                if (goodsIssueNotes.Any(n => n.StockExportOrder.SalesOrderId != order.SalesOrderId))
                 {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "Các PaymentRemain không thuộc cùng một SalesOrder.", 400);
-                }
-
-                // Chỉ cho PaymentRemain Success
-                if (payments.Any(p => p.Status != PaymentStatus.Success))
-                {
-                    return ServiceResult<InvoiceDTO>.Fail(
-                        "Chỉ cho phép sửa hóa đơn với PaymentRemain ở trạng thái Success.", 400);
+                    return new ServiceResult<InvoiceDTO>
+                    {
+                        StatusCode = 400,
+                        Message = "Có GoodsIssueNote không thuộc cùng SalesOrder với hóa đơn.",
+                        Data = null
+                    };
                 }
 
                 var orderTotal = order.TotalPrice;
+
+                // Tổng cọc cố định theo SalesOrder (% trong SalesQuotation)
                 var depositFixed = decimal.Round(
                     orderTotal * (order.SalesQuotation.DepositPercent / 100m),
                     0,
                     MidpointRounding.AwayFromZero);
 
-                var noteGroups = payments.GroupBy(p => p.GoodsIssueNoteId).ToList();
-                var noteInfos = new List<(PMS.Core.Domain.Entities.GoodsIssueNote Note, PaymentRemain Payment, decimal NoteAmount)>();
+                // Tính giá trị từng phiếu xuất
+                var noteInfos = new List<(PMS.Core.Domain.Entities.GoodsIssueNote Note, decimal NoteAmount)>();
 
-                foreach (var g in noteGroups)
+                foreach (var note in goodsIssueNotes)
                 {
-                    var payment = g.First();
-
-                    if (payment.GoodsIssueNote == null)
-                    {
-                        return ServiceResult<InvoiceDTO>.Fail(
-                            "PaymentRemain không gắn với GoodsIssueNote.", 400);
-                    }
-
-                    var note = payment.GoodsIssueNote;
-
                     decimal noteAmount = 0m;
+
                     foreach (var d in note.GoodsIssueNoteDetails)
                     {
                         var soDetail = order.SalesOrderDetails
@@ -529,14 +570,18 @@ namespace PMS.Application.Services.Invoice
 
                         if (soDetail == null)
                         {
-                            return ServiceResult<InvoiceDTO>.Fail(
-                                $"Không tìm thấy SalesOrderDetail cho LotId={d.LotId}.", 400);
+                            return new ServiceResult<InvoiceDTO>
+                            {
+                                StatusCode = 400,
+                                Message = $"Không tìm thấy SalesOrderDetail cho LotId={d.LotId}.",
+                                Data = null
+                            };
                         }
 
                         noteAmount += soDetail.UnitPrice * d.Quantity;
                     }
 
-                    noteInfos.Add((note, payment, noteAmount));
+                    noteInfos.Add((note, noteAmount));
                 }
 
                 noteInfos = noteInfos
@@ -546,32 +591,43 @@ namespace PMS.Application.Services.Invoice
 
                 await _unitOfWork.BeginTransactionAsync();
 
-                // Xoá toàn bộ InvoiceDetail cũ
                 var oldDetails = await _unitOfWork.InvoicesDetails.Query()
                     .Where(d => d.InvoiceId == invoice.Id)
                     .ToListAsync();
 
                 if (oldDetails.Any())
+                {
                     _unitOfWork.InvoicesDetails.RemoveRange(oldDetails);
+                }
 
-                // Reset tổng
                 invoice.TotalAmount = 0m;
                 invoice.TotalPaid = 0m;
                 invoice.TotalDeposit = 0m;
                 invoice.TotalRemain = 0m;
+                invoice.PaymentStatus = PaymentStatus.NotPaymentYet;
+
+                var tmpReq = new GenerateInvoiceFromGINRequestDTO
+                {
+                    SalesOrderCode = order.SalesOrderCode,
+                    GoodsIssueNoteCodes = request.GoodsIssueNoteCodes
+                };
+                invoice.InvoiceCode = BuildInvoiceCode(tmpReq);
 
                 var newDetails = new List<InvoiceDetail>();
                 int exportIndex = 1;
 
-                foreach (var (note, payment, noteAmount) in noteInfos)
+                foreach (var (note, noteAmount) in noteInfos)
                 {
-                    var proportion = noteAmount / orderTotal;
+                    var proportion = orderTotal > 0
+                        ? noteAmount / orderTotal
+                        : 0m;
+
                     var allocatedDeposit = decimal.Round(
                         depositFixed * proportion,
                         0,
                         MidpointRounding.AwayFromZero);
 
-                    var paidRemain = payment.Amount;
+                    var paidRemain = 0m; 
                     var totalPaidForNote = allocatedDeposit + paidRemain;
                     var noteBalance = noteAmount - totalPaidForNote;
 
@@ -590,11 +646,13 @@ namespace PMS.Application.Services.Invoice
 
                     invoice.TotalAmount += noteAmount;
                     invoice.TotalDeposit += allocatedDeposit;
-                    invoice.TotalRemain += paidRemain;
                     invoice.TotalPaid += totalPaidForNote;
 
                     exportIndex++;
                 }
+
+                // Cập nhật TotalRemain + PaymentStatus
+                UpdateInvoicePaymentStatus(invoice);
 
                 await _unitOfWork.InvoicesDetails.AddRangeAsync(newDetails);
                 _unitOfWork.Invoices.Update(invoice);
@@ -607,15 +665,17 @@ namespace PMS.Application.Services.Invoice
                 var detailDtos = noteInfos.Select(x =>
                 {
                     var note = x.Note;
-                    var payment = x.Payment;
                     var noteAmount = x.NoteAmount;
 
-                    var proportion = noteAmount / orderTotal;
+                    var proportion = orderTotal > 0
+                        ? noteAmount / orderTotal
+                        : 0m;
+
                     var allocatedDeposit = decimal.Round(
                         depositFixed * proportion,
                         0,
                         MidpointRounding.AwayFromZero);
-                    var paidRemain = payment.Amount;
+                    var paidRemain = 0m;
                     var totalPaidForNote = allocatedDeposit + paidRemain;
                     var noteBalance = noteAmount - totalPaidForNote;
 
@@ -647,16 +707,222 @@ namespace PMS.Application.Services.Invoice
                     Details = detailDtos
                 };
 
-                return ServiceResult<InvoiceDTO>.SuccessResult(
-                    invoiceDto, "Cập nhật hóa đơn thành công.", 200);
+                return new ServiceResult<InvoiceDTO>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật hóa đơn theo danh sách GoodsIssueNoteCodes thành công.",
+                    Data = invoiceDto
+                };
             }
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "UpdateInvoicePaymentRemainsAsync({InvoiceId}) error", invoiceId);
-                return ServiceResult<InvoiceDTO>.Fail(
-                    "Có lỗi xảy ra khi cập nhật hóa đơn.", 500);
+                _logger.LogError(ex, "UpdateInvoiceGoodsIssueNotesAsync({InvoiceId}) error", invoiceId);
+
+                return new ServiceResult<InvoiceDTO>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi xảy ra khi cập nhật hóa đơn.",
+                    Data = null
+                };
             }
         }
+
+        /// <summary>
+        /// Lấy toàn bộ SalesOrderCode
+        /// </summary>
+        /// <returns></returns>
+        public async Task<ServiceResult<List<string>>> GetAllSalesOrderCodesAsync()
+        {
+            try
+            {
+                var codes = await _unitOfWork.SalesOrder.Query()
+                    .Where(o => !string.IsNullOrEmpty(o.SalesOrderCode))
+                    .Select(o => o.SalesOrderCode!)
+                    .Distinct()
+                    .OrderBy(c => c)
+                    .ToListAsync();
+
+                if (!codes.Any())
+                {
+                    return ServiceResult<List<string>>.Fail(
+                        "Không tìm thấy SalesOrder nào.", 404);
+                }
+
+                return ServiceResult<List<string>>.SuccessResult(
+                    codes,
+                    "Lấy danh sách SalesOrderCode thành công.",
+                    200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetAllSalesOrderCodesAsync error");
+                return ServiceResult<List<string>>.Fail(
+                    "Có lỗi xảy ra khi lấy danh sách SalesOrderCode.", 500);
+            }
+        }
+
+        /// <summary>
+        /// Lấy toàn bộ GoodsIssueNoteCode theo SalesOrderCode
+        /// </summary>
+        public async Task<ServiceResult<List<string>>> GetGoodsIssueNoteCodesBySalesOrderCodeAsync(string salesOrderCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(salesOrderCode))
+                {
+                    return ServiceResult<List<string>>.Fail(
+                        "SalesOrderCode không hợp lệ.", 400);
+                }
+
+                // Tìm SalesOrder theo code
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .FirstOrDefaultAsync(o => o.SalesOrderCode == salesOrderCode);
+
+                if (order == null)
+                {
+                    return ServiceResult<List<string>>.Fail(
+                        "Không tìm thấy SalesOrder với mã đã cung cấp.", 404);
+                }
+
+                var noteCodes = await _unitOfWork.GoodsIssueNote.Query()
+                    .Include(n => n.StockExportOrder)
+                    .Where(n => n.StockExportOrder.SalesOrderId == order.SalesOrderId)
+                    .Where(n => !string.IsNullOrEmpty(n.GoodsIssueNoteCode))
+                    .Select(n => n.GoodsIssueNoteCode!)
+                    .Distinct()
+                    .OrderBy(c => c)
+                    .ToListAsync();
+
+                if (!noteCodes.Any())
+                {
+                    return ServiceResult<List<string>>.Fail(
+                        "Không tìm thấy GoodsIssueNote nào thuộc SalesOrder này.", 404);
+                }
+
+                return ServiceResult<List<string>>.SuccessResult(
+                    noteCodes,
+                    "Lấy danh sách GoodsIssueNoteCode theo SalesOrderCode thành công.",
+                    200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetGoodsIssueNoteCodesBySalesOrderCodeAsync({SalesOrderCode}) error", salesOrderCode);
+                return ServiceResult<List<string>>.Fail(
+                    "Có lỗi xảy ra khi lấy danh sách GoodsIssueNoteCode.", 500);
+            }
+        }
+
+        public async Task<ServiceResult<List<InvoiceDTO>>> GetInvoicesForCurrentCustomerAsync(string userId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(userId))
+                {
+                    return ServiceResult<List<InvoiceDTO>>.Fail(
+                        "UserId không hợp lệ.", 400);
+                }
+
+                var invoices = await _unitOfWork.Invoices.Query()
+                    .Include(i => i.SalesOrder)
+                        .ThenInclude(so => so.Customer)  
+                    .Include(i => i.InvoiceDetails)
+                        .ThenInclude(d => d.GoodsIssueNote)
+                    .Where(i => i.SalesOrder.CreateBy == userId)
+                    .ToListAsync();
+
+                if (!invoices.Any())
+                {
+                    return ServiceResult<List<InvoiceDTO>>.Fail(
+                        "Khách hàng này chưa có hóa đơn nào.", 404);
+                }
+
+                var result = invoices.Select(inv => new InvoiceDTO
+                {
+                    Id = inv.Id,
+                    InvoiceCode = inv.InvoiceCode,
+                    SalesOrderId = inv.SalesOrderId,
+                    CreatedAt = inv.CreatedAt,
+                    IssuedAt = inv.IssuedAt,
+                    Status = inv.Status,
+                    TotalAmount = inv.TotalAmount,
+                    TotalPaid = inv.TotalPaid,
+                    TotalDeposit = inv.TotalDeposit,
+                    TotalRemain = inv.TotalRemain,
+                    Details = inv.InvoiceDetails
+                        .Select((d, index) => new InvoiceDetailDTO
+                        {
+                            GoodsIssueNoteId = d.GoodsIssueNoteId,
+                            GoodsIssueDate = d.GoodsIssueNote.DeliveryDate,
+                            GoodsIssueAmount = d.GoodsIssueAmount,
+                            AllocatedDeposit = d.AllocatedDeposit,
+                            PaidRemain = d.PaidRemain,
+                            TotalPaidForNote = d.TotalPaidForNote,
+                            NoteBalance = d.NoteBalance,
+                            ExportIndex = index + 1
+                        }).ToList()
+                }).ToList();
+
+                return ServiceResult<List<InvoiceDTO>>.SuccessResult(
+                    result,
+                    "Lấy danh sách hóa đơn cho customer hiện tại thành công.",
+                    200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetInvoicesForCurrentCustomerAsync({UserId}) error", userId);
+                return ServiceResult<List<InvoiceDTO>>.Fail(
+                    "Có lỗi xảy ra khi lấy danh sách hóa đơn của customer.", 500);
+            }
+        }
+
+
+        #region Helpers
+
+        private static void UpdateInvoicePaymentStatus(Core.Domain.Entities.Invoice invoice)
+        {
+            // TotalRemain luôn = TotalAmount - TotalPaid
+            invoice.TotalRemain = invoice.TotalAmount - invoice.TotalPaid;
+
+            if (invoice.TotalPaid <= 0)
+            {
+                invoice.PaymentStatus = PaymentStatus.NotPaymentYet;
+            }
+            else if (invoice.TotalPaid < invoice.TotalAmount)
+            {
+                invoice.PaymentStatus = PaymentStatus.Deposited;
+            }
+            else
+            {
+                invoice.PaymentStatus = PaymentStatus.Paid;
+            }
+        }
+
+        private static string BuildInvoiceCode(GenerateInvoiceFromGINRequestDTO request)
+        {
+            var firstNoteCode = request.GoodsIssueNoteCodes.First();
+            var noteCount = request.GoodsIssueNoteCodes.Count;
+
+            string rawCode;
+
+            if (noteCount == 1)
+            {
+                // 1 phiếu xuất
+                rawCode = $"INV-{request.SalesOrderCode}-{firstNoteCode}";
+            }
+            else
+            {
+                // Nhiều phiếu: lấy code phiếu đầu + số lượng
+                rawCode = $"INV-{request.SalesOrderCode}-{firstNoteCode}-x{noteCount}";
+            }
+
+            // Đảm bảo không vượt quá 50 ký tự (Fluent đang set HasMaxLength(50))
+            return rawCode.Length > 50
+                ? rawCode.Substring(0, 50)
+                : rawCode;
+        }
+
+        #endregion
+
     }
 }

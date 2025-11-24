@@ -11,8 +11,8 @@ namespace PMS.Application.DTOs.PaymentRemain
     {
         public string? CustomerId { get; set; }
         public int? SalesOrderId { get; set; }
-        public int? GoodsIssueNoteId { get; set; }
-        public PaymentStatus? Status { get; set; }
+        public int? InvoiceId { get; set; }
+        public VNPayStatus? Status { get; set; }
         public PaymentMethod? PaymentMethod { get; set; }
         public PaymentType? PaymentType { get; set; }
     }
