@@ -55,7 +55,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                     profile.UserId,
                     [UserRoles.SALES_STAFF],
                     "Bạn nhận được 1 thông báo mới",
-                    "Yêu cầu báo giá",
+                    $"Yêu cầu báo giá {requestSalesQuotation.RequestCode}",
                     Core.Domain.Enums.NotificationType.Message
                     );
                 }
@@ -84,9 +84,8 @@ namespace PMS.Application.Services.RequestSalesQuotation
 
         private static string GenerateRequestCode()
         {
-            var datePart = DateTime.Now.ToString("yyyyMMdd");
             var randomPart = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
-            return $"RSQ-{datePart}-{randomPart}";
+            return $"RSQ-{randomPart}";
         }
 
         public async Task<ServiceResult<List<ViewRsqDTO>>> ViewRequestSalesQuotationList(string userId)
@@ -236,8 +235,8 @@ namespace PMS.Application.Services.RequestSalesQuotation
                     await _notificationService.SendNotificationToRolesAsync(
                         profile.UserId,
                         ["SALES_STAFF"],
-                        "Yêu cầu báo giá",
-                        "Bạn nhận được 1 yêu cầu báo giá mới từ khách hàng",
+                        "Bạn nhận được 1 thông báo mới",
+                        $"Yêu cầu báo giá {rsq.RequestCode}",
                         Core.Domain.Enums.NotificationType.Message
                         );
 
@@ -299,8 +298,8 @@ namespace PMS.Application.Services.RequestSalesQuotation
                 await _notificationService.SendNotificationToRolesAsync(
                     user.Id,
                     ["SALES_STAFF"],
-                    "Yêu cầu báo giá",
-                    "Bạn nhận được 1 yêu cầu báo giá mới từ khách hàng",
+                    "Bạn nhận được 1 thông báo mới",
+                    $"Yêu cầu báo giá {rsq.RequestCode}",
                     Core.Domain.Enums.NotificationType.Message
                     );
 

@@ -112,6 +112,7 @@ namespace PMS.Application.Services.User
                 UserStatus = UserStatus.Inactive,
                 Address = customer.Address,
                 Avatar = "/images/AvatarDefault.png",
+                FullName = customer.FullName,
             };
 
             _logger.LogWarning($"=== TẠO USER ===");
