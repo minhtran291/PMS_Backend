@@ -430,6 +430,14 @@ namespace PMS.Application.Services.User
                     type: NotificationType.System
                 );
 
+                await _notificationService.SendNotificationToRolesAsync(
+                    senderId: userId,
+                    targetRoles: new List<string> { "MANAGER" },
+                    title: "Yêu cầu duyệt hồ sơ",
+                    message: $"Khách hàng {user.UserName} có id {user.Id} vừa cập nhật hồ sơ và cần duyệt.",
+                    type: NotificationType.System
+                );
+
                 await _unitOfWork.CommitTransactionAsync();
 
                 return ServiceResult<bool>.SuccessResult(
@@ -510,7 +518,7 @@ namespace PMS.Application.Services.User
             }
         }
 
-        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string Admin)
+        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string verifier)
         {
             var exuser = await _unitOfWork.Users.Query()
                     .Include(u => u.CustomerProfile).FirstOrDefaultAsync(u => u.Id == userId);
@@ -523,7 +531,7 @@ namespace PMS.Application.Services.User
             await _unitOfWork.CommitAsync();
 
             await _notificationService.SendNotificationToCustomerAsync(
-                senderId: Admin,
+                senderId: verifier,
                 userId,
                 title: "Thông báo duyệt tài khoản",
                 message: $"Tài khoản đã cập nhật ",
