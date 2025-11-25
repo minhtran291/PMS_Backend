@@ -233,7 +233,7 @@ namespace PMS.Application.Services.StockExportOrder
                         userId,
                         ["WAREHOUSE_STAFF"],
                         "Bạn nhận được 1 thông báo mới",
-                        "Lệnh yêu cầu xuất kho",
+                        $"Yêu cầu xuất kho {newExport.StockExportOrderCode}",
                         NotificationType.Message
                         );
                 }
@@ -630,7 +630,7 @@ namespace PMS.Application.Services.StockExportOrder
                     userId,
                     ["WAREHOUSE_STAFF"],
                     "Bạn nhận được 1 thông báo mới",
-                    "Lệnh yêu cầu xuất kho",
+                    $"Yêu cầu xuất kho {stockExportOrder.StockExportOrderCode}",
                     NotificationType.Message
                     );
 
@@ -830,7 +830,7 @@ namespace PMS.Application.Services.StockExportOrder
                     userId,
                     ["WAREHOUSE_STAFF"],
                     "Bạn nhận được 1 thông báo mới",
-                    "Lệnh yêu cầu xuất kho",
+                    $"Yêu cầu xuất kho {stockExportOrder.StockExportOrderCode}",
                     NotificationType.Message
                     );
 

@@ -275,7 +275,7 @@ namespace PMS.Application.Services.SalesQuotation
                     staff.Id,
                     customer.Id,
                     "Bạn nhận được 1 thông báo mới",
-                    "Báo giá mới",
+                    $"Báo giá mới {salesQuotation.QuotationCode}",
                     Core.Domain.Enums.NotificationType.Message);
                 }
 
@@ -303,9 +303,8 @@ namespace PMS.Application.Services.SalesQuotation
 
         private static string GenerateQuotationCode()
         {
-            var datePart = DateTime.Now.ToString("yyyyMMdd");
             var randomPart = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
-            return $"SQ-{datePart}-{randomPart}";
+            return $"SQ-{randomPart}";
         }
 
         private static ServiceResult<object>? ValidateRequestSalesQuotation(Core.Domain.Entities.RequestSalesQuotation? rsq)
@@ -701,7 +700,7 @@ namespace PMS.Application.Services.SalesQuotation
                     staff.Id,
                     customer.Id,
                     "Bạn nhận được 1 thông báo mới",
-                    "Báo giá mới",
+                    $"Báo giá mới {salesQuotation.QuotationCode}",
                     Core.Domain.Enums.NotificationType.Message);
 
                     await _unitOfWork.CommitTransactionAsync();
@@ -947,8 +946,8 @@ namespace PMS.Application.Services.SalesQuotation
                 await _notificationService.SendNotificationToCustomerAsync(
                     staff.Id,
                     customer.Id,
-                    "Báo giá",
-                    "Bạn nhận được 1 báo giá mới",
+                    "Bạn nhận được 1 thông báo mới",
+                    $"Báo giá mới {salesQuotation.QuotationCode}",
                     Core.Domain.Enums.NotificationType.Message);
 
                 await _unitOfWork.CommitTransactionAsync();
