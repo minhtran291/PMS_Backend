@@ -655,20 +655,12 @@ namespace PMS.Application.Services.PaymentRemainService
                     var debt = order.CustomerDebts;
                     debt.DebtAmount = order.TotalPrice - order.PaidAmount;
 
-                    if (debt.DebtAmount <= 0)
-                    {
-                        debt.status = CustomerDebtStatus.NoDebt;
-                    }
-                    else
-                    {
-                        if (DateTime.Now > order.SalesOrderExpiredDate)
-                            debt.status = CustomerDebtStatus.OverTime;
-                        else
-                            debt.status = CustomerDebtStatus.UnPaid;
-                    }
+                    UpdateCustomerDebtStatus(order, debt);
 
                     _unitOfWork.CustomerDebt.Update(debt);
                 }
+
+                await UpdateSalesOrderDeliveryStatusAsync(order);
 
                 _unitOfWork.Invoices.Update(invoice);
                 _unitOfWork.SalesOrder.Update(order);
@@ -788,8 +780,6 @@ namespace PMS.Application.Services.PaymentRemainService
                 }
 
                 var pr = await _unitOfWork.PaymentRemains.Query()
-                    .Include(p => p.Invoice)
-                    .Include(p => p.SalesOrder)
                     .FirstOrDefaultAsync(p => p.Id == paymentRemainId);
 
                 if (pr == null)
@@ -853,5 +843,81 @@ namespace PMS.Application.Services.PaymentRemainService
             }
         }
 
+
+        #region Helper
+        private async Task UpdateSalesOrderDeliveryStatusAsync(PMS.Core.Domain.Entities.SalesOrder order)
+        {
+            // 1) Tổng số lượng đặt theo SalesOrderDetail
+            var totalOrdered = await _unitOfWork.SalesOrderDetails.Query()
+                .Where(d => d.SalesOrderId == order.SalesOrderId)
+                .SumAsync(d => (int?)d.Quantity) ?? 0;
+
+            if (totalOrdered <= 0)
+                return;
+
+            // 2) Tổng đã xuất từ tất cả GoodsIssueNote gắn với SalesOrder
+            var totalDelivered = await _unitOfWork.GoodsIssueNoteDetails.Query()
+                .Include(d => d.GoodsIssueNote)
+                .Where(d =>
+                    d.GoodsIssueNote.StockExportOrder.SalesOrderId == order.SalesOrderId &&
+                    d.GoodsIssueNote.Status == GoodsIssueNoteStatus.Sent)
+                .SumAsync(d => (int?)d.Quantity) ?? 0;
+
+            if (totalDelivered <= 0)
+                return;
+
+            // 3) Xác định trạng thái giao hàng
+            if (totalDelivered < totalOrdered)
+                order.SalesOrderStatus = SalesOrderStatus.PartiallyDelivered;
+            else
+                order.SalesOrderStatus = SalesOrderStatus.Delivered;
+
+            // 4) Nếu giao đủ + thanh toán đủ => Complete
+            if (order.PaymentStatus == PaymentStatus.Paid &&
+                order.SalesOrderStatus == SalesOrderStatus.Delivered)
+            {
+                order.SalesOrderStatus = SalesOrderStatus.Complete;
+            }
+        }
+
+        private void UpdateCustomerDebtStatus(PMS.Core.Domain.Entities.SalesOrder order, PMS.Core.Domain.Entities.CustomerDebt debt)
+        {
+            if (debt == null) return;
+
+            // 1. Hết nợ
+            if (debt.DebtAmount <= 0)
+            {
+                debt.status = CustomerDebtStatus.NoDebt;
+                return;
+            }
+
+            // 2. Đơn đã bị reject / not complete -> khóa nợ
+            if (order.SalesOrderStatus == SalesOrderStatus.Rejected
+                || order.SalesOrderStatus == SalesOrderStatus.NotComplete)
+            {
+                debt.status = CustomerDebtStatus.Disable;
+                return;
+            }
+
+            // 3. Quá hạn thanh toán
+            if (order.SalesOrderExpiredDate != default
+                && DateTime.Now > order.SalesOrderExpiredDate)
+            {
+                debt.status = CustomerDebtStatus.OverTime;
+                return;
+            }
+
+            // 4. Còn nợ nhưng đã trả một phần
+            if (order.PaidAmount > 0 && order.PaidAmount < order.TotalPrice)
+            {
+                debt.status = CustomerDebtStatus.Apart;
+                return;
+            }
+
+            // 5. Còn nợ, chưa trả đồng nào
+            debt.status = CustomerDebtStatus.UnPaid;
+        }
+
+        #endregion
     }
 }
