@@ -152,15 +152,16 @@ namespace PMS.Core.Domain.Constant
                     }}
 
                     .sign-area {{
-                        display:flex;
-                        justify-content:space-between;!Important
-                        margin-top:40px;
-                        font-size:11px;
+                    display: flex;
+                    justify-content: space-between; 
+                    margin-top: 40px;
+                    font-size: 11px;
                     }}
 
-                    .sign-area div {{
-                        text-align:center;
-                    }}
+                    .sign-area > div {{
+                    width: 45%;
+                    text-align: center;}}
+
                 </style>
             </head>
             <body>

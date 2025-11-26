@@ -1,29 +1,33 @@
 ﻿using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PMS.Application.DTOs.PaymentRemain;
+using PMS.Application.DTOs.VnPay;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.PaymentRemainService;
 using PMS.Application.Services.SalesOrder;
+using PMS.Application.Services.VNpay;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
 using PMS.Data.UnitOfWork;
-using PMS.Core.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using PMS.Application.DTOs.PaymentRemain;
 
 namespace PMS.Application.Services.PaymentRemainService
 {
     public class PaymentRemainService (IUnitOfWork unitOfWork,
         IMapper mapper, 
-        ILogger<PaymentRemainService> logger) : Service(unitOfWork, mapper), IPaymentRemainService
+        ILogger<PaymentRemainService> logger,
+        IVnPayService vnPayService) : Service(unitOfWork, mapper), IPaymentRemainService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<PaymentRemainService> _logger = logger;
+        private readonly IVnPayService _vnPayService = vnPayService;
 
         public async Task<ServiceResult<PaymentRemainItemDTO>> CreatePaymentRemainForInvoiceAsync(CreatePaymentRemainRequestDTO request)
         {
@@ -408,6 +412,60 @@ namespace PMS.Application.Services.PaymentRemainService
             }
         }
 
+        public async Task<ServiceResult<VnPayInitResponseDTO>> InitVnPayForInvoiceAsync(int invoiceId, decimal? amount, string clientIp, string? locale = "vn")
+        {
+            try
+            {
+                // 1) Tạo PaymentRemain cho Invoice
+                var createResult = await CreatePaymentRemainForInvoiceAsync(
+                    new CreatePaymentRemainRequestDTO
+                    {
+                        InvoiceId = invoiceId,
+                        Amount = amount,
+                        PaymentMethod = PaymentMethod.VnPay,
+                        PaymentType = PaymentType.Remain
+                    });
+
+                if (!createResult.Success || createResult.Data == null)
+                {
+                    return new ServiceResult<VnPayInitResponseDTO>
+                    {
+                        StatusCode = createResult.StatusCode,
+                        Success = false,
+                        Message = createResult.Message,
+                        Data = null
+                    };
+                }
+
+                var pr = createResult.Data;
+
+                var vnPayReq = new VnPayInitRequestDTO
+                {
+                    PaymentType = "remain",
+                    PaymentRemainId = pr.Id,
+                    Locale = "vn"
+                };
+
+                var vnPayResult = await _vnPayService.InitVnPayAsync(vnPayReq, clientIp);
+
+                return vnPayResult;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Lỗi InitVnPayForInvoiceAsync({InvoiceId})",
+                    invoiceId);
+
+                return new ServiceResult<VnPayInitResponseDTO>
+                {
+                    StatusCode = 500,
+                    Success = false,
+                    Message = "Có lỗi khi khởi tạo VNPay cho hóa đơn.",
+                    Data = null
+                };
+            }
+        }
+
         public async Task<ServiceResult<bool>> MarkPaymentSuccessAsync(int paymentRemainId, string? gatewayTransactionRef = null)
         {
             try
@@ -496,6 +554,8 @@ namespace PMS.Application.Services.PaymentRemainService
                     return;
 
                 // 1) Tính lại Invoice
+                var oldInvoicePaid = invoice.TotalPaid;
+
                 var remainPaid = invoice.PaymentRemains
                     .Where(p => p.PaidAt != null)
                     .Sum(p => p.Amount);
@@ -505,7 +565,6 @@ namespace PMS.Application.Services.PaymentRemainService
                 invoice.TotalPaid = totalPaid;
                 invoice.TotalRemain = Math.Max(0, invoice.TotalAmount - totalPaid);
 
-                // Map PaymentStatus theo enum mới
                 if (totalPaid <= 0)
                 {
                     invoice.PaymentStatus = PaymentStatus.NotPaymentYet;
@@ -524,12 +583,15 @@ namespace PMS.Application.Services.PaymentRemainService
                     invoice.TotalRemain = 0;
                 }
 
-                // 2) Tính lại SalesOrder
-                var orderPaid = order.PaymentRemains
-                    .Where(p => p.PaidAt != null)
-                    .Sum(p => p.Amount);
+                // Phần tiền mới tăng thêm cho invoice này
+                var deltaPaid = totalPaid - oldInvoicePaid;
+                if (deltaPaid < 0)
+                {
+                    deltaPaid = 0;
+                }
 
-                order.PaidAmount = orderPaid;
+                // 2) Tính lại SalesOrder
+                order.PaidAmount += deltaPaid;
 
                 decimal depositRequired = 0m;
                 if (order.SalesQuotation != null)
@@ -540,29 +602,29 @@ namespace PMS.Application.Services.PaymentRemainService
                         MidpointRounding.AwayFromZero);
                 }
 
-                if (orderPaid <= 0)
+                if (order.PaidAmount <= 0)
                 {
                     order.PaymentStatus = PaymentStatus.NotPaymentYet;
                     order.IsDeposited = false;
                 }
                 else if (depositRequired > 0)
                 {
-                    if (orderPaid < depositRequired)
+                    if (order.PaidAmount < depositRequired)
                     {
                         order.PaymentStatus = PaymentStatus.NotPaymentYet; // chưa đủ cọc
                         order.IsDeposited = false;
                     }
-                    else if (orderPaid == depositRequired && orderPaid < order.TotalPrice)
+                    else if (order.PaidAmount == depositRequired && order.PaidAmount < order.TotalPrice)
                     {
                         order.PaymentStatus = PaymentStatus.Deposited;
                         order.IsDeposited = true;
                     }
-                    else if (orderPaid > depositRequired && orderPaid < order.TotalPrice)
+                    else if (order.PaidAmount > depositRequired && order.PaidAmount < order.TotalPrice)
                     {
                         order.PaymentStatus = PaymentStatus.PartiallyPaid;
                         order.IsDeposited = true;
                     }
-                    else if (orderPaid >= order.TotalPrice)
+                    else if (order.PaidAmount >= order.TotalPrice)
                     {
                         order.PaymentStatus = PaymentStatus.Paid;
                         order.IsDeposited = true;
@@ -573,7 +635,7 @@ namespace PMS.Application.Services.PaymentRemainService
                 else
                 {
                     // Không có % cọc, chỉ check theo tổng
-                    if (orderPaid < order.TotalPrice)
+                    if (order.PaidAmount < order.TotalPrice)
                     {
                         order.PaymentStatus = PaymentStatus.PartiallyPaid;
                         order.IsDeposited = false;
@@ -591,7 +653,7 @@ namespace PMS.Application.Services.PaymentRemainService
                 if (order.CustomerDebts != null)
                 {
                     var debt = order.CustomerDebts;
-                    debt.DebtAmount = order.TotalPrice - orderPaid;
+                    debt.DebtAmount = order.TotalPrice - order.PaidAmount;
 
                     if (debt.DebtAmount <= 0)
                     {
@@ -620,5 +682,176 @@ namespace PMS.Application.Services.PaymentRemainService
                     invoiceId);
             }
         }
+
+        public async Task<ServiceResult<PaymentRemainItemDTO>>CreateBankTransferCheckRequestForInvoiceAsync(int invoiceId, CreateBankTransferCheckRequestDTO request)
+        {
+            try
+            {
+                var createResult = await CreatePaymentRemainForInvoiceAsync(
+                    new CreatePaymentRemainRequestDTO
+                    {
+                        InvoiceId = invoiceId,
+                        Amount = request.Amount,
+                        PaymentMethod = PaymentMethod.BankTransfer,
+                        PaymentType = PaymentType.Remain
+                    });
+
+                if (!createResult.Success || createResult.Data == null)
+                {
+                    return new ServiceResult<PaymentRemainItemDTO>
+                    {
+                        StatusCode = createResult.StatusCode,
+                        Success = false,
+                        Message = createResult.Message,
+                        Data = null
+                    };
+                }
+
+                var pr = await _unitOfWork.PaymentRemains.Query()
+                    .FirstOrDefaultAsync(p => p.Id == createResult.Data.Id);
+
+                if (pr != null)
+                {
+                    pr.CustomerNote = request.CustomerNote;
+                    pr.VNPayStatus = VNPayStatus.Pending;
+                    pr.PaymentMethod = PaymentMethod.BankTransfer;
+                    pr.Gateway = null;
+                    pr.GatewayTransactionRef = null;
+
+                    _unitOfWork.PaymentRemains.Update(pr);
+                    await _unitOfWork.CommitAsync();
+                }
+
+                return createResult;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi CreateBankTransferCheckRequestForInvoiceAsync({InvoiceId})", invoiceId);
+                return new ServiceResult<PaymentRemainItemDTO>
+                {
+                    StatusCode = 500,
+                    Success = false,
+                    Message = "Có lỗi khi tạo yêu cầu kiểm tra chuyển khoản.",
+                    Data = null
+                };
+            }
+        }
+
+        public async Task<ServiceResult<bool>> ApproveBankTransferRequestAsync(int paymentRemainId)
+        {
+            var pr = await _unitOfWork.PaymentRemains.Query()
+                .FirstOrDefaultAsync(p => p.Id == paymentRemainId);
+
+            if (pr == null)
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 404,
+                    Success = false,
+                    Message = "Không tìm thấy PaymentRemain.",
+                    Data = false
+                };
+
+            if (pr.PaymentMethod != PaymentMethod.BankTransfer)
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 400,
+                    Success = false,
+                    Message = "Yêu cầu này không phải thanh toán chuyển khoản.",
+                    Data = false
+                };
+
+            if (pr.VNPayStatus == VNPayStatus.Success)
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 400,
+                    Success = false,
+                    Message = "Yêu cầu này đã được duyệt trước đó.",
+                    Data = false
+                };
+
+            return await MarkPaymentSuccessAsync(paymentRemainId);
+        }
+
+        public async Task<ServiceResult<bool>> RejectBankTransferRequestAsync(int paymentRemainId, string reason)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(reason))
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Success = false,
+                        Message = "Vui lòng nhập lý do từ chối.",
+                        Data = false
+                    };
+                }
+
+                var pr = await _unitOfWork.PaymentRemains.Query()
+                    .Include(p => p.Invoice)
+                    .Include(p => p.SalesOrder)
+                    .FirstOrDefaultAsync(p => p.Id == paymentRemainId);
+
+                if (pr == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Success = false,
+                        Message = "Không tìm thấy PaymentRemain.",
+                        Data = false
+                    };
+                }
+
+                if (pr.PaymentMethod != PaymentMethod.BankTransfer)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Success = false,
+                        Message = "Yêu cầu này không phải thanh toán chuyển khoản.",
+                        Data = false
+                    };
+                }
+
+                if (pr.VNPayStatus == VNPayStatus.Success)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Success = false,
+                        Message = "Yêu cầu này đã được duyệt thanh toán, không thể từ chối.",
+                        Data = false
+                    };
+                }
+
+                pr.VNPayStatus = VNPayStatus.Failed; 
+                pr.RejectReason = reason.Trim();
+                pr.PaidAt = null;
+
+                _unitOfWork.PaymentRemains.Update(pr);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Success = true,
+                    Message = "Đã từ chối yêu cầu xác nhận chuyển khoản.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi RejectBankTransferRequestAsync({PaymentRemainId})", paymentRemainId);
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Success = false,
+                    Message = "Có lỗi khi từ chối yêu cầu.",
+                    Data = false
+                };
+            }
+        }
+
     }
 }

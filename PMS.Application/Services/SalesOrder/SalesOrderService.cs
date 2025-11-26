@@ -621,7 +621,7 @@ namespace PMS.Application.Services.SalesOrder
                     so.CreateBy,
                     new List<string> { "SALES_STAFF" },
                     "Có đơn hàng mới từ khách hàng",
-                    $"Đơn hàng #{so.SalesOrderId} vừa được khách hàng gửi, vui lòng kiểm tra và xử lý.",
+                    $"Đơn hàng {so.SalesOrderCode} vừa được khách hàng gửi, vui lòng kiểm tra và xử lý.",
                     NotificationType.Message
         );
 
@@ -987,7 +987,6 @@ namespace PMS.Application.Services.SalesOrder
                     var title = "Đơn hàng đã được chấp thuận";
                     var message = $"Đơn {so.SalesOrderCode} của bạn đã được chấp thuận.";
 
-                    // senderId: có thể là system hoặc user duyệt đơn (tùy hệ thống bạn)
                     var senderId = "system";
                     var receiverId = so.CreateBy;
 
@@ -1025,12 +1024,12 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<bool>> RejectSalesOrderAsync(int salesOrderId)
+        public async Task<ServiceResult<bool>> RejectSalesOrderAsync(RejectSalesOrderRequestDTO request)
         {
             try
             {
                 var so = await _unitOfWork.SalesOrder.Query()
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == request.SalesOrderId);
 
                 if (so == null)
                 {
@@ -1052,16 +1051,30 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
+                if (string.IsNullOrWhiteSpace(request.Reason))
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Vui lòng nhập lý do từ chối đơn hàng",
+                        Data = false
+                    };
+                }
+
                 so.SalesOrderStatus = SalesOrderStatus.Rejected;
+                so.RejectReason = request.Reason.Trim();
+                so.RejectedAt = DateTime.Now;
+                //so.RejectedBy = 
+
                 _unitOfWork.SalesOrder.Update(so);
                 await _unitOfWork.CommitAsync();
 
                 try
                 {
                     var title = "Đơn hàng đã bị từ chối";
-                    var message = $"Đơn {so.SalesOrderCode} của bạn đã bị từ chối vì lý do thiếu hàng.";
+                    var message = $"Đơn {so.SalesOrderCode} của bạn đã bị từ chối." +
+                        $"Lý do: {so.RejectReason}.";
 
-                    // senderId: có thể là system hoặc user duyệt đơn (tùy hệ thống bạn)
                     var senderId = "system";
                     var receiverId = so.CreateBy;
 
@@ -1075,7 +1088,6 @@ namespace PMS.Application.Services.SalesOrder
                 }
                 catch (Exception exNotify)
                 {
-                    // Không rollback trạng thái; chỉ log cảnh báo khi gửi noti lỗi
                     _logger.LogWarning(exNotify,
                         "Gửi notification thất bại: orderId={OrderId}, receiver={ReceiverId}",
                         so.SalesOrderId, so.CreateBy);
