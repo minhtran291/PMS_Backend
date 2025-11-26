@@ -934,6 +934,9 @@ namespace PMS.Data.DatabaseConfig
                     .HasColumnType("TINYINT")
                     .IsRequired();
 
+                entity.Property(so => so.RejectReason)
+                    .HasMaxLength(1000);
+
                 //1 - n (1 SalesOrder to n SalesOrderDetails)
                 entity.HasMany(so => so.SalesOrderDetails)
                     .WithOne(d => d.SalesOrder)
@@ -1327,6 +1330,10 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.Property(p => p.GatewayTransactionRef)
                     .HasMaxLength(100);
+
+                entity.Property(p => p.CustomerNote).HasMaxLength(1000);
+
+                entity.Property(p => p.RejectReason).HasMaxLength(1000);
 
                 // n - 1: n PaymentRemain - 1 SalesOrder
                 entity.HasOne(p => p.SalesOrder)

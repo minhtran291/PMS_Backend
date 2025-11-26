@@ -689,6 +689,10 @@ namespace PMS.Data.Migrations
                     b.Property<DateTime>("CreateRequestAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CustomerNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<string>("Gateway")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -713,6 +717,10 @@ namespace PMS.Data.Migrations
 
                     b.Property<byte>("PaymentType")
                         .HasColumnType("TINYINT");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("SalesOrderId")
                         .HasColumnType("int");
@@ -1122,6 +1130,16 @@ namespace PMS.Data.Migrations
 
                     b.Property<byte>("PaymentStatus")
                         .HasColumnType("TINYINT");
+
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RejectedBy")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SalesOrderCode")
                         .IsRequired()

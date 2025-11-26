@@ -83,9 +83,9 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         [HttpPost("reject/{salesOrderId}")]
         [Authorize(Roles = UserRoles.SALES_STAFF)]
-        public async Task<IActionResult> RejectOrder(int salesOrderId)
+        public async Task<IActionResult> RejectOrder(RejectSalesOrderRequestDTO request)
         {
-            var result = await _service.RejectSalesOrderAsync(salesOrderId);
+            var result = await _service.RejectSalesOrderAsync(request);
 
             return StatusCode(result.StatusCode, new
             {
