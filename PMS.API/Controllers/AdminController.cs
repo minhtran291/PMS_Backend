@@ -128,14 +128,14 @@ namespace PMS.API.Controllers
         [ProducesResponseType(401)]
         [ProducesResponseType(403)]
         [ProducesResponseType(500)]
-        [Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN + UserRoles.MANAGER)]
         public async Task<IActionResult> UpdateCustomerStatus(string userId)
         {
-            var Admin = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(Admin))
+            var verifier = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(verifier))
                 return Unauthorized(new { message = "Không thể xác thực người dùng." });
 
-            var result = await _userService.UpdateCustomerStatus(userId, Admin);
+            var result = await _userService.UpdateCustomerStatus(userId, verifier);
 
             if (result.Data)
                 return Ok(result);

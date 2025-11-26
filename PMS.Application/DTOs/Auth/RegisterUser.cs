@@ -31,5 +31,9 @@ namespace PMS.Application.DTOs.Auth
 
         [Required(ErrorMessage = "Địa chỉ không được để trống")]
         public required string Address { get; set; }
+
+        [Required(ErrorMessage = "Họ tên không được để trống")]
+        [StringLength(20, MinimumLength = 1, ErrorMessage = "Họ tên tối đa 20 ký tự.")]
+        public required string FullName { get; set; }
     }
 }

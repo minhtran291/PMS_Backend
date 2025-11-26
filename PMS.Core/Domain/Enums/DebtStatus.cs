@@ -11,6 +11,7 @@ namespace PMS.Core.Domain.Enums
         BadDebt = 2, // nợ xấu
         Apart=4, // Một phần
         NoDebt=5, // hết nợ
-        overTime=6 // quá hạn thanh toán
+        overTime=6, // quá hạn thanh toán
+        Debt = 7,
     }
 }
