@@ -22,7 +22,8 @@ namespace PMS.API
             var builder = WebApplication.CreateBuilder(args);
 
             ExcelPackage.License.SetNonCommercialPersonal("hoanganh");
-
+            // Add services to the container.
+            // DbContext
             // ======== DATABASE ========
             builder.Services.AddDatabaseContext(builder.Configuration);
 
@@ -38,7 +39,7 @@ namespace PMS.API
                 options.AddPolicy(Permissions.CAN_APPROVE_CUSTOMER, policy =>
                     policy.RequireClaim("Permission", Permissions.CAN_APPROVE_CUSTOMER));
             });
-
+            //signalR
             // ======== SIGNALR ========
             builder.Services.AddSignalR();
 
@@ -103,6 +104,7 @@ namespace PMS.API
             builder.Services.AddBackgroundServices();
 
             // ======== CORS ========
+            // cho phep khi dung ajax goi api tu fe den be
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend", policy =>
