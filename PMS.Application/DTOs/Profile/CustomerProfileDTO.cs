@@ -12,5 +12,7 @@ namespace PMS.Application.DTOs.Profile
         public string? ImageCnkd { get; set; }
         public string? ImageByt { get; set; }
         public long? Mshkd { get; set; }
+
+
     }
 }

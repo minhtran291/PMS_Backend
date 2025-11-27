@@ -11,6 +11,7 @@ using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
 using PMS.Data.UnitOfWork;
 
@@ -388,7 +389,7 @@ namespace PMS.Application.Services.User
 
         public async Task<ServiceResult<bool>> UpdateCustomerProfile(string userId, CustomerProfileDTO request)
         {
-               await _unitOfWork.BeginTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync();
 
             try
             {
@@ -405,7 +406,7 @@ namespace PMS.Application.Services.User
                 if (user == null)
                     return ServiceResult<bool>.Fail("Không tìm thấy tài khoản người dùng.", 404);
 
-                
+
                 string cnkdUrl = request.ImageCnkd != null
              ? await SaveAsync(request.ImageCnkd, "customer/cnkd/")
              : profile.ImageCnkd;
@@ -413,7 +414,7 @@ namespace PMS.Application.Services.User
             ? await SaveAsync(request.ImageByt, "customer/byt/")
             : profile.ImageByt;
 
-              
+
                 profile.Mst = request.Mst;
                 profile.Mshkd = request.Mshkd;
                 profile.ImageCnkd = cnkdUrl;
@@ -422,7 +423,7 @@ namespace PMS.Application.Services.User
                 _unitOfWork.CustomerProfile.Update(profile);
                 await _unitOfWork.CommitAsync();
 
-                
+
                 await _notificationService.SendNotificationToRolesAsync(
                     senderId: userId,
                     targetRoles: new List<string> { "ADMIN" },
@@ -459,10 +460,10 @@ namespace PMS.Application.Services.User
             if (file == null || file.Length == 0)
                 throw new Exception("File upload không hợp lệ");
 
-           
+
             var rootPath = _webEnv.WebRootPath;
 
-            
+
             var folderPath = Path.Combine(rootPath, folder);
 
             if (!Directory.Exists(folderPath))
@@ -644,7 +645,7 @@ namespace PMS.Application.Services.User
                     Data = result,
                 };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Loi");
                 return new ServiceResult<object>
@@ -659,7 +660,7 @@ namespace PMS.Application.Services.User
         {
             var query = _unitOfWork.Users.Query();
 
-            if (roles.Contains(UserRoles.SALES_STAFF) || roles.Contains(UserRoles.ACCOUNTANT) 
+            if (roles.Contains(UserRoles.SALES_STAFF) || roles.Contains(UserRoles.ACCOUNTANT)
                 || roles.Contains(UserRoles.PURCHASES_STAFF) || roles.Contains(UserRoles.WAREHOUSE_STAFF))
             {
                 var staff = await query.Include(u => u.StaffProfile)
@@ -902,6 +903,45 @@ namespace PMS.Application.Services.User
                 };
             }
         }
+
+        public async Task<bool> EditProfileAsync(string userId, DTOs.Profile.CustomerEditProfileDTO dto, IFormFile? avatarFile, IFormFile? cnkdFile, IFormFile? bytFile)
+        {
+            {
+                var user = await _unitOfWork.Users.Query()
+                    .Include(u => u.CustomerProfile)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null) return false;
+
+
+                if (!string.IsNullOrEmpty(dto.FullName))
+                    user.FullName = dto.FullName;
+
+                if (!string.IsNullOrEmpty(dto.Address))
+                    user.Address = dto.Address;
+
+
+                if (user.CustomerProfile == null)
+                    user.CustomerProfile = new CustomerProfile { UserId = user.Id };
+
+                user.CustomerProfile.Mst = dto.MST;
+                user.CustomerProfile.Mshkd = dto.Mshkd;
+
+
+                if (avatarFile != null)
+                    user.Avatar = await SaveAsync(avatarFile, "customer/avatars/");
+
+                if (cnkdFile != null)
+                    user.CustomerProfile.ImageCnkd = await SaveAsync(cnkdFile, "customer/cnkd/");
+
+                if (bytFile != null)
+                    user.CustomerProfile.ImageByt = await SaveAsync(bytFile, "customer/byt/");
+                 _unitOfWork.Users.Update(user);
+                await _unitOfWork.CommitAsync();
+                return true;
+            }
+        }
     }
 }
+
 
