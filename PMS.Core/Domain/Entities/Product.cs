@@ -18,6 +18,11 @@ namespace PMS.Core.Domain.Entities
         public string? ProductDescription { get; set; }
 
         public string? Image { get; set; }
+        public string? ImageA { get; set; }
+        public string? ImageB { get; set; }
+        public string? ImageC { get; set; }
+        public string? ImageD { get; set; }
+        public string? ImageE { get; set; }
 
         public required string Unit { get; set; }
 

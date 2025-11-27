@@ -27,6 +27,11 @@ namespace PMS.Application.DTOs.Product
         public required int CategoryID { get; set; }
 
         public IFormFile? Image { get; set; }
+        public IFormFile? ImageA { get; set; }
+        public IFormFile? ImageB { get; set; }
+        public IFormFile? ImageC { get; set; }
+        public IFormFile? ImageD { get; set; }
+        public IFormFile? ImageE { get; set; }
 
         [Required(ErrorMessage = "Số lượng tối thiểu là bắt buộc")]
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng tối thiểu phải không âm")]

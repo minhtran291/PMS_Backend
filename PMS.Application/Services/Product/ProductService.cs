@@ -7,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using PMS.Application.DTOs.Product;
 using PMS.Application.Services.Base;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Entities;
 using PMS.Data.UnitOfWork;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -68,15 +69,6 @@ namespace PMS.Application.Services.Product
                     };
                 }
 
-                //if (product.TotalCurrentQuantity < 0)
-                //{
-                //    return new ServiceResult<bool>
-                //    {
-                //        StatusCode = 200,
-                //        Message = "Đảm bảo là số nguyên dương",
-                //        Data = false,
-                //    };
-                //}
 
                 var category = await _unitOfWork.Category.Query().FirstOrDefaultAsync(c => c.CategoryID == product.CategoryID);
                 if (category == null)
@@ -103,6 +95,21 @@ namespace PMS.Application.Services.Product
                 string imageUrl = product.Image != null
             ? await SaveAsync(product.Image, "images/products/")
             : null;
+                string imageUrlA = product.ImageA != null
+            ? await SaveAsync(product.ImageA, "images/products/")
+            : null;
+                string imageUrlB = product.ImageB != null
+            ? await SaveAsync(product.ImageB, "images/products/")
+            : null;
+                string imageUrlC = product.ImageC != null
+            ? await SaveAsync(product.ImageC, "images/products/")
+            : null;
+                string imageUrlD = product.ImageD != null
+            ? await SaveAsync(product.ImageD, "images/products/")
+            : null;
+                string imageUrlE = product.ImageE != null
+            ? await SaveAsync(product.ImageE, "images/products/")
+            : null;
                 var newProduct = new PMS.Core.Domain.Entities.Product
                 {
                     ProductName = product.ProductName,
@@ -113,7 +120,12 @@ namespace PMS.Application.Services.Product
                     MaxQuantity = product.MaxQuantity,
                     TotalCurrentQuantity =0,
                     Status = product.Status,
-                    Image = imageUrl
+                    Image = imageUrl,
+                    ImageA = imageUrlA,
+                    ImageB = imageUrlB,
+                    ImageC = imageUrlC,
+                    ImageD = imageUrlD,
+                    ImageE = imageUrlE
                 };
                 await _unitOfWork.Product.AddAsync(newProduct);
                 await _unitOfWork.CommitAsync();
@@ -150,7 +162,12 @@ namespace PMS.Application.Services.Product
                     TotalCurrentQuantity = p.TotalCurrentQuantity,
                     Status = p.Status,
                     Unit = p.Unit,
-                    Image = p.Image
+                    Image = p.Image,
+                    ImageA = p.ImageA,
+                    ImageB = p.ImageB,
+                    ImageC = p.ImageC,
+                    ImageD = p.ImageD,
+                    ImageE = p.ImageE
 
                 }).ToList();
 
@@ -193,7 +210,12 @@ namespace PMS.Application.Services.Product
                         TotalCurrentQuantity = p.TotalCurrentQuantity,
                         Status = p.Status,
                         Unit = p.Unit,
-                        Image = p.Image
+                        Image = p.Image,
+                        ImageA = p.ImageA,
+                        ImageB = p.ImageB,
+                        ImageC = p.ImageC,
+                        ImageD= p.ImageD,
+                        ImageE = p.ImageE,
                     });
 
                 var productList = await products.ToListAsync();
@@ -252,7 +274,12 @@ namespace PMS.Application.Services.Product
                     MaxQuantity = product.MaxQuantity,
                     TotalCurrentQuantity = product.TotalCurrentQuantity,
                     Status = product.Status,
-                    Image = product.Image
+                    Image = product.Image,
+                    ImageA = product.ImageA,
+                    ImageB = product.ImageB,
+                    ImageC = product.ImageC,
+                    ImageD = product.ImageD,
+                    ImageE = product.ImageE
                 };
 
                 return new ServiceResult<ProductDTO?>
@@ -371,25 +398,43 @@ namespace PMS.Application.Services.Product
                     };
                 }
 
-                if (productUpdate.TotalCurrentQuantity < 0)
-                {
-                    return new ServiceResult<bool> { StatusCode = 200, Message = "Đảm bảo là số nguyên dương", Data = false };
-
-                }
 
                 var category = await _unitOfWork.Category.Query().FirstOrDefaultAsync(c => c.CategoryID == productUpdate.CategoryID);
                 if (category == null)
                 {
                     return new ServiceResult<bool> { StatusCode = 200, Message = "Danh mục không tồn tại", Data = false };
                 }
+                string imageUrl = productUpdate.Image != null
+            ? await SaveAsync(productUpdate.Image, "images/products/")
+            : null;
+                string imageUrlA = productUpdate.ImageA != null
+            ? await SaveAsync(productUpdate.ImageA, "images/products/")
+            : null;
+                string imageUrlB = productUpdate.ImageB != null
+            ? await SaveAsync(productUpdate.ImageB, "images/products/")
+            : null;
+                string imageUrlC = productUpdate.ImageC != null
+            ? await SaveAsync(productUpdate.ImageC, "images/products/")
+            : null;
+                string imageUrlD = productUpdate.ImageD != null
+            ? await SaveAsync(productUpdate.ImageD, "images/products/")
+            : null;
+                string imageUrlE = productUpdate.ImageE != null
+            ? await SaveAsync(productUpdate.ImageE, "images/products/")
+            : null;
 
                 exProduct.ProductName = productUpdate.ProductName ?? exProduct.ProductName;
                 exProduct.Unit = productUpdate.Unit ?? exProduct.Unit;
                 exProduct.CategoryID = productUpdate.CategoryID;
-                exProduct.Image = productUpdate.Image ?? exProduct.Image;
+                exProduct.Image = imageUrl;
+                exProduct.ImageA = imageUrlA;
+                exProduct.ImageB = imageUrlB;
+                exProduct.ImageC = imageUrlC;
+                exProduct.ImageD = imageUrlD;
+                exProduct.ImageE = imageUrlE;
                 exProduct.MinQuantity = productUpdate.MinQuantity;
                 exProduct.MaxQuantity = productUpdate.MaxQuantity;
-                exProduct.TotalCurrentQuantity = productUpdate.TotalCurrentQuantity;
+                //exProduct.TotalCurrentQuantity = productUpdate.TotalCurrentQuantity;
                 exProduct.Status = productUpdate.Status;
                 exProduct.ProductDescription = productUpdate.ProductDescription;
 
@@ -431,6 +476,11 @@ namespace PMS.Application.Services.Product
                     MinQuantity = p.MinQuantity,
                     TotalCurrentQuantity = p.TotalCurrentQuantity,
                     Image = p.Image,
+                    ImageA = p.ImageA,
+                    ImageB = p.ImageB,
+                    ImageC = p.ImageC,
+                    ImageD = p.ImageD,
+                    ImageE = p.ImageE,
                     ProductDescription = p.ProductDescription,
                     Status = p.Status
                     
@@ -491,5 +541,8 @@ namespace PMS.Application.Services.Product
                 return ServiceResult<List<LotProductDTO2>>.Fail($"Lỗi khi lấy lô sản phẩm: {ex.Message}");
             }
         }
+
+
+       
     }
 }

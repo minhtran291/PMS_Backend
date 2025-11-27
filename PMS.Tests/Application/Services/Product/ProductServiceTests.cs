@@ -52,6 +52,11 @@ namespace PMS.Tests.Application.Services.Product
                 CategoryID = 1,
                 Unit = "Hộp",
                 Image = null,
+                ImageA = null,
+                ImageB = null,
+                ImageC = null,
+                ImageD = null,
+                ImageE = null,
                 ProductDescription = "abc",
                 Status = true,
             };

@@ -780,6 +780,21 @@ namespace PMS.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ImageA")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ImageB")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ImageC")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ImageD")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ImageE")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("MaxQuantity")
                         .HasColumnType("int");
 

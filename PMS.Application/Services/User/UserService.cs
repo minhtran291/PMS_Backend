@@ -926,6 +926,8 @@ namespace PMS.Application.Services.User
 
                 user.CustomerProfile.Mst = dto.MST;
                 user.CustomerProfile.Mshkd = dto.Mshkd;
+                user.Gender = dto.Gender;
+                user.PhoneNumber = dto.PhoneNumber;
 
 
                 if (avatarFile != null)
