@@ -122,7 +122,7 @@ namespace PMS.API.Controllers
         /// <returns>void</returns>
         [HttpPut("update/{productId}")]
         [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
-        public async Task<IActionResult> UpdateProduct(int productId, [FromBody] ProductUpdateDTO productUpdate)
+        public async Task<IActionResult> UpdateProduct(int productId, [FromForm] ProductUpdateDTO productUpdate)
         {
             var result = await _productService.UpdateProductAsync(productId, productUpdate);
             return StatusCode(result.StatusCode, new

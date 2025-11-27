@@ -12,5 +12,8 @@ namespace PMS.Application.DTOs.Profile
         public long? Mshkd { get; set; }
         public string? FullName { get; set; }
         public string Address { get; set; } = null!;
+        public bool? Gender { get; set; }
+
+        public string? PhoneNumber {  get; set; }
     }
 }
