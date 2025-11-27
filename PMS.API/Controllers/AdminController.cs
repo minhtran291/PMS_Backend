@@ -141,7 +141,7 @@ namespace PMS.API.Controllers
         [ProducesResponseType(401)]
         [ProducesResponseType(403)]
         [ProducesResponseType(500)]
-        [PermissionAuthorize(Permissions.CAN_APPROVE_CUSTOMER)]
+        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.MANAGER)]
 
         public async Task<IActionResult> UpdateCustomerStatus(string userId)
         {

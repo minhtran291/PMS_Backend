@@ -1,5 +1,7 @@
-﻿using PMS.Application.DTOs.Auth;
+﻿using Microsoft.AspNetCore.Http;
+using PMS.Application.DTOs.Auth;
 using PMS.Application.DTOs.Customer;
+using PMS.Application.DTOs.Profile;
 using PMS.Core.Domain.Constant;
 
 namespace PMS.Application.Services.User
@@ -14,7 +16,7 @@ namespace PMS.Application.Services.User
         Task<ServiceResult<bool>> ConfirmEmailAsync(string userId, string token);
         Task<ServiceResult<bool>> SendEmailResetPasswordAsync(string email);
         Task<ServiceResult<bool>> ResetPasswordAsync(ResetPasswordRequest request);
-        Task<ServiceResult<bool>> UpdateCustomerProfile(string userId, CustomerProfileDTO request);
+        Task<ServiceResult<bool>> UpdateCustomerProfile(string userId, PMS.Application.DTOs.Customer.CustomerProfileDTO request);
         Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus();
         Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string verifier);
         Task<ServiceResult<CustomerViewDTO>> GetCustomerByIdAsync(string userId);
@@ -22,5 +24,12 @@ namespace PMS.Application.Services.User
         Task<ServiceResult<object>> GetProfile(string userId, List<string> roles);
         Task<ServiceResult<CustomerStatusDTO>> GetCustomerStatusAsync(string userId);
         Task<ServiceResult<bool>> SubmitCustomerAdditionalInfoAsync(string userId, CustomerAdditionalInfoDTO additionalInfo);
+
+        Task<bool> EditProfileAsync(
+        string userId,
+        CustomerEditProfileDTO dto,
+        IFormFile? avatarFile,
+        IFormFile? cnkdFile,
+        IFormFile? bytFile);
     }
 }

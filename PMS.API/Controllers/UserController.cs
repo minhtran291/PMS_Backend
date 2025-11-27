@@ -337,6 +337,35 @@ namespace PMS.API.Controllers
             var result = await _userService.SubmitCustomerAdditionalInfoAsync(userId, additionalInfo);
             return HandleServiceResult(result);
         }
+
+
+        /// <summary>
+        /// Edit customer profile
+        /// http://localhost:5137/api/User/edit-profile
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="dto"></param>
+        /// <param name="avatarFile"></param>
+        /// <param name="cnkdFile"></param>
+        /// <param name="bytFile"></param>
+        /// <returns></returns>
+        [HttpPut("edit-profile")]
+        [Authorize(Roles =UserRoles.CUSTOMER)]
+        public async Task<IActionResult> EditProfile(
+           
+            [FromForm] CustomerEditProfileDTO dto,
+            IFormFile? avatarFile,
+            IFormFile? cnkdFile,
+            IFormFile? bytFile)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { Message = "Không thể xác thực người dùng." });
+            var result = await _userService.EditProfileAsync(userId, dto, avatarFile, cnkdFile, bytFile);
+            if (!result) return NotFound(new { message = "User not found" });
+
+            return Ok(new { message = "Profile updated successfully" });
+        }
     }
 
 }
