@@ -25,7 +25,10 @@ namespace PMS.Core.Domain.Entities
 
         // Thông tin từ cổng thanh toán (nếu có)
         public string? GatewayTransactionRef { get; set; }
-        public string? Gateway { get; set; }  
+        public string? Gateway { get; set; }
+
+        public string? CustomerNote { get; set; }   // Nội dung khách nhập khi yêu cầu check
+        public string? RejectReason { get; set; }   // Lý do kế toán từ chối
 
         public virtual SalesOrder SalesOrder { get; set; } = null!;
         public virtual Invoice Invoice { get; set; } = null!;

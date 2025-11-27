@@ -877,6 +877,7 @@ namespace PMS.Application.Services.Invoice
         }
 
 
+
         #region Helpers
 
         private static void UpdateInvoicePaymentStatus(Core.Domain.Entities.Invoice invoice)

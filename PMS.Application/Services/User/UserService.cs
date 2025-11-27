@@ -112,6 +112,7 @@ namespace PMS.Application.Services.User
                 UserStatus = UserStatus.Inactive,
                 Address = customer.Address,
                 Avatar = "/images/AvatarDefault.png",
+                FullName = customer.FullName,
             };
 
             _logger.LogWarning($"=== TẠO USER ===");
@@ -881,15 +882,6 @@ namespace PMS.Application.Services.User
                 _unitOfWork.CustomerProfile.Update(customerProfile);
                 await _unitOfWork.Users.UserManager.UpdateAsync(user);
                 await _unitOfWork.CommitAsync();
-
-                // Gửi thông báo cho manager
-                await _notificationService.SendNotificationToRolesAsync(
-                    userId, // senderId
-                    new List<string> { UserRoles.MANAGER }, // targetRoles
-                    "Yêu cầu duyệt thông tin customer",
-                    $"Customer {user.UserName} đã submit thông tin bổ sung và cần được duyệt",
-                    NotificationType.System
-                );
 
                 _logger.LogInformation($"Submit thông tin bổ sung thành công cho customer: {userId}");
                 return new ServiceResult<bool>

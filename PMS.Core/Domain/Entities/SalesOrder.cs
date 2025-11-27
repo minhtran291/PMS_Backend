@@ -23,6 +23,11 @@ namespace PMS.Core.Domain.Entities
         public required DateTime SalesOrderExpiredDate { get; set; }
         public decimal PaidAmount { get; set; }
         public DateTime? PaidFullAt { get; set; }
+        public string? RejectReason { get; set; } 
+        public DateTime? RejectedAt { get; set; }  
+        public string? RejectedBy { get; set; } 
+
+
         public virtual ICollection<SalesOrderDetails> SalesOrderDetails { get; set; } = [];
         public virtual CustomerDebt CustomerDebts { get; set; }
         public virtual SalesQuotation SalesQuotation { get; set; } = null!;
