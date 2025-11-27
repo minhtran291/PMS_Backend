@@ -311,17 +311,51 @@ namespace PMS.Application.Services.VNpay
                 order.PaidAmount += paidAmount;
 
                 PaymentStatus newStatus;
+
                 if (order.PaidAmount <= 0)
+                {
                     newStatus = PaymentStatus.NotPaymentYet;
-                else if (order.PaidAmount < depositRequired)
-                    newStatus = PaymentStatus.PartiallyPaid;
-                else if (order.PaidAmount < order.TotalPrice)
-                    newStatus = PaymentStatus.Deposited;
+                    order.IsDeposited = false;
+                }
+                else if (depositRequired > 0)
+                {
+                    if (order.PaidAmount < depositRequired)
+                    {
+                        newStatus = PaymentStatus.NotPaymentYet;   // chưa đủ cọc
+                        order.IsDeposited = false;
+                    }
+                    else if (order.PaidAmount == depositRequired && order.PaidAmount < order.TotalPrice)
+                    {
+                        newStatus = PaymentStatus.Deposited;       // vừa đủ cọc
+                        order.IsDeposited = true;
+                    }
+                    else if (order.PaidAmount > depositRequired && order.PaidAmount < order.TotalPrice)
+                    {
+                        newStatus = PaymentStatus.PartiallyPaid;   // hơn cọc nhưng chưa đủ tổng
+                        order.IsDeposited = true;
+                    }
+                    else // order.PaidAmount >= order.TotalPrice
+                    {
+                        newStatus = PaymentStatus.Paid;
+                        order.IsDeposited = true;
+                    }
+                }
                 else
-                    newStatus = PaymentStatus.Paid;
+                {
+                    // Không có % cọc
+                    if (order.PaidAmount < order.TotalPrice)
+                    {
+                        newStatus = PaymentStatus.PartiallyPaid;
+                        order.IsDeposited = false;
+                    }
+                    else
+                    {
+                        newStatus = PaymentStatus.Paid;
+                        order.IsDeposited = true;
+                    }
+                }
 
                 order.PaymentStatus = newStatus;
-                order.IsDeposited = (newStatus == PaymentStatus.Deposited || newStatus == PaymentStatus.Paid);
 
                 if (newStatus == PaymentStatus.Paid && order.PaidFullAt == default)
                     order.PaidFullAt = DateTime.Now;
@@ -335,14 +369,17 @@ namespace PMS.Application.Services.VNpay
                         CustomerId = order.CreateBy,
                         SalesOrderId = order.SalesOrderId,
                         DebtAmount = remainDebt,
-                        // TODO: cập nhật status theo enum CustomerDebtStatus thật của bạn
                     };
+                    UpdateCustomerDebtStatus(order, order.CustomerDebts);
                     await _unitOfWork.CustomerDebt.AddAsync(order.CustomerDebts);
                 }
                 else
                 {
                     order.CustomerDebts.DebtAmount = remainDebt;
+                    UpdateCustomerDebtStatus(order, order.CustomerDebts);
                 }
+
+                await UpdateSalesOrderDeliveryStatusAsync(order);
 
                 _unitOfWork.SalesOrder.Update(order);
                 _unitOfWork.CustomerDebt.Update(order.CustomerDebts);
@@ -502,19 +539,54 @@ namespace PMS.Application.Services.VNpay
             }
 
             if (order.PaidAmount <= 0)
+            {
                 order.PaymentStatus = PaymentStatus.NotPaymentYet;
-            else if (order.PaidAmount < depositRequired)
-                order.PaymentStatus = PaymentStatus.PartiallyPaid;
-            else if (order.PaidAmount < order.TotalPrice)
-                order.PaymentStatus = PaymentStatus.Deposited;
+                order.IsDeposited = false;
+            }
+            else if (depositRequired > 0)
+            {
+                if (order.PaidAmount < depositRequired)
+                {
+                    order.PaymentStatus = PaymentStatus.NotPaymentYet;   // chưa đủ cọc
+                    order.IsDeposited = false;
+                }
+                else if (order.PaidAmount == depositRequired && order.PaidAmount < order.TotalPrice)
+                {
+                    order.PaymentStatus = PaymentStatus.Deposited;       // vừa đủ cọc
+                    order.IsDeposited = true;
+                }
+                else if (order.PaidAmount > depositRequired && order.PaidAmount < order.TotalPrice)
+                {
+                    order.PaymentStatus = PaymentStatus.PartiallyPaid;   // hơn cọc nhưng chưa đủ tổng
+                    order.IsDeposited = true;
+                }
+                else // order.PaidAmount >= order.TotalPrice
+                {
+                    order.PaymentStatus = PaymentStatus.Paid;
+                    order.IsDeposited = true;
+                    if (order.PaidFullAt == default)
+                        order.PaidFullAt = DateTime.Now;
+                }
+            }
             else
-                order.PaymentStatus = PaymentStatus.Paid;
+            {
+                if (order.PaidAmount < order.TotalPrice)
+                {
+                    order.PaymentStatus = PaymentStatus.PartiallyPaid;
+                    order.IsDeposited = false;
+                }
+                else
+                {
+                    order.PaymentStatus = PaymentStatus.Paid;
+                    order.IsDeposited = true;
+                    if (order.PaidFullAt == default)
+                        order.PaidFullAt = DateTime.Now;
+                }
+            }
+
 
             if (order.PaymentStatus == PaymentStatus.Paid && order.PaidFullAt == default)
                 order.PaidFullAt = DateTime.Now;
-
-            order.IsDeposited = order.PaymentStatus == PaymentStatus.Deposited
-                             || order.PaymentStatus == PaymentStatus.Paid;
 
             // Cập nhật CustomerDebt
             var remainDebt = order.TotalPrice - order.PaidAmount;
@@ -528,13 +600,17 @@ namespace PMS.Application.Services.VNpay
                     SalesOrderId = order.SalesOrderId,
                     DebtAmount = remainDebt,
                 };
+                UpdateCustomerDebtStatus(order, debt);
                 await _unitOfWork.CustomerDebt.AddAsync(debt);
                 order.CustomerDebts = debt;
             }
             else
             {
                 debt.DebtAmount = remainDebt;
+                UpdateCustomerDebtStatus(order, debt);
             }
+
+            await UpdateSalesOrderDeliveryStatusAsync(order);
 
             payment.VNPayStatus = VNPayStatus.Success;
             payment.PaymentMethod = PaymentMethod.VnPay;
@@ -554,5 +630,82 @@ namespace PMS.Application.Services.VNpay
                 200);
         }
 
+
+        #region Helper
+        private async Task UpdateSalesOrderDeliveryStatusAsync(PMS.Core.Domain.Entities.SalesOrder order)
+        {
+            // 1) Tổng số lượng đặt theo SalesOrderDetails
+            var totalOrdered = await _unitOfWork.SalesOrderDetails.Query()
+                .Where(d => d.SalesOrderId == order.SalesOrderId)
+                .SumAsync(d => (int?)d.Quantity) ?? 0;
+
+            if (totalOrdered <= 0)
+                return;
+
+            // 2) Tổng số lượng đã xuất theo GoodsIssueNoteDetails của các GoodsIssueNote thuộc SalesOrder
+            var totalDelivered = await _unitOfWork.GoodsIssueNoteDetails.Query()
+                .Include(d => d.GoodsIssueNote)
+                .Where(d =>
+                    d.GoodsIssueNote.StockExportOrder.SalesOrderId == order.SalesOrderId &&
+                    d.GoodsIssueNote.Status == GoodsIssueNoteStatus.Sent) // enum của bạn
+                .SumAsync(d => (int?)d.Quantity) ?? 0;
+
+            if (totalDelivered <= 0)
+                return;
+
+            // 3) Xác định trạng thái giao hàng
+            if (totalDelivered < totalOrdered)
+                order.SalesOrderStatus = SalesOrderStatus.PartiallyDelivered;
+            else
+                order.SalesOrderStatus = SalesOrderStatus.Delivered;
+
+            // 4) Nếu đã giao đủ + thanh toán đủ thì Complete
+            if (order.PaymentStatus == PaymentStatus.Paid &&
+                order.SalesOrderStatus == SalesOrderStatus.Delivered)
+            {
+                order.SalesOrderStatus = SalesOrderStatus.Complete;
+            }
+        }
+
+        private void UpdateCustomerDebtStatus(PMS.Core.Domain.Entities.SalesOrder order,PMS.Core.Domain.Entities.CustomerDebt debt)
+        {
+            if (debt == null) return;
+
+            // 1. Hết nợ
+            if (debt.DebtAmount <= 0)
+            {
+                debt.status = CustomerDebtStatus.NoDebt;
+                return;
+            }
+
+            // 2. Đơn đã bị reject / not complete -> khóa nợ
+            if (order.SalesOrderStatus == SalesOrderStatus.Rejected
+                || order.SalesOrderStatus == SalesOrderStatus.NotComplete)
+            {
+                debt.status = CustomerDebtStatus.Disable;
+                return;
+            }
+
+            // 3. Quá hạn thanh toán
+            if (order.SalesOrderExpiredDate != default
+                && DateTime.Now > order.SalesOrderExpiredDate)
+            {
+                debt.status = CustomerDebtStatus.OverTime;
+                return;
+            }
+
+            // 4. Còn nợ nhưng đã trả một phần
+            if (order.PaidAmount > 0 && order.PaidAmount < order.TotalPrice)
+            {
+                debt.status = CustomerDebtStatus.Apart;
+                return;
+            }
+
+            // 5. Còn nợ, chưa trả đồng nào
+            debt.status = CustomerDebtStatus.UnPaid;
+        }
+
+
+        #endregion
     }
 }

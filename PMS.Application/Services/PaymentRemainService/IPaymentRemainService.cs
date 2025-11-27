@@ -1,4 +1,5 @@
 ﻿using PMS.Application.DTOs.PaymentRemain;
+using PMS.Application.DTOs.VnPay;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Enums;
 using System;
@@ -30,5 +31,17 @@ namespace PMS.Application.Services.PaymentRemainService
         // Đánh dấu 1 payment đã thanh toán thành công (dùng cho VNPay callback / kế toán xác nhận)
         Task<ServiceResult<bool>>
             MarkPaymentSuccessAsync(int paymentRemainId, string? gatewayTransactionRef = null);
+
+        public Task<ServiceResult<VnPayInitResponseDTO>> 
+            InitVnPayForInvoiceAsync(int invoiceId, decimal? amount, string clientIp, string? locale = "vn");
+
+        //Tạo request check chuyển khoản ngân hàng
+        public Task<ServiceResult<PaymentRemainItemDTO>> CreateBankTransferCheckRequestForInvoiceAsync(int invoiceId, CreateBankTransferCheckRequestDTO request);
+
+        //kế toán chấp nhận là đã nhận được
+        public Task<ServiceResult<bool>> ApproveBankTransferRequestAsync(int paymentRemainId);
+
+        //Kế toán từ chối yêu cầu check kèm lý do
+        public Task<ServiceResult<bool>> RejectBankTransferRequestAsync(int paymentRemainId, string reason);
     }
 }

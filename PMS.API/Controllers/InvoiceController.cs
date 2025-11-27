@@ -51,7 +51,7 @@ namespace PMS.API.Controllers
         /// Tạo PDF hóa đơn để in / tải về.
         /// </summary>
         [HttpGet("{id}/pdf")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT + UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> GetInvoicePdf(int id)
         {
             var result = await _invoiceService.GenerateInvoicePdfAsync(id);
@@ -115,7 +115,7 @@ namespace PMS.API.Controllers
         /// Xem chi tiết 1 Invoice
         /// </summary>
         [HttpGet("{id}/invoice/details")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT + UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER)]
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _invoiceService.GetInvoiceByIdAsync(id);
@@ -152,6 +152,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách tất cả SalesOrderCode (distinct, sort tăng dần).
         /// </summary>
         [HttpGet("sales-order-codes")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> GetAllSalesOrderCodes()
         {
             var result = await _invoiceService.GetAllSalesOrderCodesAsync();
@@ -170,6 +171,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="salesOrderCode">Mã SalesOrder</param>
         [HttpGet("{salesOrderCode}/goods-issue-note-codes")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> GetGoodsIssueNoteCodesBySalesOrderCode(string salesOrderCode)
         {
             var result = await _invoiceService

@@ -34,7 +34,7 @@ namespace PMS.API.Controllers
             _unitOfWork = unitOfWork;
             _notificationService = notificationService;
         }
-        [Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN )]
         [HttpPost("create-staff-account")]
         public async Task<IActionResult> CreateStaffAccountAsync([FromBody] CreateAccountRequest request)
         {
@@ -50,7 +50,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        [Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.MANAGER)]
         [HttpGet("get-account-list")]
         public async Task<IActionResult> AccountListAsync(string? keyword)
         {
@@ -72,7 +72,7 @@ namespace PMS.API.Controllers
         /// <param name="userId"></param>
         /// <returns></returns>
         [HttpGet("get-account-details")]
-        [Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> AccountDetailAsync(string userId)
         {
             var result = await _adminService.GetAccountDetailAsync(userId);
