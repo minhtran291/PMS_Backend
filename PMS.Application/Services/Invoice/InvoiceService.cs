@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.Invoice;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
+using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
@@ -20,13 +21,15 @@ namespace PMS.Application.Services.Invoice
         IMapper mapper, 
         ILogger<InvoiceService> logger,
         IPdfService pdfService,
-        IEmailService emailService) : Service(unitOfWork, mapper), IInvoiceService
+        IEmailService emailService,
+        INotificationService notificationService) : Service(unitOfWork, mapper), IInvoiceService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<InvoiceService> _logger = logger;
         private readonly IPdfService _pdfService = pdfService;
         private readonly IEmailService _emailService = emailService;
+        private readonly INotificationService _noti = notificationService;
 
         public async Task<ServiceResult<InvoiceDTO>>
             GenerateInvoiceFromGINAsync(GenerateInvoiceFromGINRequestDTO request)
@@ -408,7 +411,7 @@ namespace PMS.Application.Services.Invoice
             }
         }
 
-        public async Task<ServiceResult<bool>> SendInvoiceEmailAsync(int invoiceId)
+        public async Task<ServiceResult<bool>> SendInvoiceEmailAsync(int invoiceId, string currentUserId)
         {
             try
             {
@@ -445,6 +448,27 @@ namespace PMS.Application.Services.Invoice
                 // cập nhật trạng thái hóa đơn
                 invoice.Status = InvoiceStatus.Send;
                 _unitOfWork.Invoices.Update(invoice);
+
+                try
+                {
+                    var senderId = currentUserId; 
+                    if (!string.IsNullOrEmpty(senderId))
+                    {
+                        await _noti.SendNotificationToCustomerAsync(
+                            senderId: senderId,
+                            receiverId: customer.Id,
+                            title: "Hóa đơn đã được gửi",
+                            message: $"Hóa đơn {invoice.InvoiceCode} của bạn đã được gửi tới email {customer.Email}.",
+                            type: NotificationType.Message
+                        );
+                    }
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification hóa đơn thất bại: invoiceId={InvoiceId}, receiver={ReceiverId}",
+                        invoice.Id, customer.Id);
+                }
                 await _unitOfWork.CommitAsync();
 
                 return ServiceResult<bool>.SuccessResult(true,

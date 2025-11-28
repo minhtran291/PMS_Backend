@@ -14,7 +14,7 @@ namespace PMS.Application.Services.Invoice
             GenerateInvoiceFromGINAsync(GenerateInvoiceFromGINRequestDTO request);
 
         Task<ServiceResult<InvoicePDFResultDTO>> GenerateInvoicePdfAsync(int invoiceId);
-        Task<ServiceResult<bool>> SendInvoiceEmailAsync(int invoiceId);
+        Task<ServiceResult<bool>> SendInvoiceEmailAsync(int invoiceId, string currentUserId);
 
         Task<ServiceResult<List<InvoiceDTO>>> GetAllInvoicesAsync();
         Task<ServiceResult<InvoiceDTO>> GetInvoiceByIdAsync(int invoiceId);
