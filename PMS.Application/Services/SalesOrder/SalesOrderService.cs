@@ -372,7 +372,6 @@ namespace PMS.Application.Services.SalesOrder
                 var orderDetailsDto = order.SalesOrderDetails.Select(d => new
                 {
                     d.SalesOrderId,
-                    //d.ProductId,
                     d.LotId,
                     ProductName = d.LotProduct.Product.ProductName,
                     d.Quantity,
@@ -400,6 +399,10 @@ namespace PMS.Application.Services.SalesOrder
                     DepositExpiredDay = order.CreateAt.AddDays(order.SalesQuotation.DepositDueDays),
                     order.TotalPrice,
                     order.PaidAmount,
+                    order.PaidFullAt,
+                    order.RejectReason,
+                    order.RejectedBy,
+                    order.RejectedAt,
                     order.SalesOrderExpiredDate,
                     Details = orderDetailsDto
                 };
@@ -454,6 +457,10 @@ namespace PMS.Application.Services.SalesOrder
                         PaymentStatusName = o.PaymentStatus.ToString(),
                         IsDeposited = o.IsDeposited,
                         PaidFullAt = o.PaidFullAt,
+                        PaidAmount = o.PaidAmount,
+                        RejectReason = o.RejectReason,
+                        RejectedAt = o.RejectedAt,
+                        RejectBy = o.RejectedBy,
                         TotalPrice = o.TotalPrice,
                         CreateAt = o.CreateAt
                     })
@@ -623,7 +630,7 @@ namespace PMS.Application.Services.SalesOrder
                     "Có đơn hàng mới từ khách hàng",
                     $"Đơn hàng {so.SalesOrderCode} vừa được khách hàng gửi, vui lòng kiểm tra và xử lý.",
                     NotificationType.Message
-        );
+                );
 
                 await _unitOfWork.CommitTransactionAsync();
 
@@ -926,8 +933,12 @@ namespace PMS.Application.Services.SalesOrder
                         SalesOrderStatusName = o.SalesOrderStatus.ToString(),
                         PaymentStatusName = o.PaymentStatus.ToString(),
                         IsDeposited = o.IsDeposited,
+                        PaidAmount = o.PaidAmount,
                         PaidFullAt = o.PaidFullAt,
                         TotalPrice = o.TotalPrice,
+                        RejectReason = o.RejectReason,
+                        RejectedAt = o.RejectedAt,
+                        RejectBy = o.RejectedBy,
                         CreateAt = o.CreateAt
                     })
                     .ToListAsync();
@@ -951,7 +962,7 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<bool>> ApproveSalesOrderAsync(int salesOrderId)
+        public async Task<ServiceResult<bool>> ApproveSalesOrderAsync(int salesOrderId, string salesStaffId)
         {
             try
             {
@@ -984,18 +995,12 @@ namespace PMS.Application.Services.SalesOrder
 
                 try
                 {
-                    var title = "Đơn hàng đã được chấp thuận";
-                    var message = $"Đơn {so.SalesOrderCode} của bạn đã được chấp thuận.";
-
-                    var senderId = "system";
-                    var receiverId = so.CreateBy;
-
                     await _noti.SendNotificationToCustomerAsync(
-                        senderId: senderId,
-                        receiverId: receiverId,
-                        title: title,
-                        message: message,
-                        type: NotificationType.Message
+                       senderId: salesStaffId, 
+                       receiverId: so.CreateBy,
+                       title: "Đơn hàng đã được chấp thuận",
+                       message: $"Đơn hàng {so.SalesOrderCode} của bạn đã được chấp thuận.",
+                       type: NotificationType.Message
                     );
                 }
                 catch (Exception exNotify)
@@ -1024,7 +1029,7 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<bool>> RejectSalesOrderAsync(RejectSalesOrderRequestDTO request)
+        public async Task<ServiceResult<bool>> RejectSalesOrderAsync(RejectSalesOrderRequestDTO request, string salesStaffId)
         {
             try
             {
@@ -1064,7 +1069,9 @@ namespace PMS.Application.Services.SalesOrder
                 so.SalesOrderStatus = SalesOrderStatus.Rejected;
                 so.RejectReason = request.Reason.Trim();
                 so.RejectedAt = DateTime.Now;
-                //so.RejectedBy = 
+                so.RejectedBy = salesStaffId;
+                so.CustomerDebts.status = CustomerDebtStatus.Disable;
+                so.CustomerDebts.DebtAmount = 0;
 
                 _unitOfWork.SalesOrder.Update(so);
                 await _unitOfWork.CommitAsync();
@@ -1075,15 +1082,15 @@ namespace PMS.Application.Services.SalesOrder
                     var message = $"Đơn {so.SalesOrderCode} của bạn đã bị từ chối." +
                         $"Lý do: {so.RejectReason}.";
 
-                    var senderId = "system";
+                    var senderId = salesStaffId;
                     var receiverId = so.CreateBy;
 
                     await _noti.SendNotificationToCustomerAsync(
-                        senderId: senderId,
-                        receiverId: receiverId,
-                        title: title,
-                        message: message,
-                        type: NotificationType.Message
+                        senderId,
+                        receiverId,
+                        title,
+                        message,
+                        NotificationType.Message
                     );
                 }
                 catch (Exception exNotify)

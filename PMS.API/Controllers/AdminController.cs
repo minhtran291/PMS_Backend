@@ -73,7 +73,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        [Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.PURCHASES_STAFF + "," + UserRoles.SALES_STAFF+ "," + UserRoles.WAREHOUSE_STAFF + "," + UserRoles.ACCOUNTANT)]
         [HttpPut("update-staff-account")]
         public async Task<IActionResult> UpdateAccountAsync([FromBody] UpdateAccountRequest request)
         {

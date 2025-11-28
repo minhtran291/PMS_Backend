@@ -22,5 +22,8 @@ namespace PMS.Application.DTOs.SalesOrder
         public DateTime SalesOrderExpiredDate { get; set; }
         public DateTime? PaidFullAt { get; set; }
         public decimal PaidAmount { get; set; }
+        public string RejectReason { get; set; }
+        public DateTime? RejectedAt { get; set; }
+        public string RejectBy { get; set; }
     }
 }

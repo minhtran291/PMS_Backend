@@ -83,7 +83,12 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> SendInvoiceEmail(int id)
         {
-            var result = await _invoiceService.SendInvoiceEmailAsync(id);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return Unauthorized();
+            }
+            var result = await _invoiceService.SendInvoiceEmailAsync(id, currentUserId);
 
             return StatusCode(result.StatusCode, new
             {
