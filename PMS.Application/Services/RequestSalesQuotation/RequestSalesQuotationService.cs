@@ -55,7 +55,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                     profile.UserId,
                     [UserRoles.SALES_STAFF],
                     "Bạn nhận được 1 thông báo mới",
-                    $"Yêu cầu báo giá {requestSalesQuotation.RequestCode}",
+                    $"Bạn nhận được 1 yêu cầu báo giá mới: {requestSalesQuotation.RequestCode}",
                     Core.Domain.Enums.NotificationType.Message
                     );
                 }
@@ -236,7 +236,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                         profile.UserId,
                         ["SALES_STAFF"],
                         "Bạn nhận được 1 thông báo mới",
-                        $"Yêu cầu báo giá {rsq.RequestCode}",
+                        $"Bạn nhận được 1 yêu cầu báo giá mới: {rsq.RequestCode}",
                         Core.Domain.Enums.NotificationType.Message
                         );
 
@@ -299,7 +299,7 @@ namespace PMS.Application.Services.RequestSalesQuotation
                     user.Id,
                     ["SALES_STAFF"],
                     "Bạn nhận được 1 thông báo mới",
-                    $"Yêu cầu báo giá {rsq.RequestCode}",
+                    $"Bạn nhận được 1 yêu cầu báo giá mới: {rsq.RequestCode}",
                     Core.Domain.Enums.NotificationType.Message
                     );
 

@@ -275,7 +275,7 @@ namespace PMS.Application.Services.SalesQuotation
                     staff.Id,
                     customer.Id,
                     "Bạn nhận được 1 thông báo mới",
-                    $"Báo giá mới {salesQuotation.QuotationCode}",
+                    $"Bạn nhận được 1 báo giá mới: {salesQuotation.QuotationCode}",
                     Core.Domain.Enums.NotificationType.Message);
                 }
 
@@ -700,7 +700,7 @@ namespace PMS.Application.Services.SalesQuotation
                     staff.Id,
                     customer.Id,
                     "Bạn nhận được 1 thông báo mới",
-                    $"Báo giá mới {salesQuotation.QuotationCode}",
+                    $"Bạn nhận được 1 báo giá mới: {salesQuotation.QuotationCode}",
                     Core.Domain.Enums.NotificationType.Message);
 
                     await _unitOfWork.CommitTransactionAsync();
@@ -947,7 +947,7 @@ namespace PMS.Application.Services.SalesQuotation
                     staff.Id,
                     customer.Id,
                     "Bạn nhận được 1 thông báo mới",
-                    $"Báo giá mới {salesQuotation.QuotationCode}",
+                    $"Bạn nhận được 1 báo giá mới: {salesQuotation.QuotationCode}",
                     Core.Domain.Enums.NotificationType.Message);
 
                 await _unitOfWork.CommitTransactionAsync();

@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using PMS.Application.Services.WarehouseLocation;
 using PMS.Application.DTOs.WarehouseLocation;
+using Microsoft.AspNetCore.Authorization;
+using PMS.Core.Domain.Constant;
 
 namespace PMS.API.Controllers
 {
@@ -16,7 +18,7 @@ namespace PMS.API.Controllers
             _warehouseLocationService = warehouseLocationService;
         }
 
-        [HttpGet]
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         [Route("get-all-warehouse-location")]
         public async Task<IActionResult> WarehouseLocationList()
         {
@@ -34,7 +36,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        [HttpPost]
+        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         [Route("create-warehouse-location")]
         public async Task<IActionResult> CreateWarehouseLocation([FromBody] CreateWarehouseLocationDTO dto)
         {
@@ -51,7 +53,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="dto"></param>
         /// <returns></returns>
-        [HttpPut]
+        [HttpPut, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         [Route("update-warehouse-location")]
         public async Task<IActionResult> UpdateWarehouseLocation([FromBody] UpdateWarehouseLocationDTO dto)
         {
@@ -67,7 +69,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="warehouseLocationId"></param>
         /// <returns></returns>
-        [HttpGet]
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         [Route("get-warehouse-location-details/{warehouseLocationId}")]
         public async Task<IActionResult> WarehouseLocationDetails(int warehouseLocationId)
         {
@@ -80,7 +82,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet]
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         [Route("get-warehouse-location-by-warehouse-id")]
         public async Task<IActionResult> WarehouseLocationListByWarehouseId(int warehouseId)
         {
@@ -93,7 +95,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpDelete]
+        [HttpDelete, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         [Route("delete")]
         public async Task<IActionResult> DeleteWarehouseLocation(int warehouseLocationId)
         {
