@@ -21,8 +21,12 @@ namespace PMS.Application.DTOs.Product
         [Required(ErrorMessage = "Danh mục là bắt buộc")]
         [ForeignKey("Category")]
         public required int CategoryID { get; set; }
-        [StringLength(300, ErrorMessage = "Mô tả sản phẩm không được vượt quá 300 ký tự")]
         public string? Image { get; set; }
+        public string? ImageA { get; set; }
+        public string? ImageB { get; set; }
+        public string? ImageC { get; set; }
+        public string? ImageD { get; set; }
+        public string? ImageE { get; set; }
 
         [Required(ErrorMessage = "Số lượng tối thiểu là bắt buộc")]
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng tối thiểu phải không âm")]

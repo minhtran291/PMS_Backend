@@ -292,6 +292,11 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired();
 
                 entity.Property(p => p.Image).IsRequired();
+                entity.Property(p => p.ImageA);
+                entity.Property(p => p.ImageB);
+                entity.Property(p => p.ImageC);
+                entity.Property(p => p.ImageD);
+                entity.Property(p => p.ImageE);
 
                 entity.HasOne(p => p.Category)
                     .WithMany(c => c.Products)

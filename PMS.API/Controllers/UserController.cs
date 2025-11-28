@@ -358,13 +358,17 @@ namespace PMS.API.Controllers
             IFormFile? cnkdFile,
             IFormFile? bytFile)
         {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { Message = "Không thể xác thực người dùng." });
-            var result = await _userService.EditProfileAsync(userId, dto, avatarFile, cnkdFile, bytFile);
-            if (!result) return NotFound(new { message = "User not found" });
 
-            return Ok(new { message = "Profile updated successfully" });
+            var result = await _userService.EditProfileAsync(userId, dto, avatarFile, cnkdFile, bytFile);
+            if (!result) return NotFound(new { message = "Không tìm thấy người dùng" });
+
+            return Ok(new { message = "Cập nhật thành công thông tin người dùng" });
         }
     }
 

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace PMS.Application.DTOs.Product
 {
@@ -10,8 +11,12 @@ namespace PMS.Application.DTOs.Product
         [StringLength(300, ErrorMessage = "Mô tả sản phẩm không được vượt quá 300 ký tự")]
         public string? ProductDescription { get; set; }
 
-        [StringLength(300, ErrorMessage = "Mô tả sản phẩm không được vượt quá 300 ký tự")]
-        public string? Image { get; set; }
+        public IFormFile? Image { get; set; }
+        public IFormFile? ImageA { get; set; }
+        public IFormFile? ImageB { get; set; }
+        public IFormFile? ImageC { get; set; }
+        public IFormFile? ImageD { get; set; }
+        public IFormFile? ImageE { get; set; }
 
         [StringLength(10, ErrorMessage = "Đơn vị tính không được vượt quá 10 ký tự")]
         public string? Unit { get; set; }
@@ -23,9 +28,6 @@ namespace PMS.Application.DTOs.Product
 
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng tối đa phải không âm")]
         public int MaxQuantity { get; set; }
-
-        [Range(0, int.MaxValue, ErrorMessage = "Tổng số lượng hiện tại phải không âm")]
-        public int TotalCurrentQuantity { get; set; }
 
         public bool Status { get; set; }
     }
