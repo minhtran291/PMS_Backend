@@ -1017,6 +1017,9 @@ namespace PMS.Data.Migrations
                     b.Property<int>("PRFQID")
                         .HasColumnType("int");
 
+                    b.Property<int>("PaymentDueDate")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("QuotationExpiredDate")
                         .HasColumnType("datetime2");
 

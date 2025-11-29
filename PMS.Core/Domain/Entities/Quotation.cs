@@ -19,6 +19,8 @@ namespace PMS.Core.Domain.Entities
         public SupplierQuotationStatus Status { get; set; }
         public required DateTime QuotationExpiredDate { get; set; }
 
+        public int PaymentDueDate{get; set; }
+
         public int PRFQID { get; set; }
         [ForeignKey("PRFQID")]
         public virtual PurchasingRequestForQuotation PurchasingRequestForQuotation { get; set; } = null!;
