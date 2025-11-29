@@ -92,22 +92,22 @@ namespace PMS.Application.Services.Product
                     };
                 }
 
-                string imageUrl = product.Image != null
+                string? imageUrl = product.Image != null
             ? await SaveAsync(product.Image, "images/products/")
             : null;
-                string imageUrlA = product.ImageA != null
+                string? imageUrlA = product.ImageA != null
             ? await SaveAsync(product.ImageA, "images/products/")
             : null;
-                string imageUrlB = product.ImageB != null
+                string? imageUrlB = product.ImageB != null
             ? await SaveAsync(product.ImageB, "images/products/")
             : null;
-                string imageUrlC = product.ImageC != null
+                string? imageUrlC = product.ImageC != null
             ? await SaveAsync(product.ImageC, "images/products/")
             : null;
-                string imageUrlD = product.ImageD != null
+                string? imageUrlD = product.ImageD != null
             ? await SaveAsync(product.ImageD, "images/products/")
             : null;
-                string imageUrlE = product.ImageE != null
+                string? imageUrlE = product.ImageE != null
             ? await SaveAsync(product.ImageE, "images/products/")
             : null;
                 var newProduct = new PMS.Core.Domain.Entities.Product
@@ -420,22 +420,22 @@ namespace PMS.Application.Services.Product
                 {
                     return new ServiceResult<bool> { StatusCode = 200, Message = "Danh mục không tồn tại", Data = false };
                 }
-                string imageUrl = productUpdate.Image != null
+                string? imageUrl = productUpdate.Image != null
             ? await SaveAsync(productUpdate.Image, "images/products/")
             : null;
-                string imageUrlA = productUpdate.ImageA != null
+                string? imageUrlA = productUpdate.ImageA != null
             ? await SaveAsync(productUpdate.ImageA, "images/products/")
             : null;
-                string imageUrlB = productUpdate.ImageB != null
+                string? imageUrlB = productUpdate.ImageB != null
             ? await SaveAsync(productUpdate.ImageB, "images/products/")
             : null;
-                string imageUrlC = productUpdate.ImageC != null
+                string? imageUrlC = productUpdate.ImageC != null
             ? await SaveAsync(productUpdate.ImageC, "images/products/")
             : null;
-                string imageUrlD = productUpdate.ImageD != null
+                string? imageUrlD = productUpdate.ImageD != null
             ? await SaveAsync(productUpdate.ImageD, "images/products/")
             : null;
-                string imageUrlE = productUpdate.ImageE != null
+                string? imageUrlE = productUpdate.ImageE != null
             ? await SaveAsync(productUpdate.ImageE, "images/products/")
             : null;
 
