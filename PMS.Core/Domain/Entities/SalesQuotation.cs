@@ -20,6 +20,7 @@ namespace PMS.Core.Domain.Entities
         public string? Notes { get; set; }
         public decimal DepositPercent {  get; set; }
         public int DepositDueDays {  get; set; }
+        public int ExpectedDeliveryDate {  get; set; }
 
         public virtual RequestSalesQuotation RequestSalesQuotation { get; set; } = null!;
         public virtual ICollection<SalesQuotaionDetails> SalesQuotaionDetails { get; set; } = [];
