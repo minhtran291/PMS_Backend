@@ -734,6 +734,9 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(sq => sq.DepositDueDays)
                     .IsRequired();
 
+                entity.Property(sq => sq.ExpectedDeliveryDate)
+                    .IsRequired();
+
                 entity.HasOne(sq => sq.RequestSalesQuotation)
                     .WithMany(rsq => rsq.SalesQuotations)
                     .HasForeignKey(sq => sq.RsqId);

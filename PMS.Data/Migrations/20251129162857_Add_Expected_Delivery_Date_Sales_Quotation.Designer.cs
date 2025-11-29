@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PMS.Data.DatabaseConfig;
 
@@ -11,9 +12,11 @@ using PMS.Data.DatabaseConfig;
 namespace PMS.Data.Migrations
 {
     [DbContext(typeof(PMSContext))]
-    partial class PMSContextModelSnapshot : ModelSnapshot
+    [Migration("20251129162857_Add_Expected_Delivery_Date_Sales_Quotation")]
+    partial class Add_Expected_Delivery_Date_Sales_Quotation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1015,9 +1018,6 @@ namespace PMS.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("PRFQID")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PaymentDueDate")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("QuotationExpiredDate")

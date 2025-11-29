@@ -178,6 +178,13 @@ namespace PMS.Application.Services.SalesQuotation
                         Message = "Ngày hết hạn không hợp lệ"
                     };
 
+                if(dto.DepositDueDays >= dto.ExpectedDeliveryDate)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Thời hạn thanh toán cọc không được bằng hoặc vượt quá ngày giao hàng dự kiến"
+                    };
+
                 var lotIdsInDto = dto.Details
                     .Where(d => d.LotId != null)
                     .Select(d => d.LotId!.Value)
@@ -225,6 +232,7 @@ namespace PMS.Application.Services.SalesQuotation
                     Status = dto.Status == 1 ? Core.Domain.Enums.SalesQuotationStatus.Sent : Core.Domain.Enums.SalesQuotationStatus.Draft,
                     DepositPercent = dto.DepositPercent,
                     DepositDueDays = dto.DepositDueDays,
+                    ExpectedDeliveryDate = dto.ExpectedDeliveryDate,
                     SalesQuotaionDetails = dto.Details.Select(item => new SalesQuotaionDetails
                     {
                         LotId = item.LotId,
@@ -270,6 +278,22 @@ namespace PMS.Application.Services.SalesQuotation
                     var pdfBytes = _pdfService.GeneratePdfFromHtml(html);
 
                     await SendSalesQuotationEmailAsync(pdfBytes, "Báo giá.pdf", customer.Email);
+
+                    var listOldSalesQuotation = await _unitOfWork.SalesQuotation.Query()
+                        .Where(s => s.RsqId == salesQuotation.RsqId && s.Id != salesQuotation.Id && s.Status == Core.Domain.Enums.SalesQuotationStatus.Sent)
+                        .ToListAsync();
+
+                    if (listOldSalesQuotation.Any())
+                    {
+                        foreach(var item in listOldSalesQuotation)
+                        {
+                            item.Status = Core.Domain.Enums.SalesQuotationStatus.Invalid;
+                        }
+
+                        _unitOfWork.SalesQuotation.UpdateRange(listOldSalesQuotation);
+
+                        await _unitOfWork.CommitAsync();
+                    }
 
                     await _notificationService.SendNotificationToCustomerAsync(
                     staff.Id,
@@ -564,6 +588,13 @@ namespace PMS.Application.Services.SalesQuotation
                         Message = "Ngày hết hạn không hợp lệ"
                     };
 
+                if (dto.DepositDueDays >= dto.ExpectedDeliveryDate)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Thời hạn thanh toán cọc không được bằng hoặc vượt quá ngày giao hàng dự kiến"
+                    };
+
                 var lotIdsInDto = dto.Details
                     .Where(d => d.LotId != null)
                     .Select(d => d.LotId!.Value)
@@ -607,6 +638,8 @@ namespace PMS.Application.Services.SalesQuotation
                 salesQuotation.DepositPercent = dto.DepositPercent;
 
                 salesQuotation.DepositDueDays = dto.DepositDueDays;
+
+                salesQuotation.ExpectedDeliveryDate = dto.ExpectedDeliveryDate;
 
                 var oldDetails = salesQuotation.SalesQuotaionDetails.ToList();
 
@@ -695,6 +728,22 @@ namespace PMS.Application.Services.SalesQuotation
                     var pdfBytes = _pdfService.GeneratePdfFromHtml(html);
 
                     await SendSalesQuotationEmailAsync(pdfBytes, "Báo giá.pdf", customer.Email);
+
+                    var listOldSalesQuotation = await _unitOfWork.SalesQuotation.Query()
+                        .Where(s => s.RsqId == salesQuotation.RsqId && s.Id != salesQuotation.Id && s.Status == Core.Domain.Enums.SalesQuotationStatus.Sent)
+                        .ToListAsync();
+
+                    if (listOldSalesQuotation.Any())
+                    {
+                        foreach (var item in listOldSalesQuotation)
+                        {
+                            item.Status = Core.Domain.Enums.SalesQuotationStatus.Invalid;
+                        }
+
+                        _unitOfWork.SalesQuotation.UpdateRange(listOldSalesQuotation);
+
+                        await _unitOfWork.CommitAsync();
+                    }
 
                     await _notificationService.SendNotificationToCustomerAsync(
                     staff.Id,
@@ -942,6 +991,22 @@ namespace PMS.Application.Services.SalesQuotation
                 var pdfBytes = _pdfService.GeneratePdfFromHtml(html);
 
                 await SendSalesQuotationEmailAsync(pdfBytes, "Báo giá.pdf", customer.Email);
+
+                var listOldSalesQuotation = await _unitOfWork.SalesQuotation.Query()
+                        .Where(s => s.RsqId == salesQuotation.RsqId && s.Id != salesQuotation.Id && s.Status == Core.Domain.Enums.SalesQuotationStatus.Sent)
+                        .ToListAsync();
+
+                if (listOldSalesQuotation.Any())
+                {
+                    foreach (var item in listOldSalesQuotation)
+                    {
+                        item.Status = Core.Domain.Enums.SalesQuotationStatus.Invalid;
+                    }
+
+                    _unitOfWork.SalesQuotation.UpdateRange(listOldSalesQuotation);
+
+                    await _unitOfWork.CommitAsync();
+                }
 
                 await _notificationService.SendNotificationToCustomerAsync(
                     staff.Id,
@@ -1282,7 +1347,7 @@ namespace PMS.Application.Services.SalesQuotation
                     note = $@"Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá.
 Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế.
 Tạm ứng {salesQuotation.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {salesQuotation.DepositDueDays} ngày kể từ khi ký hợp đồng.
-Hàng hóa dự kiến giao trong thời gian 30 ngày kể từ ngày ký kết hợp đồng và cọc.
+Hàng hóa dự kiến giao trong thời gian {salesQuotation.ExpectedDeliveryDate} ngày kể từ ngày ký kết hợp đồng và cọc.
 Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN QUANG TRUNG."
                 };
 
