@@ -18,6 +18,10 @@ namespace PMS.Application.DTOs.Product
         public IFormFile? ImageD { get; set; }
         public IFormFile? ImageE { get; set; }
 
+        public string? ProductIngredients { get; set; }
+        public string? ProductlUses { get; set; }
+        public decimal? ProductWeight { get; set; }
+
         [StringLength(10, ErrorMessage = "Đơn vị tính không được vượt quá 10 ký tự")]
         public string? Unit { get; set; }
 

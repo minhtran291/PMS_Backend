@@ -298,6 +298,10 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(p => p.ImageD);
                 entity.Property(p => p.ImageE);
 
+                entity.Property(p => p.ProductIngredients);
+                entity.Property(p => p.ProductlUses);
+                entity.Property(p => p.ProductWeight).HasColumnType("decimal(18,2)");
+
                 entity.HasOne(p => p.Category)
                     .WithMany(c => c.Products)
                     .HasForeignKey(p => p.CategoryID)
