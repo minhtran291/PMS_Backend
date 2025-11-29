@@ -520,15 +520,31 @@ namespace PMS.Application.Services.User
             }
         }
 
-        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string verifier)
+        public async Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string verifier, UserStatus status, string note)
         {
             var exuser = await _unitOfWork.Users.Query()
                     .Include(u => u.CustomerProfile).FirstOrDefaultAsync(u => u.Id == userId);
             if (exuser == null)
             {
-                return new ServiceResult<bool> { Data = false, Message = "không tìm thấy người dùng", StatusCode = 200 };
+                return new ServiceResult<bool> { Data = false, Message = "không tìm thấy người dùng", StatusCode = 404 };
             }
-            exuser.UserStatus = UserStatus.Active;
+            if (status == UserStatus.decline)
+            {
+                await _notificationService.SendNotificationToCustomerAsync(
+                 senderId: verifier,
+                 userId,
+                 title: "Thông báo phản hồi duyệt tài khoản",
+                 message: $"Tài khoản bị từ chối duyệt: {note} ",
+                 type: NotificationType.System);
+
+                return new ServiceResult<bool>
+                {
+                    Data = true,
+                    Message = "Thông báo đã được gửi",
+                    StatusCode = 200,
+                };
+            }
+            exuser.UserStatus = status;
             _unitOfWork.Users.Update(exuser);
             await _unitOfWork.CommitAsync();
 
@@ -536,13 +552,13 @@ namespace PMS.Application.Services.User
                 senderId: verifier,
                 userId,
                 title: "Thông báo duyệt tài khoản",
-                message: $"Tài khoản đã cập nhật ",
+                message: $"Tài khoản đã được cập nhật ",
                 type: NotificationType.System);
 
             return new ServiceResult<bool>
             {
                 Data = true,
-                Message = "Cập nhật thành công",
+                Message = "Thông báo đã được gửi",
                 StatusCode = 200,
             };
         }

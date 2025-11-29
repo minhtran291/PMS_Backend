@@ -16,6 +16,9 @@ namespace PMS.Core.Domain.Entities
         public required string ProductName { get; set; }
 
         public string? ProductDescription { get; set; }
+        public string? ProductIngredients { get; set; }
+        public string? ProductlUses { get; set; }
+        public decimal? ProductWeight { get; set; }
 
         public string? Image { get; set; }
         public string? ImageA { get; set; }

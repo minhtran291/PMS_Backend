@@ -36,8 +36,8 @@ namespace PMS.Application.Services.SalesOrder
 
         //Sales Staff
         Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListSalesOrdersAsync();
-        Task<ServiceResult<bool>> ApproveSalesOrderAsync(int salesOrderId);
-        Task<ServiceResult<bool>> RejectSalesOrderAsync(RejectSalesOrderRequestDTO request);
+        Task<ServiceResult<bool>> ApproveSalesOrderAsync(int salesOrderId, string salesStaffId);
+        Task<ServiceResult<bool>> RejectSalesOrderAsync(RejectSalesOrderRequestDTO request, string salesStaffId);
         Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, PaymentStatus status); // When Sales Order is approveed and cannot payment auto then manualy
 
 

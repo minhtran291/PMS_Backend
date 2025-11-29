@@ -66,7 +66,12 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.SALES_STAFF)]
         public async Task<IActionResult> ApproveOrder(int salesOrderId)
         {
-            var result = await _service.ApproveSalesOrderAsync(salesOrderId);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return Unauthorized();
+            }
+            var result = await _service.ApproveSalesOrderAsync(salesOrderId, currentUserId);
 
             return StatusCode(result.StatusCode, new
             {
@@ -85,7 +90,12 @@ namespace PMS.API.Controllers
         [Authorize(Roles = UserRoles.SALES_STAFF)]
         public async Task<IActionResult> RejectOrder(RejectSalesOrderRequestDTO request)
         {
-            var result = await _service.RejectSalesOrderAsync(request);
+            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return Unauthorized();
+            }
+            var result = await _service.RejectSalesOrderAsync(request, currentUserId);
 
             return StatusCode(result.StatusCode, new
             {

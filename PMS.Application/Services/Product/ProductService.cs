@@ -92,22 +92,22 @@ namespace PMS.Application.Services.Product
                     };
                 }
 
-                string imageUrl = product.Image != null
+                string? imageUrl = product.Image != null
             ? await SaveAsync(product.Image, "images/products/")
             : null;
-                string imageUrlA = product.ImageA != null
+                string? imageUrlA = product.ImageA != null
             ? await SaveAsync(product.ImageA, "images/products/")
             : null;
-                string imageUrlB = product.ImageB != null
+                string? imageUrlB = product.ImageB != null
             ? await SaveAsync(product.ImageB, "images/products/")
             : null;
-                string imageUrlC = product.ImageC != null
+                string? imageUrlC = product.ImageC != null
             ? await SaveAsync(product.ImageC, "images/products/")
             : null;
-                string imageUrlD = product.ImageD != null
+                string? imageUrlD = product.ImageD != null
             ? await SaveAsync(product.ImageD, "images/products/")
             : null;
-                string imageUrlE = product.ImageE != null
+                string? imageUrlE = product.ImageE != null
             ? await SaveAsync(product.ImageE, "images/products/")
             : null;
                 var newProduct = new PMS.Core.Domain.Entities.Product
@@ -118,14 +118,18 @@ namespace PMS.Application.Services.Product
                     CategoryID = product.CategoryID,
                     MinQuantity = product.MinQuantity,
                     MaxQuantity = product.MaxQuantity,
-                    TotalCurrentQuantity =0,
+                    TotalCurrentQuantity = 0,
                     Status = product.Status,
                     Image = imageUrl,
                     ImageA = imageUrlA,
                     ImageB = imageUrlB,
                     ImageC = imageUrlC,
                     ImageD = imageUrlD,
-                    ImageE = imageUrlE
+                    ImageE = imageUrlE,
+
+                    ProductIngredients = product.ProductIngredients,
+                    ProductWeight = product.ProductWeight,
+                    ProductlUses = product.ProductlUses,
                 };
                 await _unitOfWork.Product.AddAsync(newProduct);
                 await _unitOfWork.CommitAsync();
@@ -167,7 +171,11 @@ namespace PMS.Application.Services.Product
                     ImageB = p.ImageB,
                     ImageC = p.ImageC,
                     ImageD = p.ImageD,
-                    ImageE = p.ImageE
+                    ImageE = p.ImageE,
+
+                    ProductIngredients = p.ProductIngredients,
+                    ProductWeight = p.ProductWeight,
+                    ProductlUses = p.ProductlUses
 
                 }).ToList();
 
@@ -214,8 +222,12 @@ namespace PMS.Application.Services.Product
                         ImageA = p.ImageA,
                         ImageB = p.ImageB,
                         ImageC = p.ImageC,
-                        ImageD= p.ImageD,
+                        ImageD = p.ImageD,
                         ImageE = p.ImageE,
+
+                        ProductlUses = p.ProductlUses,
+                        ProductWeight = p.ProductWeight,
+                        ProductIngredients = p.ProductIngredients,
                     });
 
                 var productList = await products.ToListAsync();
@@ -279,7 +291,11 @@ namespace PMS.Application.Services.Product
                     ImageB = product.ImageB,
                     ImageC = product.ImageC,
                     ImageD = product.ImageD,
-                    ImageE = product.ImageE
+                    ImageE = product.ImageE,
+
+                    ProductIngredients = product.ProductIngredients,
+                    ProductWeight = product.ProductWeight,
+                    ProductlUses = product.ProductlUses,
                 };
 
                 return new ServiceResult<ProductDTO?>
@@ -404,22 +420,22 @@ namespace PMS.Application.Services.Product
                 {
                     return new ServiceResult<bool> { StatusCode = 200, Message = "Danh mục không tồn tại", Data = false };
                 }
-                string imageUrl = productUpdate.Image != null
+                string? imageUrl = productUpdate.Image != null
             ? await SaveAsync(productUpdate.Image, "images/products/")
             : null;
-                string imageUrlA = productUpdate.ImageA != null
+                string? imageUrlA = productUpdate.ImageA != null
             ? await SaveAsync(productUpdate.ImageA, "images/products/")
             : null;
-                string imageUrlB = productUpdate.ImageB != null
+                string? imageUrlB = productUpdate.ImageB != null
             ? await SaveAsync(productUpdate.ImageB, "images/products/")
             : null;
-                string imageUrlC = productUpdate.ImageC != null
+                string? imageUrlC = productUpdate.ImageC != null
             ? await SaveAsync(productUpdate.ImageC, "images/products/")
             : null;
-                string imageUrlD = productUpdate.ImageD != null
+                string? imageUrlD = productUpdate.ImageD != null
             ? await SaveAsync(productUpdate.ImageD, "images/products/")
             : null;
-                string imageUrlE = productUpdate.ImageE != null
+                string? imageUrlE = productUpdate.ImageE != null
             ? await SaveAsync(productUpdate.ImageE, "images/products/")
             : null;
 
@@ -432,9 +448,13 @@ namespace PMS.Application.Services.Product
                 exProduct.ImageC = imageUrlC;
                 exProduct.ImageD = imageUrlD;
                 exProduct.ImageE = imageUrlE;
+
+                exProduct.ProductIngredients = productUpdate.ProductIngredients;
+                exProduct.ProductlUses = productUpdate.ProductlUses;
+                exProduct.ProductWeight = productUpdate.ProductWeight;
+
                 exProduct.MinQuantity = productUpdate.MinQuantity;
                 exProduct.MaxQuantity = productUpdate.MaxQuantity;
-                //exProduct.TotalCurrentQuantity = productUpdate.TotalCurrentQuantity;
                 exProduct.Status = productUpdate.Status;
                 exProduct.ProductDescription = productUpdate.ProductDescription;
 
@@ -482,8 +502,12 @@ namespace PMS.Application.Services.Product
                     ImageD = p.ImageD,
                     ImageE = p.ImageE,
                     ProductDescription = p.ProductDescription,
-                    Status = p.Status
-                    
+                    Status = p.Status,
+
+                    ProductlUses = p.ProductlUses,
+                    ProductWeight = p.ProductWeight,
+                    ProductIngredients = p.ProductIngredients
+
                 })
                 .ToListAsync();
 
@@ -543,6 +567,6 @@ namespace PMS.Application.Services.Product
         }
 
 
-       
+
     }
 }
