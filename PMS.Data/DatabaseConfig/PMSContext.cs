@@ -515,6 +515,7 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired()
                     .HasMaxLength(500);
 
+
                 entity.Property(prfq => prfq.Status)
                     .IsRequired();
 
@@ -645,6 +646,8 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired();
 
                 entity.Property(q => q.PRFQID);
+
+                entity.Property(q => q.PaymentDueDate);
 
 
 

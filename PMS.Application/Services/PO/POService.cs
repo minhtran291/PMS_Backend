@@ -774,7 +774,7 @@ namespace PMS.API.Services.POService
                 else
                 {
                     // Nếu đã có, cập nhật nợ phải trả
-                    debtReport.Payables += existingPO.Debt;
+                    debtReport.Payables -= existingPO.Deposit;
                     debtReport.Payday = existingPO.PaymentDate;
                 }
                 // cap nhat lai tong chi
@@ -783,7 +783,7 @@ namespace PMS.API.Services.POService
                 await _unitOfWork.CommitAsync();
                 //
                 var debtCeiling = pharmacySecretInfor.DebtCeiling;
-                var currentDebt = debtCeiling - debtReport.Payables;
+                var currentDebt = debtCeiling - pOUpdateDTO.paid;
 
                 if (debtReport.Payables > debtCeiling)
                 {
@@ -893,7 +893,7 @@ namespace PMS.API.Services.POService
 
                 // Tính lại nợ trần và trạng thái
                 var debtCeiling = pharmacySecretInfor.DebtCeiling;
-                debtReport.CurrentDebt = debtCeiling - debtReport.Payables;
+                debtReport.CurrentDebt = debtCeiling - pOUpdateDTO.paid;
                 _unitOfWork.DebtReport.Update(debtReport);
                 await _unitOfWork.CommitAsync();
                 // Mốc ngày bắt đầu tính hạn = DepositDate của đợt 1
