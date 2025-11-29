@@ -139,5 +139,22 @@ namespace PMS.API.Controllers
                 data = result.Data,
             });
         }
+
+        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Route("response-not-enough")]
+        public async Task<IActionResult> NotEnough(int stockExportOrder)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _goodsIssueNoteService.ResponseNotEnough(stockExportOrder, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+            });
+        }
     }
 }

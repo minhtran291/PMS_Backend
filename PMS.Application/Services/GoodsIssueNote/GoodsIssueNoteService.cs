@@ -517,5 +517,64 @@ namespace PMS.Application.Services.GoodsIssueNote
                 };
             }
         }
+
+        public async Task<ServiceResult<object>> ResponseNotEnough(int stockExportOrderId, string userId)
+        {
+            try
+            {
+                var stockExportOrder = await _unitOfWork.StockExportOrder.Query()
+                    .FirstOrDefaultAsync(s => s.Id == stockExportOrderId);
+
+                if(stockExportOrder == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy yêu cầu xuất kho"
+                    };
+
+                if(stockExportOrder.Status == Core.Domain.Enums.StockExportOrderStatus.Draft)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Lệnh xuất kho chưa được gửi"
+                    };
+
+                if (stockExportOrder.Status == Core.Domain.Enums.StockExportOrderStatus.Exported)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Lệnh xuất kho đã có phiếu xuất"
+                    };
+
+                stockExportOrder.Status = Core.Domain.Enums.StockExportOrderStatus.NotEnough;
+                
+                _unitOfWork.StockExportOrder.Update(stockExportOrder);
+
+                await _unitOfWork.CommitAsync();
+
+                await _notificationService.SendNotificationToRolesAsync(
+                    userId,
+                    [UserRoles.SALES_STAFF],
+                    "Bạn nhận được 1 thông báo mới",
+                    $"Không đủ hàng để xuất cho mã yêu cầu {stockExportOrder.StockExportOrderCode}",
+                    Core.Domain.Enums.NotificationType.Message);
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Gửi phản hồi thành công"
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
     }
 }
