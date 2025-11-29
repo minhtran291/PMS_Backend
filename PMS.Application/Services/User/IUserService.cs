@@ -3,6 +3,7 @@ using PMS.Application.DTOs.Auth;
 using PMS.Application.DTOs.Customer;
 using PMS.Application.DTOs.Profile;
 using PMS.Core.Domain.Constant;
+using PMS.Core.Domain.Enums;
 
 namespace PMS.Application.Services.User
 {
@@ -18,7 +19,7 @@ namespace PMS.Application.Services.User
         Task<ServiceResult<bool>> ResetPasswordAsync(ResetPasswordRequest request);
         Task<ServiceResult<bool>> UpdateCustomerProfile(string userId, PMS.Application.DTOs.Customer.CustomerProfileDTO request);
         Task<ServiceResult<IEnumerable<CustomerDTO>>> GetAllCustomerWithInactiveStatus();
-        Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string verifier);
+        Task<ServiceResult<bool>> UpdateCustomerStatus(string userId, string verifier, UserStatus status, string note);
         Task<ServiceResult<CustomerViewDTO>> GetCustomerByIdAsync(string userId);
         Task<ServiceResult<bool>> ChangePasswordAsync(string userId, string oldPasword, string newpassword);
         Task<ServiceResult<object>> GetProfile(string userId, List<string> roles);
@@ -31,5 +32,7 @@ namespace PMS.Application.Services.User
         IFormFile? avatarFile,
         IFormFile? cnkdFile,
         IFormFile? bytFile);
+
+
     }
 }
