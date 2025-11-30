@@ -64,6 +64,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                 var allLots = await _unitOfWork.LotProduct.Query()
                     .Include(l => l.WarehouseLocation)
                         .ThenInclude(wl => wl.Warehouse)
+                    .Where(l => l.LotQuantity > 0 && l.ExpiredDate > DateTime.Today)
                     .ToListAsync();
 
                 var lotExportMap = new Dictionary<int, int>();
@@ -120,25 +121,25 @@ namespace PMS.Application.Services.GoodsIssueNote
                     }
                 }
 
-                var lotsToUpdate = allLots
-                    .Where(l => lotExportMap.ContainsKey(l.LotID))
-                    .ToList();
+                //var lotsToUpdate = allLots
+                //    .Where(l => lotExportMap.ContainsKey(l.LotID))
+                //    .ToList();
 
-                foreach (var lot in lotsToUpdate)
-                {
-                    var totalExport = lotExportMap[lot.LotID];
+                //foreach (var lot in lotsToUpdate)
+                //{
+                //    var totalExport = lotExportMap[lot.LotID];
 
-                    if (lot.LotQuantity < totalExport)
-                    {
-                        return new ServiceResult<object>
-                        {
-                            StatusCode = 400,
-                            Message = $"Lô {lot.LotID} không đủ số lượng"
-                        };
-                    }
+                //    if (lot.LotQuantity < totalExport)
+                //    {
+                //        return new ServiceResult<object>
+                //        {
+                //            StatusCode = 400,
+                //            Message = $"Lô {lot.LotID} không đủ số lượng"
+                //        };
+                //    }
 
-                    lot.LotQuantity -= totalExport;
-                }
+                //    lot.LotQuantity -= totalExport;
+                //}
 
                 var listGoodsIssueNote = new List<Core.Domain.Entities.GoodsIssueNote>();
 
@@ -151,7 +152,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                         CreateBy = userId,
                         WarehouseId = wh.Key,
                         CreateAt = DateTime.Now,
-                        ExportedAt = DateTime.Now,
+                        ExportedAt = null,
                         DeliveryDate = seo.DueDate,
                         Note = dto.Note,
                         Status = Core.Domain.Enums.GoodsIssueNoteStatus.Sent,
@@ -575,6 +576,93 @@ namespace PMS.Application.Services.GoodsIssueNote
                     Message = "Lỗi"
                 };
             }
+        }
+
+        public async Task<ServiceResult<object>> ExportLotProduct(int goodsIssueNoteId, string userId)
+        {
+            try
+            {
+                var goodsIssueNote = await _unitOfWork.GoodsIssueNote.Query()
+                    .Include(g => g.GoodsIssueNoteDetails)
+                    .FirstOrDefaultAsync(g => g.Id == goodsIssueNoteId);
+
+                if (goodsIssueNote == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy phiếu xuất kho"
+                    };
+
+                if(goodsIssueNote.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Exported)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Đã xuất hàng cho phiếu xuất rồi"
+                    };
+
+                var lotIdDetails = goodsIssueNote.GoodsIssueNoteDetails
+                    .Select(g => g.LotId)
+                    .ToList();
+
+                var lotProduct = await _unitOfWork.LotProduct.Query()
+                    .Include(l => l.Product)
+                    .Where(l => lotIdDetails.Contains(l.LotID))
+                    .ToListAsync();
+
+                foreach(var lot in lotProduct)
+                {
+                    var lotDetails = goodsIssueNote.GoodsIssueNoteDetails.FirstOrDefault(l => l.LotId == lot.LotID);
+
+                    if (lotDetails == null)
+                        throw new Exception("Loi ko lay dc lot product");
+
+                    if(lotDetails.Quantity > lot.LotQuantity)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"Số lượng lấy ra của sản phẩm {lot.Product.ProductName} lớn hơn số lượng đang có trong lô"
+                        };
+
+                    lot.LotQuantity -= lotDetails.Quantity;
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                goodsIssueNote.Status = Core.Domain.Enums.GoodsIssueNoteStatus.Exported;
+
+                goodsIssueNote.ExportedAt = DateTime.Now;
+
+                _unitOfWork.LotProduct.UpdateRange(lotProduct);
+
+                await _unitOfWork.CommitAsync();
+
+                await _unitOfWork.CommitTransactionAsync();
+
+                await _notificationService.SendNotificationToRolesAsync(
+                    userId,
+                    [UserRoles.ACCOUNTANT],
+                    "Bạn nhận được 1 thông báo mới",
+                    $"Đã xuất kho cho phiếu xuất {goodsIssueNote.GoodsIssueNoteCode}",
+                    Core.Domain.Enums.NotificationType.Message
+                    );
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Xuất hàng thành công"
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+
         }
     }
 }
