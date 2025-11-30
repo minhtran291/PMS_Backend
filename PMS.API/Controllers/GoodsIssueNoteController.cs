@@ -142,14 +142,31 @@ namespace PMS.API.Controllers
 
         [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
         [Route("response-not-enough")]
-        public async Task<IActionResult> NotEnough(int stockExportOrder)
+        public async Task<IActionResult> NotEnough(int stockExportOrderId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized("Token không chứa thông tin định danh người dùng");
 
-            var result = await _goodsIssueNoteService.ResponseNotEnough(stockExportOrder, userId);
+            var result = await _goodsIssueNoteService.ResponseNotEnough(stockExportOrderId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+            });
+        }
+
+        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Route("exported-lot-product")]
+        public async Task<IActionResult> ExportedLotProduct(int goodsIssueNoteId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _goodsIssueNoteService.ExportLotProduct(goodsIssueNoteId, userId);
 
             return StatusCode(result.StatusCode, new
             {
