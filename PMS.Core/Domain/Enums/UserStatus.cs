@@ -10,6 +10,7 @@ namespace PMS.Core.Domain.Enums
     {
         Block,
         Inactive,
-        Active
+        Active,
+        decline
     }
 }

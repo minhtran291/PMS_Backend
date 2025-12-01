@@ -17,5 +17,7 @@ namespace PMS.Application.Services.GoodsIssueNote
         Task<ServiceResult<object>> UpdateAsync(UpdateGoodsIssueNoteDTO dto, string userId);
         Task<ServiceResult<object>> DeleteAsync(int ginId, string userId);
         Task<ServiceResult<object>> WarningAsync();
+        Task<ServiceResult<object>> ResponseNotEnough(int stockExportOrderId, string userId);
+        Task<ServiceResult<object>> ExportLotProduct(int goodsIssueNoteId, string userId);
     }
 }

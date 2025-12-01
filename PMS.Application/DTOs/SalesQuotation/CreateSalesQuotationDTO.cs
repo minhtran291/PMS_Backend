@@ -14,8 +14,10 @@ namespace PMS.Application.DTOs.SalesQuotation
         public DateTime ExpiredDate { get; set; }
         [Range(0, 70, ErrorMessage = "Cọc trong khoảng từ 0% đến 70%")]
         public decimal DepositPercent { get; set; }
-        [Range(1, 7, ErrorMessage = "Thời hạn thanh toán cọc trong khoảng từ 1 đến 7 ngày")]
+        //[Range(1, 7, ErrorMessage = "Thời hạn thanh toán cọc trong khoảng từ 1 đến 7 ngày")]
         public int DepositDueDays { get; set; }
+        [Range(1, 365, ErrorMessage = "Thời hạn giao hàng dự kiến chỉ được phép trong khoảng từ 1 đến 365 ngày")]
+        public int ExpectedDeliveryDate {  get; set; }
         public int Status { get; set; }
         public List<SalesQuotationDetailsDTO> Details { get; set; } = [];
     }

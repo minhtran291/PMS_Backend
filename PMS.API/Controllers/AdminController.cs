@@ -8,6 +8,7 @@ using Org.BouncyCastle.Crypto;
 using PMS.API.Helpers.AttributeRoles;
 using PMS.API.Helpers.PermisstionStaff;
 using PMS.Application.DTOs.Admin;
+using PMS.Application.DTOs.Customer;
 using PMS.Application.Services.Admin;
 using PMS.Application.Services.Notification;
 using PMS.Application.Services.User;
@@ -141,15 +142,15 @@ namespace PMS.API.Controllers
         [ProducesResponseType(401)]
         [ProducesResponseType(403)]
         [ProducesResponseType(500)]
-        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.MANAGER)]
+        [Authorize(Roles =  UserRoles.MANAGER)]
 
-        public async Task<IActionResult> UpdateCustomerStatus(string userId)
+        public async Task<IActionResult> UpdateCustomerStatus(string userId, [FromBody] ManagerResponse data)
         {
             var verifier = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(verifier))
                 return Unauthorized(new { message = "Không thể xác thực người dùng." });
 
-            var result = await _userService.UpdateCustomerStatus(userId, verifier);
+            var result = await _userService.UpdateCustomerStatus(userId, verifier, data.Status, data.note);
 
             if (result.Data)
                 return Ok(result);

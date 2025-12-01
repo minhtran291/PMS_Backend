@@ -300,6 +300,10 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(p => p.ImageD);
                 entity.Property(p => p.ImageE);
 
+                entity.Property(p => p.ProductIngredients);
+                entity.Property(p => p.ProductlUses);
+                entity.Property(p => p.ProductWeight).HasColumnType("decimal(18,2)");
+
                 entity.HasOne(p => p.Category)
                     .WithMany(c => c.Products)
                     .HasForeignKey(p => p.CategoryID)
@@ -513,6 +517,7 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired()
                     .HasMaxLength(500);
 
+
                 entity.Property(prfq => prfq.Status)
                     .IsRequired();
 
@@ -644,6 +649,8 @@ namespace PMS.Data.DatabaseConfig
 
                 entity.Property(q => q.PRFQID);
 
+                entity.Property(q => q.PaymentDueDate);
+
 
 
                 entity.HasMany(q => q.PurchasingOrders)
@@ -727,6 +734,9 @@ namespace PMS.Data.DatabaseConfig
                     .IsRequired();
 
                 entity.Property(sq => sq.DepositDueDays)
+                    .IsRequired();
+
+                entity.Property(sq => sq.ExpectedDeliveryDate)
                     .IsRequired();
 
                 entity.HasOne(sq => sq.RequestSalesQuotation)

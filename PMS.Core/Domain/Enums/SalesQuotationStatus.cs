@@ -10,6 +10,7 @@ namespace PMS.Core.Domain.Enums
     {
         Draft = 0,
         Sent = 1,
-        Expired = 2
+        Expired = 2,
+        Invalid = 3,
     }
 }

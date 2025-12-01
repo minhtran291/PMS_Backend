@@ -1191,7 +1191,8 @@ namespace PMS.API.Services.PRFQService
                 SendDate = data.SendDate,
                 Status = SupplierQuotationStatus.InDate,
                 QuotationExpiredDate = data.ExpiredDate,
-                PRFQID = data.PRFQID
+                PRFQID = data.PRFQID,
+                PaymentDueDate= data.PaymentDueDate,
             };
 
             await _unitOfWork.Quotation.AddAsync(quotation);
@@ -1429,6 +1430,7 @@ namespace PMS.API.Services.PRFQService
                     UserId = userId,
                     Total = 0,
                     Status = input.Status,
+                    PaymentDueDate=quotation.PaymentDueDate,
                 };
 
                 await _unitOfWork.PurchasingOrder.AddAsync(po);

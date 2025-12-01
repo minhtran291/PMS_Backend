@@ -33,6 +33,10 @@ namespace PMS.Application.DTOs.Product
         public IFormFile? ImageD { get; set; }
         public IFormFile? ImageE { get; set; }
 
+        public string? ProductIngredients { get; set; }
+        public string? ProductlUses { get; set; }
+        public decimal? ProductWeight { get; set; }
+
         [Required(ErrorMessage = "Số lượng tối thiểu là bắt buộc")]
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng tối thiểu phải không âm")]
         public required int MinQuantity { get; set; }
