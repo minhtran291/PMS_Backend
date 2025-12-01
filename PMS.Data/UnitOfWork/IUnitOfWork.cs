@@ -23,6 +23,7 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesOrderDepositCheck;
 using PMS.Data.Repositories.SalesOrderDetailsRepository;
 using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.SalesQuotation;
@@ -81,6 +82,7 @@ namespace PMS.Data.UnitOfWork
         //SalesOrder
         ISalesOrderRepository SalesOrder { get; }
         ISalesOrderDetailsRepository SalesOrderDetails { get; }
+        ISalesOrderDepositCheckRepo SalesOrderDepositCheck { get; }
         //CustomerDept
         ICustomerDebtRepository CustomerDebt { get; }
         //InventoryHistory

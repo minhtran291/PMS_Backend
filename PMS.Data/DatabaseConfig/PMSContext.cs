@@ -53,6 +53,8 @@ namespace PMS.Data.DatabaseConfig
         public virtual DbSet<SalesOrder> SalesOrders { get; set; }
         public virtual DbSet<SalesOrderDetails> SalesOrderDetails { get; set; }
         public virtual DbSet<CustomerDebt> CustomerDebts { get; set; }
+        public virtual DbSet<SalesOrderDepositCheck> CheckSalesDepositManuals {  get; set; }
+
         // StockExportOrder
         public virtual DbSet<StockExportOrder> StockExportOrders { get; set; }
         public virtual DbSet<StockExportOrderDetails> StockExportOrderDetails { get; set; }
@@ -989,6 +991,48 @@ namespace PMS.Data.DatabaseConfig
                     .HasForeignKey(pr => pr.SalesOrderId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+
+            builder.Entity<SalesOrderDepositCheck>(entity =>
+            {
+                entity.ToTable("CheckSalesDepositManuals");
+
+                entity.HasKey(e => e.Id);
+
+                // 1 SalesOrder - n DepositCheck
+                entity.HasOne(e => e.SalesOrder)
+                    .WithMany(o => o.SalesOrderDepositChecks)
+                    .HasForeignKey(e => e.SalesOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.Property(e => e.RequestedAmount)
+                    .HasPrecision(18, 2);
+
+                entity.Property(e => e.PaymentMethod)
+                    .HasConversion<byte>()  
+                    .IsRequired();
+
+                entity.Property(e => e.Status)
+                    .HasConversion<byte>() 
+                    .IsRequired();
+
+                entity.Property(e => e.CustomerNote)
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.RequestedBy)
+                    .HasMaxLength(450)   
+                    .IsRequired();
+
+                entity.Property(e => e.CheckedBy)
+                    .HasMaxLength(450);
+
+                entity.Property(e => e.RejectReason)
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.RequestedAt)
+                    .IsRequired();
+
+            });
+
 
             builder.Entity<SalesOrderDetails>(entity =>
             {
