@@ -11,6 +11,7 @@ namespace PMS.Core.Domain.Enums
         Draft = 0,
         Sent = 1,
         Exported = 2,
-        Late = 3,
+        NotEnough = 3,
+        Late = 4
     }
 }

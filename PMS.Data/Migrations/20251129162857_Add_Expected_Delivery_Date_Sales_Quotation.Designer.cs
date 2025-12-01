@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PMS.Data.DatabaseConfig;
 
@@ -11,9 +12,11 @@ using PMS.Data.DatabaseConfig;
 namespace PMS.Data.Migrations
 {
     [DbContext(typeof(PMSContext))]
-    partial class PMSContextModelSnapshot : ModelSnapshot
+    [Migration("20251129162857_Add_Expected_Delivery_Date_Sales_Quotation")]
+    partial class Add_Expected_Delivery_Date_Sales_Quotation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1017,9 +1020,6 @@ namespace PMS.Data.Migrations
                     b.Property<int>("PRFQID")
                         .HasColumnType("int");
 
-                    b.Property<int>("PaymentDueDate")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("QuotationExpiredDate")
                         .HasColumnType("datetime2");
 
@@ -1193,57 +1193,6 @@ namespace PMS.Data.Migrations
                     b.HasIndex("SalesQuotationId");
 
                     b.ToTable("SalesOrders");
-                });
-
-            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDepositCheck", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime?>("CheckedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("CheckedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("CustomerNote")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<byte>("PaymentMethod")
-                        .HasColumnType("tinyint");
-
-                    b.Property<string>("RejectReason")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<decimal?>("RequestedAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("RequestedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("RequestedBy")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("SalesOrderId")
-                        .HasColumnType("int");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("tinyint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SalesOrderId");
-
-                    b.ToTable("CheckSalesDepositManuals");
                 });
 
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDetails", b =>
@@ -2161,17 +2110,6 @@ namespace PMS.Data.Migrations
                     b.Navigation("SalesQuotation");
                 });
 
-            modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDepositCheck", b =>
-                {
-                    b.HasOne("PMS.Core.Domain.Entities.SalesOrder", "SalesOrder")
-                        .WithMany("SalesOrderDepositChecks")
-                        .HasForeignKey("SalesOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SalesOrder");
-                });
-
             modelBuilder.Entity("PMS.Core.Domain.Entities.SalesOrderDetails", b =>
                 {
                     b.HasOne("PMS.Core.Domain.Entities.LotProduct", "LotProduct")
@@ -2429,8 +2367,6 @@ namespace PMS.Data.Migrations
                     b.Navigation("Invoice");
 
                     b.Navigation("PaymentRemains");
-
-                    b.Navigation("SalesOrderDepositChecks");
 
                     b.Navigation("SalesOrderDetails");
 

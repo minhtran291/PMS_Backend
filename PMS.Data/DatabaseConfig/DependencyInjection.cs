@@ -48,6 +48,7 @@ using PMS.Data.Repositories.PharmacySecretInfor;
 using PMS.Data.Repositories.InvoiceRepo;
 using PMS.Data.Repositories.InvoiceDetailRepo;
 using PMS.Data.Repositories.PaymentRemainRepo;
+using PMS.Data.Repositories.SalesOrderDepositCheck;
 
 namespace PMS.Data.DatabaseConfig
 {
@@ -102,6 +103,7 @@ namespace PMS.Data.DatabaseConfig
             //
             services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
             services.AddScoped<ISalesOrderDetailsRepository, SalesOrderDetailsRepository>();
+            services.AddScoped<ISalesOrderDepositCheckRepo, SalesOrderDepositCheckRepo>();
             //
             services.AddScoped<ICustomerDebtRepository, CustomerDebtRepository>();
             //

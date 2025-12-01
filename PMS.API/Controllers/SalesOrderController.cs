@@ -23,6 +23,8 @@ namespace PMS.API.Controllers
             _service = service;
         }
 
+        private string GetUserId()
+        => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
         [HttpGet("get-quotation-info/{quotationId}")]
         //[Authorize(Roles = UserRoles.CUSTOMER)]
@@ -304,5 +306,161 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
+
+        #region depositmanual
+
+        /// <summary>
+        /// Customer tạo yêu cầu check cọc manual
+        /// POST: http://localhost:5137/api/SalesOrder/{salesOrderId}/deposit-checks/manual
+        /// <param name="salesOrderId"></param>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost("{salesOrderId}/deposit-checks/manual")]
+        [Authorize(Roles = UserRoles.CUSTOMER)] 
+        public async Task<IActionResult> CreateManualDepositCheck(
+            int salesOrderId,
+            [FromBody] CreateSalesOrderDepositCheckRequestDTO dto)
+        {
+            dto.SalesOrderId = salesOrderId;
+            var userId = GetUserId();
+
+            var result = await _service.CreateDepositCheckRequestAsync(dto, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// Accountant approve request check cọc manual của customer
+        /// POST: http://localhost:5137/api/SalesOrder/deposit-checks/{requestId}/approve
+        /// <param name="requestId"></param>
+        /// <returns></returns>
+        [HttpPost("deposit-checks/{requestId}/approve")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> ApproveManualDepositCheck(int requestId)
+        {
+            var accountantId = GetUserId();
+            var result = await _service.ApproveDepositCheckAsync(requestId, accountantId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// Accountant reject request check cọc manual của customer
+        /// POST: http://localhost:5137/api/SalesOrder/deposit-checks/{requestId}/reject
+        /// <param name="requestId"></param>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPost("deposit-checks/{requestId}/reject")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> RejectManualDepositCheck(
+            int requestId,
+            [FromBody] RejectSalesOrderDepositCheckDTO dto)
+        {
+            dto.RequestId = requestId;
+            var accountantId = GetUserId();
+            var result = await _service.RejectDepositCheckAsync(dto, accountantId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// CUSTOMER: list tất cả manual deposit check của mình
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("deposit-checks/manual/my")]
+        [Authorize]
+        public async Task<IActionResult> GetMyManualDepositChecks()
+        {
+            var userId = GetUserId();
+            var result = await _service.ListDepositChecksForCustomerAsync(userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// CUSTOMER: xem chi tiết 1 request
+        /// </summary>
+        /// <param name="requestId"></param>
+        /// <returns></returns>
+        [HttpGet("deposit-checks/manual/{requestId:int}")]
+        [Authorize]
+        public async Task<IActionResult> GetManualDepositCheckDetail(int requestId)
+        {
+            var userId = GetUserId();
+            var result = await _service.GetDepositCheckDetailForCustomerAsync(requestId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="requestId"></param>
+        /// <param name="dto"></param>
+        /// <returns></returns>
+        [HttpPut("deposit-checks/manual/{requestId:int}")]
+        [Authorize]
+        public async Task<IActionResult> UpdateManualDepositCheck(
+            int requestId,
+            [FromBody] UpdateSalesOrderDepositCheckRequestDTO dto)
+        {
+            var userId = GetUserId();
+            var result = await _service.UpdateDepositCheckRequestAsync(requestId, userId, dto);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// CUSTOMER: xoá request nếu vẫn Pending
+        /// </summary>
+        /// <param name="requestId"></param>
+        /// <returns></returns>
+        [HttpDelete("deposit-checks/manual/{requestId:int}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteManualDepositCheck(int requestId)
+        {
+            var userId = GetUserId();
+            var result = await _service.DeleteDepositCheckRequestAsync(requestId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        #endregion
+
     }
 }
