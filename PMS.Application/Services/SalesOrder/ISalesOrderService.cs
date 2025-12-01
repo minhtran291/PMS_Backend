@@ -41,6 +41,15 @@ namespace PMS.Application.Services.SalesOrder
         Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, PaymentStatus status); // When Sales Order is approveed and cannot payment auto then manualy
 
 
+        //Cọc manual
+        public Task<ServiceResult<bool>> CreateDepositCheckRequestAsync(CreateSalesOrderDepositCheckRequestDTO dto, string customerId);
+        public Task<ServiceResult<bool>> ApproveDepositCheckAsync(int requestId, string accountantId);
+        public Task<ServiceResult<bool>> RejectDepositCheckAsync(RejectSalesOrderDepositCheckDTO dto, string accountantId);
+        public Task<ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>> ListDepositChecksForCustomerAsync(string customerId);
+        public Task<ServiceResult<SalesOrderDepositCheckDetailDTO>> GetDepositCheckDetailForCustomerAsync(int requestId, string customerId);
+        public Task<ServiceResult<bool>> UpdateDepositCheckRequestAsync(int requestId, string customerId, UpdateSalesOrderDepositCheckRequestDTO dto);
+        public Task<ServiceResult<bool>> DeleteDepositCheckRequestAsync(int requestId, string customerId);
+
         //
         Task<ServiceResult<bool>> CheckAndUpdateDeliveredStatusAsync();
 

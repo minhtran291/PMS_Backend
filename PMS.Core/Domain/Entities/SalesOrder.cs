@@ -35,6 +35,7 @@ namespace PMS.Core.Domain.Entities
         public virtual ICollection<StockExportOrder> StockExportOrders { get; set; } = [];
         public virtual ICollection<PaymentRemain> PaymentRemains { get; set; } = [];
         public virtual ICollection<Invoice> Invoice { get; set; } = new List<Invoice>();
-
+        public virtual ICollection<SalesOrderDepositCheck> SalesOrderDepositChecks { get; set; }
+        = new List<SalesOrderDepositCheck>();
     }
 }

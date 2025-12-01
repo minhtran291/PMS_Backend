@@ -31,6 +31,7 @@ using PMS.Data.Repositories.QuotationDetailRepository;
 using PMS.Data.Repositories.QuotationRepository;
 using PMS.Data.Repositories.RequestSalesQuotation;
 using PMS.Data.Repositories.RequestSalesQuotationDetails;
+using PMS.Data.Repositories.SalesOrderDepositCheck;
 using PMS.Data.Repositories.SalesOrderDetailsRepository;
 using PMS.Data.Repositories.SalesOrderRepository;
 using PMS.Data.Repositories.SalesQuotation;
@@ -88,7 +89,8 @@ namespace PMS.Data.UnitOfWork
         IGoodsIssueNoteDetailsRepository goodsIssueNoteDetails,
         IInvoiceRepository invoices,
         IInvoiceDetailRepository invoiceDetails,
-        IPaymentRemainRepository paymentRemains) : IUnitOfWork
+        IPaymentRemainRepository paymentRemains,
+        ISalesOrderDepositCheckRepo checkDepositManual) : IUnitOfWork
     {
         private readonly PMSContext _context = context;
         private IDbContextTransaction? _transaction;
@@ -130,6 +132,8 @@ namespace PMS.Data.UnitOfWork
         //SalesOrder
         public ISalesOrderRepository SalesOrder { get; private set; } = salesOrder;
         public ISalesOrderDetailsRepository SalesOrderDetails { get; private set; } = salesOrderDetails;
+        public ISalesOrderDepositCheckRepo SalesOrderDepositCheck { get; private set; } = checkDepositManual;
+        
         //CustomerDept
         public ICustomerDebtRepository CustomerDebt { get; private set; } = customerDept;
 

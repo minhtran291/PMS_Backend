@@ -30,6 +30,7 @@ public static class SampleData
     public static RegisterUser ValidRegisterRequest => new RegisterUser
     {
         UserName = "tunahe171966",
+        FullName = "Nguyen Anh Tu",
         Email = "tunahe171966@fpt.edu.vn",
         Password = "Tunahe171966@",
         ConfirmPassword = "Tunahe171966@",
@@ -41,6 +42,7 @@ public static class SampleData
     public static RegisterUser InvalidEmailRegisterRequest => new RegisterUser
     {
         UserName = "tunahe171966",
+        FullName = "Nguyen Anh Tu",
         Email = "tunahe171966.fpt.edu.vn",
         Password = "Tunahe171966@",
         ConfirmPassword = "Tunahe171966@",
