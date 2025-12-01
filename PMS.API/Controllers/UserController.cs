@@ -370,6 +370,25 @@ namespace PMS.API.Controllers
 
             return Ok(new { message = "Cập nhật thành công thông tin người dùng" });
         }
+
+
+
+        /// <summary>
+        /// Download 1 ảnh (byt hoặc cnkd)
+        /// http://localhost:5137/api/User/download-image
+        /// GET /api/customer/download-image?userId=123&type=byt
+        /// </summary>
+        [HttpGet("download-image")]
+        public async Task<IActionResult> DownloadImage([FromQuery] string userId, [FromQuery] string type)
+        {
+            var fileResult = await _userService.DownloadCustomerImageAsync(userId, type);
+
+            if (fileResult == null)
+                return NotFound(new { success = false, message = "Không tìm thấy ảnh hoặc ảnh không hợp lệ" });
+
+            return fileResult; 
+        }
+
     }
 
 }
