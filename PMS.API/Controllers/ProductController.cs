@@ -177,6 +177,39 @@ namespace PMS.API.Controllers
             });
         }
 
+        /// <summary>
+        /// http://localhost:5137/api/Product/belowMinQuantity
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("belowMinQuantity")]
+        public async Task<IActionResult> GetProductsBelowMinQuantity()
+        {
+            var products = await _productService.GetProductsBelowMinQuantityAsync();
+
+            return Ok(new
+            {
+                success = true,
+                total = products.Count(),
+                data = products
+            });
+        }
+
+        /// <summary>
+        /// http://localhost:5137/api/Product/NearestLot
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet("NearestLot")]
+        public async Task<IActionResult> GetProductsWithNearestLot()
+        {
+            var data = await _productService.GetProductsWithNearestLotAsync();
+
+            return Ok(new
+            {
+                total = data.Count(),
+                data
+            });
+        }
+
     }
 }
 

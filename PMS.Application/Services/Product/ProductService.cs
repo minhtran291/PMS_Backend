@@ -566,6 +566,64 @@ namespace PMS.Application.Services.Product
             }
         }
 
+        public async Task<IEnumerable<ProductMinQuantityDto>> GetProductsBelowMinQuantityAsync()
+        {
+            return await _unitOfWork.Product.Query()
+               .Where(p => p.TotalCurrentQuantity < p.MinQuantity)
+               .Select(p => new ProductMinQuantityDto
+               {
+                   ProductID = p.ProductID,
+                   ProductName = p.ProductName,
+                   MinQuantity = p.MinQuantity,
+                   TotalCurrentQuantity = p.TotalCurrentQuantity
+               })
+               .ToListAsync();
+        }
+
+        public async Task<IEnumerable<ProductNearestLotDto>> GetProductsWithNearestLotAsync()
+        {
+            var products = await _unitOfWork.Product.Query()
+                .Include(p => p.LotProducts)
+                    .ThenInclude(l => l.Supplier)
+                .Include(p => p.LotProducts)
+                    .ThenInclude(l => l.WarehouseLocation)
+                .ToListAsync();
+
+            var result = products
+                .Select(product =>
+                {
+                    var nearestLot = product.LotProducts
+                        .OrderBy(l => l.ExpiredDate) 
+                        .FirstOrDefault();
+
+                    if (nearestLot == null)
+                        return null;
+
+                    return new ProductNearestLotDto
+                    {
+                        ProductID = product.ProductID,
+                        ProductName = product.ProductName,
+                        TotalCurrentQuantity = product.TotalCurrentQuantity,
+
+                        LotID = nearestLot.LotID,
+                        InputDate = nearestLot.InputDate,
+                        ExpiredDate = nearestLot.ExpiredDate,
+                        LotQuantity = nearestLot.LotQuantity,
+                        InputPrice = nearestLot.InputPrice,
+                        SalePrice = nearestLot.SalePrice,
+
+                        SupplierID = nearestLot.SupplierID,
+                        SupplierName = nearestLot.Supplier?.Name ?? "",
+
+                        WarehouseLocationID = nearestLot.WarehouselocationID,
+                        WarehouseLocationName = nearestLot.WarehouseLocation?.LocationName ?? ""
+                    };
+                })
+                .Where(x => x != null)
+                .ToList()!;
+
+            return result;
+        }
 
 
     }

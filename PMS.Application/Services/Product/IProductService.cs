@@ -14,5 +14,9 @@ namespace PMS.Application.Services.Product
         Task<ServiceResult<List<ProductDTO>>> SearchProductByKeyWordAsync(string keyWord);
 
         Task<ServiceResult<List<LotProductDTO2>>> GetLotProductByProductId(int productId);
+
+        Task<IEnumerable<ProductMinQuantityDto>> GetProductsBelowMinQuantityAsync();
+
+        Task<IEnumerable<ProductNearestLotDto>> GetProductsWithNearestLotAsync();
     }
 }
