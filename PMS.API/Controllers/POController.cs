@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PMS.Application.DTOs.PO;
 using PMS.Application.Services.PO;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Enums;
+using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Controllers
 {
@@ -14,9 +16,11 @@ namespace PMS.API.Controllers
     public class POController : BaseController
     {
         private readonly IPOService _poService;
-        public POController(IPOService poService)
+        private readonly IUnitOfWork _unitOfWork;
+        public POController(IPOService poService, IUnitOfWork unitOfWork)
         {
             _poService = poService;
+            _unitOfWork = unitOfWork;
         }
 
         /// <summary>
@@ -243,6 +247,64 @@ namespace PMS.API.Controllers
         {
             var result = await _poService.GetDebtReportDetail(dbid);
             return HandleServiceResult(result);
+        }
+
+        /// <summary>
+        /// http://localhost:5137/api/PO/detailsByYear/?year=2025
+        /// </summary>
+        /// <param name="month"></param>
+        /// <param name="year"></param>
+        /// <returns></returns>
+        [HttpGet("detailsByYear")]
+        public async Task<IActionResult> GetPurchasingOrderDetailsByYear(int year)
+        {
+            var poList = await _unitOfWork.PurchasingOrder.Query()
+                .Where(p => p.OrderDate.Year == year
+                         && (p.Status == PurchasingOrderStatus.paid
+                          || p.Status == PurchasingOrderStatus.deposited))
+                .Include(p => p.PurchasingOrderDetails)
+                .Include(p => p.User)
+                .ToListAsync();
+
+            var grouped = poList
+                .GroupBy(p => p.OrderDate.Month)
+                .OrderBy(g => g.Key)
+                .Select(g => new
+                {
+                    Month = g.Key,
+                    TotalOrders = g.Count(),
+                    Orders = g.Select(p => new PurchasingOrderDetailByMonthDto
+                    {
+                        POID = p.POID,
+                        OrderDate = p.OrderDate,
+                        Total = p.Total,
+                        Deposit = p.Deposit,
+                        Debt = p.Debt,
+                        Status = p.Status,
+                        QID = p.QID,
+                        CreatedBy = p.User?.UserName ?? "",
+                        Details = p.PurchasingOrderDetails.Select(d => new PurchasingOrderDetailItemDto
+                        {
+                            PODID = d.PODID,
+                            ProductID = d.ProductID,
+                            ProductName = d.ProductName,
+                            DVT = d.DVT,
+                            Quantity = d.Quantity,
+                            UnitPrice = d.UnitPrice,
+                            UnitPriceTotal = d.UnitPriceTotal,
+                            Tax = d.Tax,
+                            ExpiredDate = d.ExpiredDate
+                        }).ToList()
+                    }).ToList()
+                })
+                .ToList();
+
+            return Ok(new
+            {
+                Year = year,
+                TotalMonths = grouped.Count,
+                Data = grouped
+            });
         }
 
     }
