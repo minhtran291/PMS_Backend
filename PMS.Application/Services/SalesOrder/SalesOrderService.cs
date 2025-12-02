@@ -37,6 +37,7 @@ namespace PMS.Application.Services.SalesOrder
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
                     .Include(o => o.CustomerDebts)
+                    .Include(o => o.SalesQuotation)
                     .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (order == null)
@@ -49,12 +50,12 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                if (order.SalesOrderStatus != SalesOrderStatus.Approved && order.PaymentStatus != PaymentStatus.Deposited)
+                if (order.SalesOrderStatus != SalesOrderStatus.Approved )
                 {
                     return new ServiceResult<bool>
                     {
                         StatusCode = 400,
-                        Message = "Chỉ xác nhận thanh toán cho đơn ở trạng thái đã được chấp thuận hoặc đã cọc.",
+                        Message = "Chỉ xác nhận thanh toán cọc cho đơn ở trạng thái đã được chấp thuận.",
                         Data = false
                     };
                 }
@@ -345,6 +346,594 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
+
+        #region CheckDepositManual
+
+        //Customer yêu cầu kiếm tra tài khoản hoặc đã nhận được tiền mặt chưa
+        public async Task<ServiceResult<bool>> CreateDepositCheckRequestAsync(
+            CreateSalesOrderDepositCheckRequestDTO dto,string customerId)
+        {
+            try
+            {
+                if (dto == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Payload trống.",
+                        Data = false
+                    };
+                }
+
+                if (dto.SalesOrderId <= 0)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "SalesOrderId không hợp lệ.",
+                        Data = false
+                    };
+                }
+
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesQuotation)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == dto.SalesOrderId);
+
+                if (order == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy đơn hàng.",
+                        Data = false
+                    };
+                }
+
+                if (!string.Equals(order.CreateBy, customerId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền tạo yêu cầu cho đơn hàng này.",
+                        Data = false
+                    };
+                }
+
+                if (order.SalesOrderStatus != SalesOrderStatus.Approved)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ tạo yêu cầu cọc cho đơn đã được chấp thuận.",
+                        Data = false
+                    };
+                }
+
+                if (order.PaymentStatus == PaymentStatus.Paid)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Đơn hàng đã được thanh toán đủ.",
+                        Data = false
+                    };
+                }
+
+                if (order.SalesQuotation == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Đơn hàng không có thông tin báo giá.",
+                        Data = false
+                    };
+                }
+
+                var depositPercent = order.SalesQuotation.DepositPercent;
+                var fullDeposit = Math.Round(order.TotalPrice * depositPercent / 100m, 2);
+
+                var requestedAmount = dto.RequestedAmount ?? fullDeposit;
+                if (requestedAmount <= 0)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Số tiền yêu cầu kiểm tra không hợp lệ.",
+                        Data = false
+                    };
+                }
+
+                var entity = new SalesOrderDepositCheck
+                {
+                    SalesOrderId = order.SalesOrderId,
+                    RequestedAmount = requestedAmount,
+                    PaymentMethod = dto.PaymentMethod,
+                    CustomerNote = dto.CustomerNote,
+                    Status = DepositCheckStatus.Pending,
+                    RequestedBy = customerId,
+                    RequestedAt = DateTime.Now
+                };
+
+                await _unitOfWork.SalesOrderDepositCheck.AddAsync(entity);
+                await _unitOfWork.CommitAsync();
+
+                // Gửi noti cho ACCOUNTANT
+                try
+                {
+                    await _noti.SendNotificationToRolesAsync(
+                        customerId,
+                        new List<string> { "ACCOUNTANT" },
+                        "Yêu cầu kiểm tra cọc đơn hàng",
+                        $"Đơn {order.SalesOrderCode} có yêu cầu kiểm tra cọc số tiền {requestedAmount:N0}.",
+                        NotificationType.Message
+                    );
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification ACCOUNTANT thất bại khi tạo DepositCheck cho order {OrderId}",
+                        order.SalesOrderId);
+                }
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 201,
+                    Message = "Tạo yêu cầu kiểm tra cọc thành công. Vui lòng đợi phản hồi!",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi CreateDepositCheckRequestAsync");
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi tạo yêu cầu kiểm tra cọc.",
+                    Data = false
+                };
+            }
+        }
+
+        //Accountant chấp nhận yêu cầu check cọc
+        public async Task<ServiceResult<bool>> ApproveDepositCheckAsync(int requestId, string accountantId)
+        {
+            try
+            {
+                var req = await _unitOfWork.SalesOrderDepositCheck.Query()
+                    .Include(r => r.SalesOrder)
+                    .ThenInclude(o => o.SalesQuotation)
+                    .FirstOrDefaultAsync(r => r.Id == requestId);
+
+                if (req == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy yêu cầu kiểm tra cọc.",
+                        Data = false
+                    };
+                }
+
+                if (req.Status != DepositCheckStatus.Pending)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Yêu cầu đã được xử lý trước đó.",
+                        Data = false
+                    };
+                }
+
+                // Xác nhận cọc cho SalesOrder này
+                var confirmResult = await ConfirmPaymentAsync(req.SalesOrderId, PaymentStatus.Deposited);
+                if (confirmResult.StatusCode != 200 || !confirmResult.Data)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = confirmResult.StatusCode,
+                        Message = "Không thể xác nhận cọc cho đơn hàng: " + confirmResult.Message,
+                        Data = false
+                    };
+                }
+
+                req.Status = DepositCheckStatus.Approved;
+                req.CheckedBy = accountantId;
+                req.CheckedAt = DateTime.Now;
+
+                _unitOfWork.SalesOrderDepositCheck.Update(req);
+                await _unitOfWork.CommitAsync();
+
+                // Noti cho khách
+                try
+                {
+                    await _noti.SendNotificationToCustomerAsync(
+                        accountantId,
+                        req.SalesOrder.CreateBy,
+                        "Đã xác nhận cọc cho đơn hàng",
+                        $"Đơn {req.SalesOrder.SalesOrderCode} đã được xác nhận cọc.",
+                        NotificationType.Message
+                    );
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification Customer thất bại khi approve DepositCheck {RequestId}",
+                        req.Id);
+                }
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Đã phê duyệt yêu cầu kiểm tra cọc.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ApproveDepositCheckAsync({RequestId})", requestId);
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi phê duyệt yêu cầu kiểm tra cọc.",
+                    Data = false
+                };
+            }
+        }
+
+        //Accountant reject yêu cầu check cọc có lý do
+        public async Task<ServiceResult<bool>> RejectDepositCheckAsync(
+            RejectSalesOrderDepositCheckDTO dto, string accountantId)
+        {
+            try
+            {
+                var req = await _unitOfWork.SalesOrderDepositCheck.Query()
+                    .Include(r => r.SalesOrder)
+                    .FirstOrDefaultAsync(r => r.Id == dto.RequestId);
+
+                if (req == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy yêu cầu kiểm tra cọc.",
+                        Data = false
+                    };
+                }
+
+                if (req.Status != DepositCheckStatus.Pending)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Yêu cầu đã được xử lý trước đó.",
+                        Data = false
+                    };
+                }
+
+                if (string.IsNullOrWhiteSpace(dto.Reason))
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Vui lòng nhập lý do từ chối.",
+                        Data = false
+                    };
+                }
+
+                req.Status = DepositCheckStatus.Rejected;
+                req.RejectReason = dto.Reason.Trim();
+                req.CheckedBy = accountantId;
+                req.CheckedAt = DateTime.Now;
+
+                _unitOfWork.SalesOrderDepositCheck.Update(req);
+                await _unitOfWork.CommitAsync();
+
+                // Noti cho khách
+                try
+                {
+                    await _noti.SendNotificationToCustomerAsync(
+                        accountantId,
+                        req.SalesOrder.CreateBy,
+                        "Yêu cầu kiểm tra cọc bị từ chối",
+                        $"Yêu cầu xác nhận cọc cho đơn {req.SalesOrder.SalesOrderCode} đã bị từ chối. Lý do: {req.RejectReason}.",
+                        NotificationType.Message
+                    );
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification Customer thất bại khi reject DepositCheck {RequestId}",
+                        req.Id);
+                }
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Đã từ chối yêu cầu kiểm tra cọc.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi RejectDepositCheckAsync({RequestId})", dto.RequestId);
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi từ chối yêu cầu kiểm tra cọc.",
+                    Data = false
+                };
+            }
+        }
+
+        //Customer request check deposit
+        public async Task<ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>> ListDepositChecksForCustomerAsync(string customerId)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(customerId))
+                {
+                    return new ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>
+                    {
+                        StatusCode = 400,
+                        Message = "Thiếu thông tin khách hàng.",
+                        Data = null
+                    };
+                }
+
+                var query = _unitOfWork.SalesOrderDepositCheck.Query()
+                    .Include(x => x.SalesOrder)
+                    .Where(x => x.RequestedBy == customerId)
+                    .OrderByDescending(x => x.RequestedAt);
+
+                var items = await query
+                    .Select(x => new SalesOrderDepositCheckItemDTO
+                    {
+                        Id = x.Id,
+                        SalesOrderId = x.SalesOrderId,
+                        SalesOrderCode = x.SalesOrder.SalesOrderCode,
+                        RequestedAmount = x.RequestedAmount,
+                        PaymentMethod = x.PaymentMethod,
+                        Status = x.Status,
+                        RequestedAt = x.RequestedAt
+                    })
+                    .ToListAsync();
+
+                return new ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>
+                {
+                    StatusCode = 200,
+                    Message = "Lấy danh sách yêu cầu kiểm tra cọc thành công.",
+                    Data = items
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ListDepositChecksForCustomerAsync({CustomerId})", customerId);
+                return new ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi lấy danh sách yêu cầu kiểm tra cọc.",
+                    Data = null
+                };
+            }
+        }
+
+        //Customer xem chi tiết yêu cầu check cọc cho đơn hàng của mình
+        public async Task<ServiceResult<SalesOrderDepositCheckDetailDTO>> GetDepositCheckDetailForCustomerAsync(int requestId, string customerId)
+        {
+            try
+            {
+                var entity = await _unitOfWork.SalesOrderDepositCheck.Query()
+                    .Include(x => x.SalesOrder)
+                    .FirstOrDefaultAsync(x => x.Id == requestId);
+
+                if (entity == null)
+                {
+                    return new ServiceResult<SalesOrderDepositCheckDetailDTO>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy yêu cầu kiểm tra cọc.",
+                        Data = null
+                    };
+                }
+
+                if (!string.Equals(entity.RequestedBy, customerId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ServiceResult<SalesOrderDepositCheckDetailDTO>
+                    {
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền xem yêu cầu này.",
+                        Data = null
+                    };
+                }
+
+                var dto = new SalesOrderDepositCheckDetailDTO
+                {
+                    Id = entity.Id,
+                    SalesOrderId = entity.SalesOrderId,
+                    SalesOrderCode = entity.SalesOrder.SalesOrderCode,
+                    TotalOrderAmount = entity.SalesOrder.TotalPrice,
+                    RequestedAmount = entity.RequestedAmount,
+                    PaymentMethod = entity.PaymentMethod,
+                    CustomerNote = entity.CustomerNote,
+                    Status = entity.Status,
+                    RequestedBy = entity.RequestedBy,
+                    RequestedAt = entity.RequestedAt,
+                    CheckedBy = entity.CheckedBy,
+                    CheckedAt = entity.CheckedAt,
+                    RejectReason = entity.RejectReason
+                };
+
+                return new ServiceResult<SalesOrderDepositCheckDetailDTO>
+                {
+                    StatusCode = 200,
+                    Message = "Lấy chi tiết yêu cầu kiểm tra cọc thành công.",
+                    Data = dto
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi GetDepositCheckDetailForCustomerAsync({RequestId})", requestId);
+                return new ServiceResult<SalesOrderDepositCheckDetailDTO>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi lấy chi tiết yêu cầu kiểm tra cọc.",
+                    Data = null
+                };
+            }
+        }
+
+        // Customer có thể sửa khi yêu cầu kiểm tra còn ở trạng thái pending
+        public async Task<ServiceResult<bool>> UpdateDepositCheckRequestAsync(int requestId, string customerId, UpdateSalesOrderDepositCheckRequestDTO dto)
+        {
+            try
+            {
+                var entity = await _unitOfWork.SalesOrderDepositCheck.Query()
+                    .Include(x => x.SalesOrder)
+                        .ThenInclude(o => o.SalesQuotation)
+                    .FirstOrDefaultAsync(x => x.Id == requestId);
+
+                if (entity == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy yêu cầu kiểm tra cọc.",
+                        Data = false
+                    };
+                }
+
+                if (!string.Equals(entity.RequestedBy, customerId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền sửa yêu cầu này.",
+                        Data = false
+                    };
+                }
+
+                if (entity.Status != DepositCheckStatus.Pending)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được sửa yêu cầu ở trạng thái Pending.",
+                        Data = false
+                    };
+                }
+
+                if (entity.SalesOrder == null || entity.SalesOrder.SalesQuotation == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Đơn hàng không có thông tin báo giá.",
+                        Data = false
+                    };
+                }
+
+                var depositPercent = entity.SalesOrder.SalesQuotation.DepositPercent;
+                var fullDeposit = Math.Round(entity.SalesOrder.TotalPrice * depositPercent / 100m, 2);
+
+                var newRequestedAmount = dto.RequestedAmount ?? fullDeposit;
+                if (newRequestedAmount <= 0)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Số tiền yêu cầu kiểm tra không hợp lệ.",
+                        Data = false
+                    };
+                }
+
+                entity.RequestedAmount = newRequestedAmount;
+                entity.PaymentMethod = dto.PaymentMethod;
+                entity.CustomerNote = dto.CustomerNote;
+
+                _unitOfWork.SalesOrderDepositCheck.Update(entity);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Cập nhật yêu cầu kiểm tra cọc thành công.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi UpdateDepositCheckRequestAsync({RequestId})", requestId);
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi cập nhật yêu cầu kiểm tra cọc.",
+                    Data = false
+                };
+            }
+        }
+
+        //Customer có thẻe xóa yêu cầu kiểm tra cọc khi yêu cầu còn ở trạng thái pending
+        public async Task<ServiceResult<bool>> DeleteDepositCheckRequestAsync(int requestId, string customerId)
+        {
+            try
+            {
+                var entity = await _unitOfWork.SalesOrderDepositCheck.Query()
+                    .FirstOrDefaultAsync(x => x.Id == requestId);
+
+                if (entity == null)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy yêu cầu kiểm tra cọc.",
+                        Data = false
+                    };
+                }
+
+                if (!string.Equals(entity.RequestedBy, customerId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền xoá yêu cầu này.",
+                        Data = false
+                    };
+                }
+
+                if (entity.Status != DepositCheckStatus.Pending)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Chỉ được xoá yêu cầu ở trạng thái Pending.",
+                        Data = false
+                    };
+                }
+
+                _unitOfWork.SalesOrderDepositCheck.Remove(entity);
+                await _unitOfWork.CommitAsync();
+
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 200,
+                    Message = "Xoá yêu cầu kiểm tra cọc thành công.",
+                    Data = true
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi DeleteDepositCheckRequestAsync({RequestId})", requestId);
+                return new ServiceResult<bool>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi xoá yêu cầu kiểm tra cọc.",
+                    Data = false
+                };
+            }
+        }
+
+
+        #endregion
 
         public async Task<ServiceResult<object>> GetOrderDetailsAsync(int salesOrderId)
         {
