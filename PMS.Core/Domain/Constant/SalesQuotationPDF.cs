@@ -171,19 +171,19 @@ namespace PMS.Core.Domain.Constant
             <div class=""header-title"">BÊN GỬI</div>
             <div class=""info-row"">
                 <span class=""label"">Tên nhà thuốc:</span>
-                <span class=""value"">BB Pharmacy</span>
+                <span class=""value"">NHÀ THUỐC DƯỢC PHẨM SỐ 17</span>
             </div>
             <div class=""info-row"">
                 <span class=""label"">Email:</span>
-                <span class=""value"">trananhtester@gmail.com</span>
+                <span class=""value"">minhtran2912003@gmail.com</span>
             </div>
             <div class=""info-row"">
                 <span class=""label"">Địa chỉ:</span>
-                <span class=""value"">Hà Nội</span>
+                <span class=""value"">Kiot số 17, Phường Lê Thanh Nghị, TP Hải Phòng</span>
             </div>
             <div class=""info-row"">
                 <span class=""label"">Liên lạc:</span>
-                <span class=""value"">0915054117</span>
+                <span class=""value"">0398233047</span>
             </div>
             <div class=""info-row"">
                 <span class=""label"">Người gửi:</span>
@@ -258,11 +258,11 @@ namespace PMS.Core.Domain.Constant
     <p><strong>Ghi chú</strong></p>
 
     <div style=""line-height:1.4;"">
-        <div>Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá</div>
-        <div>Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế</div>
-        <div>Tạm ứng {sq.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {sq.DepositDueDays} ngày kể từ khi ký hợp đồng</div>
-        <div>Hàng hóa dự kiến giao trong thời gian {sq.ExpectedDeliveryDate} ngày kể từ ngày ký kết hợp đồng và cọc</div>
-        <div>Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN QUANG TRUNG</div>
+        <div>Hiệu lực báo giá có giá trị {validityText} kể từ lúc báo giá.</div>
+        <div>Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế.</div>
+        <div>Tạm ứng {sq.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {sq.DepositDueDays} ngày kể từ khi ký hợp đồng.</div>
+        <div>Hàng hóa dự kiến giao trong thời gian {sq.ExpectedDeliveryDate} ngày kể từ ngày ký kết hợp đồng và cọc.</div>
+        <div>Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN QUANG TRUNG - 4619300024210402 - Ngân hàng Timo.</div>
     </div>
 
     <div class=""footer"">

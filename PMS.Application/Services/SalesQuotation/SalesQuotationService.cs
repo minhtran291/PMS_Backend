@@ -1335,10 +1335,10 @@ namespace PMS.Application.Services.SalesQuotation
                     subTotal = subTotal,
                     taxTotal = taxTotal,
                     grandTotal = grandTotal,
-                    PharmacyName = "BBPharmacy",
-                    Email = "trananhtestter@gmail.com",
-                    SenderAddress = "Hà Nội",
-                    SenderPhone = "0915054117",
+                    PharmacyName = "NHÀ THUỐC DƯỢC PHẨM SỐ 17",
+                    Email = "minhtran2912003@gmail.com",
+                    SenderAddress = "Kiot số 17, Phường Lê Thanh Nghị, TP Hải Phòng",
+                    SenderPhone = "0398233047",
                     SenderName = salesQuotation.StaffProfile.User.FullName ?? "",
                     ReceiverName = salesQuotation.RequestSalesQuotation.CustomerProfile.User.FullName ?? "",
                     ReceiverPhone = salesQuotation.RequestSalesQuotation.CustomerProfile.User.PhoneNumber ?? "",
@@ -1348,7 +1348,7 @@ namespace PMS.Application.Services.SalesQuotation
 Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế.
 Tạm ứng {salesQuotation.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {salesQuotation.DepositDueDays} ngày kể từ khi ký hợp đồng.
 Hàng hóa dự kiến giao trong thời gian {salesQuotation.ExpectedDeliveryDate} ngày kể từ ngày ký kết hợp đồng và cọc.
-Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN QUANG TRUNG."
+Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN QUANG TRUNG - 4619300024210402 - Ngân hàng Timo."
                 };
 
                 return new ServiceResult<object>

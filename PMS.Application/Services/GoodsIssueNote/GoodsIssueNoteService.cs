@@ -339,7 +339,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                 if (isWarehouseStaff)
                     query = query.Where(g => g.CreateBy == user.Id);
                 else
-                    query = query.Where(g => g.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Sent);
+                    query = query.Where(g => g.Status != Core.Domain.Enums.GoodsIssueNoteStatus.Draft);
 
                 var list = await query.ToListAsync();
 
