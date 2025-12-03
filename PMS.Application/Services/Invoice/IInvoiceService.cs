@@ -26,6 +26,9 @@ namespace PMS.Application.Services.Invoice
         Task<ServiceResult<List<string>>> GetGoodsIssueNoteCodesBySalesOrderCodeAsync(string salesOrderCode);
         Task<ServiceResult<List<InvoiceDTO>>> GetInvoicesForCurrentCustomerAsync(string userId);
 
+        Task<ServiceResult<InvoiceSmartCASignResponseDTO>>CreateSmartCASignTransactionAsync(
+            int invoiceId,
+            SmartCASignInvoiceRequestDTO request);
 
     }
 }

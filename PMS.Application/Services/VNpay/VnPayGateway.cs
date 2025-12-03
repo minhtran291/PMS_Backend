@@ -111,7 +111,7 @@ namespace PMS.API.Helpers.VnPay
                 ["vnp_Amount"] = amountVnp,
                 ["vnp_CurrCode"] = "VND",
                 ["vnp_TxnRef"] = txnRef,
-                ["vnp_OrderInfo"] = safeOrderInfo,   // ✅ DÙNG safeOrderInfo
+                ["vnp_OrderInfo"] = safeOrderInfo,  
                 ["vnp_OrderType"] = "billpayment",
                 ["vnp_ReturnUrl"] = _opt.ReturnUrl,
                 ["vnp_IpAddr"] = ip,
@@ -172,8 +172,6 @@ namespace PMS.API.Helpers.VnPay
                 }
             }
 
-            // ✅ Hash lại y chang rule build request:
-            // sort alphab + VnPayEnc (UrlEncode UTF8 + "+" cho space + HEX uppercase)
             var raw = string.Join("&", input.Select(kv => $"{kv.Key}={VnPayEnc(kv.Value)}"));
             var myHash = HmacSHA512(_opt.HashSecret, raw).ToLowerInvariant();
             var vnpHash = query["vnp_SecureHash"].ToString();
