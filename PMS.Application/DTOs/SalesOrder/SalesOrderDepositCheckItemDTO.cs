@@ -12,6 +12,7 @@ namespace PMS.Application.DTOs.SalesOrder
         public int Id { get; set; }
         public int SalesOrderId { get; set; }
         public string SalesOrderCode { get; set; } = null!;
+        public string CustomerName { get; set; } = null!;
         public decimal? RequestedAmount { get; set; }
         public PaymentMethod PaymentMethod { get; set; }
         public DepositCheckStatus Status { get; set; }

@@ -37,6 +37,7 @@ using PMS.Application.Services.TaxPolicy;
 using PMS.Application.Services.PaymentRemainService;
 using PMS.Application.Services.Invoice;
 using PMS.Application.Services.CustomerDebt;
+using PMS.Application.Services.SmartCA;
 
 namespace PMS.Application.DIConfig
 {
@@ -76,6 +77,8 @@ namespace PMS.Application.DIConfig
             services.AddScoped<IPaymentRemainService, PaymentRemainService>();
             services.AddScoped<IInvoiceService, InvoiceService>();
             services.AddScoped<ICustomerDebtService, CustomerDebtService>();
+            services.AddScoped<ISmartCAService,SmartCAService>();
+            services.AddHttpClient<ISmartCAService, SmartCAService>();
         }
 
         public static void InitialValueConfig(this IServiceCollection services, IConfiguration configuration)
@@ -84,10 +87,12 @@ namespace PMS.Application.DIConfig
             var jwtConfig = configuration.GetSection("Jwt");
             var VnPayConfig = configuration.GetSection("VnPay");
             var VietQRConfig = configuration.GetSection("VietQR");
+            var SmartCA = configuration.GetSection("SmartCA");
             services.Configure<EmailConfig>(emailConfig);
             services.Configure<JwtConfig>(jwtConfig);
             services.Configure<VNPayConfig>(VnPayConfig);
             services.Configure<VietQRConfig>(VietQRConfig);
+            services.Configure<SmartCAConfig>(SmartCA);
         }
 
         public static void AddExternalServices(this IServiceCollection services)

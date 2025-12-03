@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.Auth;
 using PMS.Application.DTOs.Customer;
 using PMS.Application.DTOs.Profile;
@@ -25,7 +26,7 @@ namespace PMS.Application.Services.User
         Task<ServiceResult<object>> GetProfile(string userId, List<string> roles);
         Task<ServiceResult<CustomerStatusDTO>> GetCustomerStatusAsync(string userId);
         Task<ServiceResult<bool>> SubmitCustomerAdditionalInfoAsync(string userId, CustomerAdditionalInfoDTO additionalInfo);
-
+        Task<FileContentResult?> DownloadCustomerImageAsync(string userId, string type);
         Task<bool> EditProfileAsync(
         string userId,
         CustomerEditProfileDTO dto,

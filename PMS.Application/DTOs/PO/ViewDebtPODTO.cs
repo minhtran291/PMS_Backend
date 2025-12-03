@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using PMS.Core.Domain.Enums;
 
 namespace PMS.Application.DTOs.PO
 {
@@ -10,5 +11,6 @@ namespace PMS.Application.DTOs.PO
     {
         public int poid { get; set; }
         public decimal toatlPo { get; set; }
+        public PurchasingOrderStatus Status { get; set; }
     }
 }

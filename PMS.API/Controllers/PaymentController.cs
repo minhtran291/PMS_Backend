@@ -48,7 +48,7 @@ namespace PMS.API.Controllers
         public async Task<IActionResult> Return()
         {
             var result = await _vnPay.HandleVnPayReturnAsync(Request.Query);
-            // return Redirect($"https://your-frontend.com/payment/result?success={rs.Data}");
+            return Redirect($"https://bbpharmacy.site/payment/result?success={result.Data}");
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,
@@ -65,6 +65,7 @@ namespace PMS.API.Controllers
         [HttpGet("vnpay/ipn")]
         public async Task<IActionResult> VnPayIpn()
         {
+            
             var (ok, code, msg) = await _vnPay.HandleVnPayIpnAsync(Request.Query)
                 .ContinueWith(t =>
                 {
@@ -76,7 +77,10 @@ namespace PMS.API.Controllers
                     if (!r.Success && r.StatusCode == 404) return (false, "01", r.Message);
                     return (true, "00", "Confirm Success");
                 });
-
+            if (ok)
+            {
+                await _salesOrder.RecalculateTotalReceiveAsync();
+            }
             return Content($"RspCode={code}&Message={msg}", "text/plain");
         }
 
