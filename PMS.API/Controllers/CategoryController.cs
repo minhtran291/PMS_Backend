@@ -40,7 +40,7 @@ namespace PMS.API.Controllers
         /// Lấy tất cả thể loại
         /// </summary>
         [HttpGet("all")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+       // [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
         public async Task<IActionResult> GetAllCategories()
         {
             var result = await _categoryService.GetAllAsync();

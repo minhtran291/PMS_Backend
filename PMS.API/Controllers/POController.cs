@@ -264,13 +264,14 @@ namespace PMS.API.Controllers
                           || p.Status == PurchasingOrderStatus.deposited))
                 .Include(p => p.PurchasingOrderDetails)
                 .Include(p => p.User)
-                .ToListAsync();
-
+                .Include(p=>p.Quotations)
+                .ToListAsync();          
             var grouped = poList
                 .GroupBy(p => p.OrderDate.Month)
                 .OrderBy(g => g.Key)
                 .Select(g => new
                 {
+                    
                     Month = g.Key,
                     TotalOrders = g.Count(),
                     Orders = g.Select(p => new PurchasingOrderDetailByMonthDto
@@ -281,6 +282,7 @@ namespace PMS.API.Controllers
                         Deposit = p.Deposit,
                         Debt = p.Debt,
                         Status = p.Status,
+                        supname= p.Quotations.SupplierID, 
                         QID = p.QID,
                         CreatedBy = p.User?.UserName ?? "",
                         Details = p.PurchasingOrderDetails.Select(d => new PurchasingOrderDetailItemDto
@@ -306,6 +308,75 @@ namespace PMS.API.Controllers
                 Data = grouped
             });
         }
+
+        /// <summary>
+        /// http://localhost:5137/api/PO/UploadPdf
+        /// </summary>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        [HttpPost("UploadPdf")]
+        public async Task<IActionResult> UploadPdf(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("File is empty");
+
+            
+            const long maxSize = 5 * 1024 * 1024;
+            if (file.Length > maxSize)
+                return BadRequest("File size cannot exceed 5MB.");
+
+           
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            if (extension != ".pdf")
+                return BadRequest("Only PDF files are allowed.");
+
+
+            var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "pdfs");
+
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
+
+            string fileName = $"{Guid.NewGuid()}.pdf";
+            string fullPath = Path.Combine(folderPath, fileName);
+
+
+            using (var stream = new FileStream(fullPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+
+            return Ok(new
+            {
+                message = "Upload success",
+                fileName = fileName,
+                fileUrl = $"/pdfs/{fileName}"
+            });
+        }
+
+        /// <summary>
+        /// http://localhost:5137/api/PO/DownloadPdf/?fileName=
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
+        [HttpGet("DownloadPdf")]
+        public IActionResult DownloadPdf([FromQuery] string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName))
+                return BadRequest("File name is required");
+
+            var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "pdfs");
+            var fullPath = Path.Combine(folderPath, fileName);
+
+            if (!System.IO.File.Exists(fullPath))
+                return NotFound("File not found");
+
+            var fileBytes = System.IO.File.ReadAllBytes(fullPath);
+
+            return File(fileBytes, "application/pdf", fileName);
+        }
+
 
     }
 }

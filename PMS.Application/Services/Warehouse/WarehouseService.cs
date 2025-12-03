@@ -368,7 +368,7 @@ namespace PMS.Application.Services.Warehouse
 
 
             ws.Cells["A1:H1"].Merge = true;
-            ws.Cells["A1"].Value = "CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY";
+            ws.Cells["A1"].Value = "Nhà thuốc số 17";
             ws.Cells["A1"].Style.Font.Bold = true;
             ws.Cells["A1"].Style.Font.Size = 14;
             ws.Cells["A1"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
@@ -381,7 +381,7 @@ namespace PMS.Application.Services.Warehouse
             ws.Cells["A2"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
 
             ws.Cells["A3:H3"].Merge = true;
-            ws.Cells["A3"].Value = "Lý do kiểm kê: Thường niên, tránh mất mát, hư hỏng, phục vụ vô điều kiện cho mục đích pháp lý";
+            ws.Cells["A3"].Value = "Lý do kiểm kê: Thường niên, tránh mất mát, hư hỏng, phục vụ mục đích pháp lý";
             ws.Cells["A3"].Style.Font.Size = 11;
             ws.Cells["A3"].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
             ws.Cells["A3"].Style.Font.Italic = true;
