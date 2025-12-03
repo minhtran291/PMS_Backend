@@ -308,5 +308,28 @@ namespace PMS.API.Controllers
             return HandleServiceResult(result);
         }
 
+
+        /// <summary>
+        /// http://localhost:5137/api/PRFQ/import
+        /// Import báo giá nhà cung cấp từ file excel
+        /// </summary>
+        [HttpPost("import")]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> ImportQuotation([FromForm] IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "File không hợp lệ" });
+
+            var result = await _iPRFQService.ImportSupplierQuotationExcelFile(file);
+
+            return result.StatusCode switch
+            {
+                200 => Ok(result),
+                400 => BadRequest(result),
+                404 => NotFound(result),
+                _ => StatusCode(result.StatusCode, result)
+            };
+        }
+
     }
 }

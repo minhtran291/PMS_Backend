@@ -36,7 +36,6 @@ public static class SampleData
         ConfirmPassword = "Tunahe171966@",
         PhoneNumber = "0987654321",
         Address = "Hanoi",
-        FullName="ancdqwe"
     };
 
     // Register request email không hợp lệ
@@ -49,7 +48,6 @@ public static class SampleData
         ConfirmPassword = "Tunahe171966@",
         PhoneNumber = "0987654321",
         Address = "Hanoi",
-        FullName="qweasdaswq"
     };
 
     // Các role mẫu
