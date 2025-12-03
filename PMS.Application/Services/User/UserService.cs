@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.Auth;
@@ -958,6 +959,47 @@ namespace PMS.Application.Services.User
                 await _unitOfWork.CommitAsync();
                 return true;
             }
+        }
+
+
+        public async Task<FileContentResult?> DownloadCustomerImageAsync(string userId, string type)
+        {
+            var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
+            if (user == null)
+                return null;
+
+
+            var profile = await _unitOfWork.CustomerProfile
+                .Query()
+                .FirstOrDefaultAsync(cp => cp.UserId == user.Id);
+            if (profile == null)
+                return null;
+
+
+            string? imageString = type.ToLower() switch
+            {
+                "byt" => profile.ImageByt,
+                "cnkd" => profile.ImageCnkd,
+                _ => null
+            };
+
+            if (string.IsNullOrEmpty(imageString))
+                return null;
+
+            byte[] imageBytes;
+            try
+            {
+                imageBytes = Convert.FromBase64String(imageString);
+            }
+            catch
+            {
+                return null;
+            }
+
+            return new FileContentResult(imageBytes, "image/jpeg")
+            {
+                FileDownloadName = $"{userId}_{type}.jpg"
+            };
         }
     }
 }

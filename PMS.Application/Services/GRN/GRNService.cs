@@ -3,6 +3,7 @@ using DinkToPdf;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using PMS.Application.DTOs.GRN;
+using PMS.Application.DTOs.PO;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Core.Domain.Constant;
@@ -68,17 +69,24 @@ namespace PMS.API.Services.GRNService
 
                 var grnDetailEntities = new List<GoodReceiptNoteDetail>();
                 var grnDetailsForLot = new List<IGRNDetail>();
+                var remainingMap = await CalculateRemainingQuantitiesAsync(poId);
 
                 foreach (var detail in po.PurchasingOrderDetails)
                 {
                     var product = products[detail.ProductName];
+                    var key = (product.ProductID, detail.UnitPrice);
+
+                    var remain = remainingMap[key].Remaining;
+
+                    if (remain <= 0)
+                        continue;
 
                     var grnDetail = new GoodReceiptNoteDetail
                     {
                         GRNID = grn.GRNID,
                         ProductID = product.ProductID,
                         UnitPrice = detail.UnitPrice,
-                        Quantity = detail.Quantity
+                        Quantity = remain
                     };
 
                     grnDetailEntities.Add(grnDetail);
@@ -329,7 +337,47 @@ namespace PMS.API.Services.GRNService
             };
         }
 
+        private async Task<Dictionary<(int ProductID, decimal UnitPrice), RemainingQuantityResult>>
+        CalculateRemainingQuantitiesAsync(int poId)
+        {
 
+            var po = await _unitOfWork.PurchasingOrder.Query()
+                .Include(p => p.PurchasingOrderDetails)
+                .Include(p => p.GoodReceiptNotes)
+                    .ThenInclude(g => g.GoodReceiptNoteDetails)
+                .FirstOrDefaultAsync(p => p.POID == poId);
+
+            if (po == null)
+                throw new Exception("PO không tồn tại.");
+
+            var details = po.PurchasingOrderDetails;
+
+            var receivedMap = po.GoodReceiptNotes
+                .SelectMany(grn => grn.GoodReceiptNoteDetails)
+                .GroupBy(d => (d.ProductID, d.UnitPrice))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(i => i.Quantity)
+                );
+
+            var result = new Dictionary<(int ProductID, decimal UnitPrice), RemainingQuantityResult>();
+
+            foreach (var d in details)
+            {
+                var key = (d.ProductID, d.UnitPrice);
+
+                int ordered = d.Quantity;
+                int received = receivedMap.ContainsKey(key) ? receivedMap[key] : 0;
+
+                result[key] = new RemainingQuantityResult
+                {
+                    Ordered = ordered,
+                    Received = received
+                };
+            }
+
+            return result;
+        }
 
         public async Task<byte[]> GeneratePDFGRNAsync(int grnId)
         {
@@ -493,29 +541,34 @@ namespace PMS.API.Services.GRNService
                     <th>STT</th>
                     <th>Mặt hàng</th>
                     <th>Số lượng</th>
+                    <th>Đơn vị</th>
                     <th>Đơn giá (VNĐ)</th>
-                    <th>Thành tiền (VNĐ)</th>
+
                 </tr>
             </thead>
             <tbody>";
-
+           
             var details = await _unitOfWork.GoodReceiptNoteDetail.Query()
                 .Include(d => d.Product)
                 .Where(d => d.GRNID == grn.GRNID)
                 .ToListAsync();
+
+            var productListInPODetail = await _unitOfWork.PurchasingOrderDetail.Query().Where(pod => pod.POID == grn.POID).ToListAsync();
 
             if (details != null && details.Any())
             {
                 int index = 1;
                 foreach (var d in details)
                 {
+                     string unit = d.Product?.Unit ?? "";
                     html += $@"
             <tr>
                 <td style='text-align:center;'>{index++}</td>
                 <td>{d.Product?.ProductName ?? "Không xác định"}</td>
                 <td style='text-align:center;'>{d.Quantity}</td>
+                <td style='text-align:center;'>{unit}</td>
                 <td style='text-align:right;'>{d.UnitPrice:N2}</td>
-                <td style='text-align:right;'>{(d.Quantity * d.UnitPrice):N2}</td>
+
             </tr>";
                 }
             }
