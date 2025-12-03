@@ -817,6 +817,7 @@ namespace PMS.Application.Services.Invoice
                     .Where(n => n.StockExportOrder.SalesOrderId == order.SalesOrderId)
                     .Where(n => !string.IsNullOrEmpty(n.GoodsIssueNoteCode))
                     .Where(n => !n.InvoiceDetails.Any())
+                    .Where(n => n.Status == GoodsIssueNoteStatus.Exported)
                     .Select(n => n.GoodsIssueNoteCode!)
                     .Distinct()
                     .OrderBy(c => c)
@@ -856,7 +857,7 @@ namespace PMS.Application.Services.Invoice
                         .ThenInclude(so => so.Customer)  
                     .Include(i => i.InvoiceDetails)
                         .ThenInclude(d => d.GoodsIssueNote)
-                    .Where(i => i.SalesOrder.CreateBy == userId && i.Status.Equals(InvoiceStatus.Send))
+                    .Where(i => i.SalesOrder.CreateBy == userId && i.Status == InvoiceStatus.Send)
                     .ToListAsync();
 
                 if (!invoices.Any())

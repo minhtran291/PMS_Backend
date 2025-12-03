@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.GoodsIssueNote;
 using PMS.Application.DTOs.StockExportOrder;
 using PMS.Application.Services.GoodsIssueNote;
+using PMS.Application.Services.SalesOrder;
 using PMS.Core.Domain.Constant;
 using System.Security.Claims;
 
@@ -15,10 +16,12 @@ namespace PMS.API.Controllers
     public class GoodsIssueNoteController : ControllerBase
     {
         private readonly IGoodsIssueNoteService _goodsIssueNoteService;
+        private readonly ISalesOrderService _salesOrder;
 
-        public GoodsIssueNoteController(IGoodsIssueNoteService service)
+        public GoodsIssueNoteController(IGoodsIssueNoteService service, ISalesOrderService salesOrderService)
         {
             _goodsIssueNoteService = service;
+            _salesOrder = salesOrderService;
         }
 
         [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
@@ -167,6 +170,11 @@ namespace PMS.API.Controllers
                 return Unauthorized("Token không chứa thông tin định danh người dùng");
 
             var result = await _goodsIssueNoteService.ExportLotProduct(goodsIssueNoteId, userId);
+
+            if (result.Success)
+            {
+                await _salesOrder.CheckAndUpdateDeliveredStatusAsync();
+            }
 
             return StatusCode(result.StatusCode, new
             {

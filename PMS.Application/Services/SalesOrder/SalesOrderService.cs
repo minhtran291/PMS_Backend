@@ -1881,9 +1881,7 @@ namespace PMS.Application.Services.SalesOrder
         {
             try
             {
-                // Lấy tất cả SalesOrder kèm:
-                // - SalesOrderDetails (để tính tổng quantity đặt)
-                // - StockExportOrders -> GoodsIssueNote -> GoodsIssueNoteDetails (để tính tổng quantity đã xuất)
+                
                 var salesOrders = await _unitOfWork.SalesOrder.Query()
                     .Include(so => so.SalesOrderDetails)
                     .Include(so => so.StockExportOrders)
@@ -1908,15 +1906,18 @@ namespace PMS.Application.Services.SalesOrder
                     // Tổng quantity đặt trong SalesOrder
                     var totalOrderedQty = order.SalesOrderDetails?.Sum(d => d.Quantity) ?? 0;
 
+                    if (totalOrderedQty <= 0) continue;
+
                     // Lấy tất cả GoodsIssueNote liên quan đến SalesOrder này qua StockExportOrder
                     var goodsIssueNotes = order.StockExportOrders
                         .Where(seo => seo.GoodsIssueNotes != null)
                         .SelectMany(seo => seo.GoodsIssueNotes!)
+                        .Where(gi => gi.Status == GoodsIssueNoteStatus.Exported)
                         .ToList();
 
+                    //Chưa có phiếu xuất nào thì không đổi trạng thái
                     if (!goodsIssueNotes.Any())
                     {
-                        // Chưa có phiếu xuất nào -> không thể Delivered
                         continue;
                     }
 
@@ -1925,15 +1926,25 @@ namespace PMS.Application.Services.SalesOrder
                         .SelectMany(gi => gi.GoodsIssueNoteDetails)
                         .Sum(d => d.Quantity);
 
-
-                    // Tất cả GoodsIssueNote phải ở trạng thái Sent
-                    bool allSent = goodsIssueNotes.All(gi => gi.Status == GoodsIssueNoteStatus.Sent);
-
-                    if (allSent &&
-                        totalExportedQty == totalOrderedQty &&
-                        order.SalesOrderStatus != SalesOrderStatus.Delivered)
+                    if (totalExportedQty <= 0)
                     {
-                        order.SalesOrderStatus = SalesOrderStatus.Delivered;
+                        continue;
+                    }
+
+                    SalesOrderStatus? newStatus = null;
+
+                    if (totalExportedQty >= totalOrderedQty)
+                    {
+                        newStatus = SalesOrderStatus.Delivered;
+                    }
+                    else 
+                    {
+                        newStatus = SalesOrderStatus.PartiallyDelivered;
+                    }
+
+                    if (newStatus.HasValue && order.SalesOrderStatus != newStatus.Value)
+                    {
+                        order.SalesOrderStatus = newStatus.Value;
                         _unitOfWork.SalesOrder.Update(order);
                         updatedCount++;
                     }
