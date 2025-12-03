@@ -117,6 +117,10 @@ namespace PMS.API.Controllers
         public async Task<IActionResult> ConfirmPaymentManual(int orderId, PaymentStatus status)
         {
             var result = await _service.ConfirmPaymentAsync(orderId, status);
+            if (result.Success)
+            {
+                await _service.RecalculateTotalReceiveAsync();
+            }
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,
@@ -273,7 +277,7 @@ namespace PMS.API.Controllers
         }
 
         /// <summary>
-        /// http://localhost:5137/api/SalesOrder/list-sales-order-not-delivered
+        /// GET: http://localhost:5137/api/SalesOrder/list-sales-order-not-delivered
         /// </summary>
         /// <returns></returns>
         [HttpGet("list-sales-order-not-delivered")]
@@ -317,9 +321,7 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         [HttpPost("{salesOrderId}/deposit-checks/manual")]
         [Authorize(Roles = UserRoles.CUSTOMER)] 
-        public async Task<IActionResult> CreateManualDepositCheck(
-            int salesOrderId,
-            [FromBody] CreateSalesOrderDepositCheckRequestDTO dto)
+        public async Task<IActionResult> CreateManualDepositCheck(int salesOrderId,[FromBody] CreateSalesOrderDepositCheckRequestDTO dto)
         {
             dto.SalesOrderId = salesOrderId;
             var userId = GetUserId();
@@ -345,7 +347,10 @@ namespace PMS.API.Controllers
         {
             var accountantId = GetUserId();
             var result = await _service.ApproveDepositCheckAsync(requestId, accountantId);
-
+            if (result.Success)
+            {
+                await _service.RecalculateTotalReceiveAsync();
+            }
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,
@@ -380,7 +385,7 @@ namespace PMS.API.Controllers
 
         /// <summary>
         /// CUSTOMER: list tất cả manual deposit check của mình
-        /// </summary>
+        /// GET: http://localhost:5137/api/SalesOrder/deposit-checks/manual/my
         /// <returns></returns>
         [HttpGet("deposit-checks/manual/my")]
         [Authorize]
@@ -460,6 +465,24 @@ namespace PMS.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Accountant list các yêu cầu kiểm tra cọc manual.
+        /// GET: http://localhost:5137/api/SalesOrder/all-deposit-checks/manual
+        /// <param name="status"></param>
+        /// <returns></returns>
+        [HttpGet("all-deposit-checks/manual")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> GetManualDepositChecks([FromQuery] DepositCheckStatus? status)
+        {
+            var result = await _service.ListDepositChecksAsync(status);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
         #endregion
 
     }

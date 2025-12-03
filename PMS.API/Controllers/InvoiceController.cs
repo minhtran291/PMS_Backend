@@ -219,5 +219,41 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
+
+
+        /// <summary>
+        /// POST: api/Invoice/{id}/sign-smartca
+        /// Tạo giao dịch ký số Invoice bằng VNPT SmartCA.
+        /// Body: { "userId": "MST/CCCD", "password": "xxxx", "otp": "123456" }
+        /// </summary>
+        [HttpPost("{id}/sign-smartca")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> SignInvoiceWithSmartCA(
+            int id,
+            [FromBody] SmartCASignInvoiceRequestDTO request)
+        {
+            var result = await _invoiceService.CreateSmartCASignTransactionAsync(id, request);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        [HttpPost("{id}/smartca-sign-test")]
+        public async Task<IActionResult> TestSmartCASign(int id, [FromBody] SmartCASignInvoiceRequestDTO req)
+        {
+            var result = await _invoiceService.CreateSmartCASignTransactionAsync(id, req);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+
     }
 }

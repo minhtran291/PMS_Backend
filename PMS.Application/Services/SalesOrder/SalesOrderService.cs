@@ -60,42 +60,73 @@ namespace PMS.Application.Services.SalesOrder
                     };
                 }
 
-                decimal depositAmount = order.TotalPrice * decimal.Round(order.SalesQuotation.DepositPercent / 100, 2);
-
-                if (status == PaymentStatus.Deposited)
+                if (order.CustomerDebts == null)
                 {
-                    order.PaymentStatus = status;
-                    order.IsDeposited = true;
-                    order.PaidAmount = depositAmount;
-                    order.CustomerDebts.DebtAmount = order.TotalPrice - depositAmount;
-                    if (DateTime.Now > order.SalesOrderExpiredDate)
+                    return new ServiceResult<bool>
                     {
-                        order.CustomerDebts.status = CustomerDebtStatus.BadDebt;
-                    }
-                    else
-                    {
-                        order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
-                    }
+                        StatusCode = 400,
+                        Message = "Đơn hàng chưa có bản ghi công nợ khách hàng.",
+                        Data = false
+                    };
                 }
 
-                if (status == PaymentStatus.Paid)
+                var depositPercent = order.SalesQuotation.DepositPercent;
+                var depositAmount = Math.Round(order.TotalPrice * depositPercent / 100m, 2);
+
+                // Update PaidAmount  + DebtAmount
+                if (status == PaymentStatus.Deposited)
                 {
-                    order.PaymentStatus = status;
+                    order.PaymentStatus = PaymentStatus.Deposited;
                     order.IsDeposited = true;
+
+                    order.PaidAmount = depositAmount;
+                    order.CustomerDebts.DebtAmount = order.TotalPrice - depositAmount;
+                }
+                else if (status == PaymentStatus.Paid)
+                {
+                    order.PaymentStatus = PaymentStatus.Paid;
+                    order.IsDeposited = true;
+
                     order.PaidAmount = order.TotalPrice;
                     order.CustomerDebts.DebtAmount = 0;
-                    if (DateTime.Now > order.SalesOrderExpiredDate)
+                }
+                else
+                {
+                    return new ServiceResult<bool>
                     {
-                        order.CustomerDebts.status = CustomerDebtStatus.BadDebt;
-                    }
-                    else
-                    {
-                        order.CustomerDebts.status = CustomerDebtStatus.NoDebt;
-                    }
+                        StatusCode = 400,
+                        Message = "Trạng thái thanh toán không hợp lệ để xác nhận.",
+                        Data = false
+                    };
+                }
+
+                // Set trạng thái nợ
+                var debt = order.CustomerDebts;
+                var remainingDebt = debt.DebtAmount;
+                var now = DateTime.Now;
+                var expired = order.SalesOrderExpiredDate;
+
+                if (remainingDebt <= 0)
+                {
+                    debt.status = CustomerDebtStatus.NoDebt; // Hết nợ
+                }
+                else if (order.PaidAmount == 0)
+                {
+                    debt.status = now > expired
+                        ? CustomerDebtStatus.BadDebt   // quá hạn + chưa trả
+                        : CustomerDebtStatus.UnPaid;    // chưa đến hạn
+                }
+                else // PaidAmount > 0 && remainingDebt > 0
+                {
+                    debt.status = now > expired
+                        ? CustomerDebtStatus.OverTime   // quá hạn nhưng đã trả một phần
+                        : CustomerDebtStatus.Apart;     // đang nợ một phần, chưa quá hạn
                 }
 
 
                 _unitOfWork.SalesOrder.Update(order);
+                _unitOfWork.CustomerDebt.Update(debt);
+
                 await _unitOfWork.CommitAsync();
 
                 return new ServiceResult<bool>
@@ -449,7 +480,7 @@ namespace PMS.Application.Services.SalesOrder
                     RequestedAmount = requestedAmount,
                     PaymentMethod = dto.PaymentMethod,
                     CustomerNote = dto.CustomerNote,
-                    Status = DepositCheckStatus.Pending,
+                    Status = DepositCheckStatus.Draft,
                     RequestedBy = customerId,
                     RequestedAt = DateTime.Now
                 };
@@ -457,28 +488,10 @@ namespace PMS.Application.Services.SalesOrder
                 await _unitOfWork.SalesOrderDepositCheck.AddAsync(entity);
                 await _unitOfWork.CommitAsync();
 
-                // Gửi noti cho ACCOUNTANT
-                try
-                {
-                    await _noti.SendNotificationToRolesAsync(
-                        customerId,
-                        new List<string> { "ACCOUNTANT" },
-                        "Yêu cầu kiểm tra cọc đơn hàng",
-                        $"Đơn {order.SalesOrderCode} có yêu cầu kiểm tra cọc số tiền {requestedAmount:N0}.",
-                        NotificationType.Message
-                    );
-                }
-                catch (Exception exNotify)
-                {
-                    _logger.LogWarning(exNotify,
-                        "Gửi notification ACCOUNTANT thất bại khi tạo DepositCheck cho order {OrderId}",
-                        order.SalesOrderId);
-                }
-
                 return new ServiceResult<bool>
                 {
                     StatusCode = 201,
-                    Message = "Tạo yêu cầu kiểm tra cọc thành công. Vui lòng đợi phản hồi!",
+                    Message = "Tạo bản nháp yêu cầu kiểm tra cọc thành công.",
                     Data = true
                 };
             }
@@ -493,6 +506,10 @@ namespace PMS.Application.Services.SalesOrder
                 };
             }
         }
+
+        //Gửi yêu cầu cho kế toán 
+
+
 
         //Accountant chấp nhận yêu cầu check cọc
         public async Task<ServiceResult<bool>> ApproveDepositCheckAsync(int requestId, string accountantId)
@@ -932,6 +949,55 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
+        //List check request for accountant
+        public async Task<ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>> ListDepositChecksAsync(DepositCheckStatus? status = null)
+        {
+            try
+            {
+                var query = _unitOfWork.SalesOrderDepositCheck.Query()
+                    .Include(x => x.SalesOrder)
+                        .ThenInclude(o => o.Customer)
+                    .OrderByDescending(x => x.RequestedAt)
+                    .AsQueryable();
+
+                if (status.HasValue)
+                {
+                    query = query.Where(x => x.Status == status.Value);
+                }
+
+                var items = await query
+                    .Select(x => new SalesOrderDepositCheckItemDTO
+                    {
+                        Id = x.Id,
+                        SalesOrderId = x.SalesOrderId,
+                        SalesOrderCode = x.SalesOrder.SalesOrderCode,
+                        CustomerName = x.SalesOrder.Customer.FullName,
+                        RequestedAmount = x.RequestedAmount,
+                        PaymentMethod = x.PaymentMethod,
+                        Status = x.Status,
+                        RequestedAt = x.RequestedAt
+                    })
+                    .ToListAsync();
+
+                return new ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>
+                {
+                    StatusCode = 200,
+                    Message = "Lấy danh sách yêu cầu kiểm tra cọc thành công.",
+                    Data = items
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Lỗi ListDepositChecksAsync");
+                return new ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>
+                {
+                    StatusCode = 500,
+                    Message = "Có lỗi khi lấy danh sách yêu cầu kiểm tra cọc.",
+                    Data = null
+                };
+            }
+        }
+
 
         #endregion
 
@@ -1030,6 +1096,7 @@ namespace PMS.Application.Services.SalesOrder
                 }
 
                 var orders = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.SalesQuotation)
                     .Include(o => o.SalesOrderDetails)
                     .Include(o => o.Customer)
                     .AsNoTracking()
@@ -1046,6 +1113,8 @@ namespace PMS.Application.Services.SalesOrder
                         PaymentStatusName = o.PaymentStatus.ToString(),
                         IsDeposited = o.IsDeposited,
                         PaidFullAt = o.PaidFullAt,
+                        DepositPercent = o.SalesQuotation.DepositPercent,
+                        DepositAmount = o.TotalPrice * o.SalesQuotation.DepositPercent,
                         PaidAmount = o.PaidAmount,
                         RejectReason = o.RejectReason,
                         RejectedAt = o.RejectedAt,
@@ -1525,6 +1594,8 @@ namespace PMS.Application.Services.SalesOrder
                         PaidAmount = o.PaidAmount,
                         PaidFullAt = o.PaidFullAt,
                         TotalPrice = o.TotalPrice,
+                        DepositPercent = o.SalesQuotation.DepositPercent,
+                        DepositAmount = o.TotalPrice * o.SalesQuotation.DepositPercent,
                         RejectReason = o.RejectReason,
                         RejectedAt = o.RejectedAt,
                         RejectBy = o.RejectedBy,

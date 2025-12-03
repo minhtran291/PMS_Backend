@@ -1,6 +1,8 @@
-﻿using PMS.Core.Domain.Entities;
+﻿using OfficeOpenXml.Style;
+using PMS.Core.Domain.Entities;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,24 +20,23 @@ namespace PMS.Core.Domain.Constant
             var customerPhone = HttpUtility.HtmlEncode(order.Customer?.PhoneNumber ?? "");
             var customerAddress = HttpUtility.HtmlEncode(order.Customer?.Address ?? "");
 
-            var pharmacyName = "Nhà thuốc BBPharma";
-            var pharmacyAddress = "Số 25, Tân Mỹ, Mỹ Đình, Hà Nội";
-            var pharmacyTaxCode = "123456789";
+            var pharmacyName = "Nhà thuốc dược phẩm số 17";
+            var pharmacyAddress = "Kiot số 17, Phường Lê Thanh Nghị, Tp Hải Phòng";
+            var pharmacyTaxCode = "030203002865";
 
             var sb = new StringBuilder();
             int index = 1;
             int exportIndex = 1;
 
             var details = invoice.InvoiceDetails
-                .OrderBy(d => d.GoodsIssueNote.DeliveryDate)   // sửa đúng tên field ngày
+                .OrderBy(d => d.GoodsIssueNote.DeliveryDate)  
                 .ThenBy(d => d.GoodsIssueNoteId)
                 .ToList();
 
             foreach (var d in details)
             {
                 var note = d.GoodsIssueNote;
-
-                                sb.Append($@"
+                sb.Append($@"
                 <tr>
                     <td style=""text-align:center"">{index}</td>
                     <td>PX{note.Id}</td>
@@ -59,54 +60,63 @@ namespace PMS.Core.Domain.Constant
                 <meta charset=""UTF-8"">
                 <title>Hóa đơn giá trị gia tăng</title>
                 <style>
-                    body {{
-                        font-family: Arial, sans-serif;
-                        background:#fff;
-                        margin:0;
-                        padding:0;
+                    html, body {{
+                        margin: 0;
+                        padding: 0;
+                        height: 100%;
                     }}
 
-                    /* Trang A4 ~ 1120px cao (tương đối) */
+                    body {{display: flex;
+                        justify-content: center;
+                        align-items: center;
+                    }}                    
+
                     .page {{
-                        width: 100%;
-                        height: 1320px;
-                        padding: 40px 40px 60px 40px;
+                        width: 250mm;
+                        height: 350mm;
+                        border: 1px solid #000;  
                         box-sizing: border-box;
+                        padding: 5mm;  
+                        font-family: Times New Roman, Times, serif;
+                        font-size: 15px;
+                    }}
+
+                    @page {{
+                        size: A4 portrait;
+                        margin: 0; 
                     }}
 
                     .wrapper {{
-                        border:1px solid #000;
-                        padding:20px 20px 30px 20px;
-                        box-sizing:border-box;
-                        height:100%;
-                        display:flex;
-                        flex-direction:column;
-                        justify-content:space-between;
+                        height: 100%;
+                        box-sizing: border-box;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
                     }}
 
                     h1 {{
                         text-align:center;
                         margin:0;
-                        font-size:22px;
+                        font-size:26px;
                     }}
                     h2 {{
                         text-align:center;
                         margin:4px 0 0 0;
-                        font-size:13px;
+                        font-size:17px;
                     }}
 
                     .top-row {{
                         display:flex;
                         justify-content:space-between;
-                        margin-top:14px;
-                        margin-bottom:14px;
-                        font-size:11px;
+                        margin-top:25px;
+                        margin-bottom:15px;
+                        font-size:15px;
                     }}
 
                     .box {{
                         border:1px solid #000;
                         padding:8px 10px;
-                        font-size:11px;
+                        font-size:15px;
                         margin-bottom:10px;
                     }}
 
@@ -118,17 +128,18 @@ namespace PMS.Core.Domain.Constant
                         width:100%;
                         border-collapse:collapse;
                         margin-top:8px;
-                        font-size:11px;
+                        font-size:15px;
                     }}
 
                     th, td {{
                         border:1px solid #000;
-                        padding:5px 6px;
+                        padding:6px 7px;
                     }}
 
                     th {{
                         background:#f5f5f5;
                         text-align:center;
+                        font-size:15px;
                     }}
 
                     .right {{ text-align:right; }}
@@ -139,28 +150,31 @@ namespace PMS.Core.Domain.Constant
                         flex-direction:column;
                     }}
 
-                    .summary-table {{
-                        width: 35%;
+                    .summary-table {{width: 35%;
                         margin-top:10px;
                         margin-left:auto;
-                        font-size:11px;
+                        font-size:15px;
+                        border-collapse:collapse;
+                        border:none; 
                     }}
 
-                    .summary-table td {{
-                        padding:3px 4px;
-                        border:1px solid #000;
+                    .summary-table td {{padding:4px 6px;
+                        border:none !important; 
                     }}
 
-                    .sign-area {{
-                    display: flex;
-                    justify-content: space-between; 
-                    margin-top: 40px;
-                    font-size: 11px;
+                    .sign-table {{width: 100%;
+                        margin-top: 40px;
+                        font-size: 15px;
+                        border-collapse: collapse;
                     }}
 
-                    .sign-area > div {{
-                    width: 45%;
-                    text-align: center;}}
+                    .sign-table td {{border: none;
+                        text-align: center;
+                        height: 80px;  
+                        vertical-align: top;
+                    }}
+
+
 
                 </style>
             </head>
@@ -175,7 +189,7 @@ namespace PMS.Core.Domain.Constant
                     </div>
 
                     <div class=""top-row"">
-                        <div>Mã CQT: Chưa có</div>
+                        
                         <div>Ngày: {invoice.IssuedAt:dd-MM-yyyy}</div>
                     </div>
 
@@ -225,22 +239,31 @@ namespace PMS.Core.Domain.Constant
                             <td class=""right"">{invoice.TotalDeposit:N0}</td>
                         </tr>
                         <tr>
-                            <td>Tổng phần còn lại:</td>
-                            <td class=""right"">{invoice.TotalRemain:N0}</td>
-                        </tr>
-                        <tr>
                             <td>Tổng đã thanh toán:</td>
                             <td class=""right"">{invoice.TotalPaid:N0}</td>
                         </tr>
+                        <tr>
+                            <td>Tổng phần còn lại:</td>
+                            <td class=""right"">{invoice.TotalRemain:N0}</td>
+                        </tr>
+                        
                     </table>
                 </div>
 
-                <!-- phần chữ ký luôn nằm thấp hơn vì wrapper là flex-column space-between -->
-                <div class=""sign-area"" >
-                    <div>Người mua hàng<br /><br /><br /><br /></div>
-                    <div>Người bán hàng<br /><br /><br /><br /></div>
-                </div>
-              </div>
+                <table class=""sign-table"">
+                    <tr>
+                        <td>
+                            <strong>Người mua hàng</strong><br />
+                            (Ký, ghi rõ họ tên)
+                        </td>
+                        <td>
+                            <strong>Người bán hàng</strong><br />
+                            (Ký, ghi rõ họ tên)
+                        </td>
+                    </tr>
+                </table>
+
+             </div>
             </div>
             </body>
             </html>";
