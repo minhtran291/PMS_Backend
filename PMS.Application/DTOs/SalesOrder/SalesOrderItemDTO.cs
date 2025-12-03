@@ -25,5 +25,8 @@ namespace PMS.Application.DTOs.SalesOrder
         public string RejectReason { get; set; }
         public DateTime? RejectedAt { get; set; }
         public string RejectBy { get; set; }
+        public decimal? DepositPercent { get; set; }
+        public decimal? DepositAmount { get; set; }
+
     }
 }

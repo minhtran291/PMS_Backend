@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.PaymentRemain;
 using PMS.Application.Services.PaymentRemainService;
+using PMS.Application.Services.SalesOrder;
 using PMS.Core.Domain.Constant;
 
 namespace PMS.API.Controllers
@@ -12,10 +13,11 @@ namespace PMS.API.Controllers
     public class PaymentRemainController : ControllerBase
     {
         private readonly IPaymentRemainService _paymentRemainService;
-
-        public PaymentRemainController(IPaymentRemainService paymentRemainService)
+        private readonly ISalesOrderService _salesOrder;
+        public PaymentRemainController(IPaymentRemainService paymentRemainService, ISalesOrderService salesOrderService)
         {
             _paymentRemainService = paymentRemainService;
+            _salesOrder = salesOrderService;
         }
 
         public class InitInvoiceVnPayRequest
@@ -115,7 +117,10 @@ namespace PMS.API.Controllers
         {
             var result = await _paymentRemainService
                 .MarkPaymentSuccessAsync(id, body?.GatewayTransactionRef);
-
+            if (result.Success)
+            {
+                await _salesOrder.RecalculateTotalReceiveAsync();
+            }
             return StatusCode(result.StatusCode, result);
         }
 
@@ -167,7 +172,10 @@ namespace PMS.API.Controllers
         {
             var result = await _paymentRemainService
                 .ApproveBankTransferRequestAsync(paymentRemainId);
-
+            if (result.Success)
+            {
+                await _salesOrder.RecalculateTotalReceiveAsync();
+            }
             return StatusCode(result.StatusCode, result);
         }
 
