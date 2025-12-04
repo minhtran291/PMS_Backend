@@ -319,6 +319,7 @@ namespace PMS.API.Controllers
         /// <param name="year"></param>
         /// <returns></returns>
         [HttpGet("revenue/{year}")]
+        [Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetYearRevenue(int year)
         {
             var result = await _service.GetYearRevenueAsync(year);
@@ -337,6 +338,7 @@ namespace PMS.API.Controllers
         /// <param name="year"></param>
         /// <returns></returns>
         [HttpGet("sales-product-quantity/{year}")]
+        [Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetProductQuantityByYear(int year)
         {
             var result = await _service.GetProductQuantityByYearAsync(year);
