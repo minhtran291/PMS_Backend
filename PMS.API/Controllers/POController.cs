@@ -378,5 +378,72 @@ namespace PMS.API.Controllers
         }
 
 
+        /// <summary>
+        /// http://localhost:5137/api/PO/purchasingOrderProducts/2025
+        /// </summary>
+        /// <param name="year"></param>
+        /// <returns></returns>
+        [HttpGet("purchasingOrderProducts/{year}")]
+        public async Task<IActionResult> GetApprovedOrderProducts(int year)
+        {
+            // Trạng thái cần loại bỏ
+            var excludedStatuses = new[]
+            {
+        PurchasingOrderStatus.draft,
+        PurchasingOrderStatus.rejected,
+        PurchasingOrderStatus.sent
+    };
+
+            // Lấy tất cả PO trừ 3 trạng thái loại bỏ
+            var orders = await _unitOfWork.PurchasingOrder.Query()
+                .Where(po => po.OrderDate.Year == year
+                             && !excludedStatuses.Contains(po.Status))
+                .Include(po => po.PurchasingOrderDetails)
+                    .ThenInclude(d => d.Product)
+                .ToListAsync();
+
+            if (!orders.Any())
+            {
+                return Ok(new PurchasingOrderStatisticDto
+                {
+                    Year = year
+                });
+            }
+
+            // Gom theo tháng
+            var monthlyData = orders
+                .SelectMany(po => po.PurchasingOrderDetails)
+                .GroupBy(d => d.PurchasingOrder.OrderDate.Month)
+                .Select(monthGroup => new MonthlyOrderProductDto
+                {
+                    Month = monthGroup.Key,
+                    Products = monthGroup.Select(d => new OrderProductDetailDto
+                    {
+                        ProductID = d.ProductID,
+                        ProductName = d.ProductName,
+                        DVT = d.DVT,
+                        Quantity = d.Quantity,
+                        UnitPrice = d.UnitPrice,
+                        UnitPriceTotal = d.UnitPriceTotal,
+                        Description = d.Description,
+                        Tax = d.Tax,
+                        ExpiredDate = d.ExpiredDate,
+                        POID = d.POID
+                    }).ToList()
+                })
+                .OrderBy(m => m.Month)
+                .ToList();
+
+            var result = new PurchasingOrderStatisticDto
+            {
+                Year = year,
+                MonthlyData = monthlyData
+            };
+
+            return Ok(result);
+        }
+
+
+
     }
 }
