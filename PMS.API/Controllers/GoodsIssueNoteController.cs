@@ -176,9 +176,40 @@ namespace PMS.API.Controllers
                 await _salesOrder.CheckAndUpdateDeliveredStatusAsync();
             }
 
+            if(result.StatusCode == 200)
+            {
+                await _goodsIssueNoteService.CheckQuantity(userId);
+            }
+
             return StatusCode(result.StatusCode, new
             {
                 message = result.Message,
+            });
+        }
+
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Route("exported-statistic")]
+        public async Task<IActionResult> Statistic()
+        {
+            var result = await _goodsIssueNoteService.StatisticAsync();
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Route("not-exported-statistic")]
+        public async Task<IActionResult> NotExported()
+        {
+            var result = await _goodsIssueNoteService.NotExportedAsync();
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data
             });
         }
     }

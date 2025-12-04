@@ -58,7 +58,8 @@ namespace PMS.Application.Services.SalesQuotation
                     .AsNoTracking()
                     .Where(lp => productIds.Contains(lp.ProductID)
                                 && lp.ExpiredDate > DateTime.Now
-                                && lp.LotQuantity > 0)
+                                && lp.LotQuantity > 0
+                                && lp.SalePrice > 0)
                     .ToListAsync();
 
                 var listTax = await _unitOfWork.TaxPolicy.Query()

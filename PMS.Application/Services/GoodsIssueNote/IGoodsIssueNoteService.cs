@@ -19,5 +19,8 @@ namespace PMS.Application.Services.GoodsIssueNote
         Task<ServiceResult<object>> WarningAsync();
         Task<ServiceResult<object>> ResponseNotEnough(int stockExportOrderId, string userId);
         Task<ServiceResult<object>> ExportLotProduct(int goodsIssueNoteId, string userId);
+        Task<ServiceResult<object>> StatisticAsync();
+        Task<ServiceResult<object>> NotExportedAsync();
+        Task CheckQuantity(string userId);
     }
 }
