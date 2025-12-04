@@ -1055,7 +1055,8 @@ namespace PMS.API.Services.POService
                 var viewDebtPOs = pos.Select(po => new ViewDebtPODTO
                 {
                     poid = po.POID,
-                    toatlPo = po.Total
+                    toatlPo = po.Total,
+                    Status=po.Status,
                 }).ToList();
 
                 var result = new DebtReportDTO

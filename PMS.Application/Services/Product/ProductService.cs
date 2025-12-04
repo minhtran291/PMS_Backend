@@ -569,7 +569,7 @@ namespace PMS.Application.Services.Product
         public async Task<IEnumerable<ProductMinQuantityDto>> GetProductsBelowMinQuantityAsync()
         {
             return await _unitOfWork.Product.Query()
-               .Where(p => p.TotalCurrentQuantity < p.MinQuantity)
+               .Where(p => p.TotalCurrentQuantity < (p.MinQuantity * 1.5))
                .Select(p => new ProductMinQuantityDto
                {
                    ProductID = p.ProductID,
@@ -593,7 +593,7 @@ namespace PMS.Application.Services.Product
                 .Select(product =>
                 {
                     var nearestLot = product.LotProducts
-                        .OrderBy(l => l.ExpiredDate) 
+                        .OrderBy(l => l.ExpiredDate)
                         .FirstOrDefault();
 
                     if (nearestLot == null)

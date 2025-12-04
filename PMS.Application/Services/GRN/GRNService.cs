@@ -514,7 +514,7 @@ namespace PMS.API.Services.GRNService
             {(string.IsNullOrEmpty(logoBase64) ? "" : $"<img src='{logoBase64}' style='height:60px;' />")}
         </div>
         <h1>PHIẾU NHẬP KHO (GOODS RECEIPT NOTE)</h1>
-        <h3 style='text-align:center;'>Công ty TNHH Dược phẩm BBPharmacy</h3>
+        <h3 style='text-align:center;'>Nhà thuốc số 17 Phường Lê Thanh Nghị TP Hải Phòng</h3>
         <table>
             <tr>
                 <td><b>Mã GRN:</b></td><td>{grn.GRNID}</td>
@@ -590,13 +590,9 @@ namespace PMS.API.Services.GRNService
             <tr>
                 <td><b>Người lập phiếu</b></td>
                 <td><b>Người giao hàng</b></td>
-                <td><b>Thủ kho</b></td>
-                <td><b>Kế toán trưởng</b></td>
-                <td><b>Giám đốc</b></td>
+                <td><b>Kế toán</b></td>
             </tr>
             <tr>
-                <td>(Ký, ghi rõ họ tên)</td>
-                <td>(Ký, ghi rõ họ tên)</td>
                 <td>(Ký, ghi rõ họ tên)</td>
                 <td>(Ký, ghi rõ họ tên)</td>
                 <td>(Ký, ghi rõ họ tên)</td>
@@ -834,6 +830,9 @@ namespace PMS.API.Services.GRNService
                 };
             }).ToList();
         }
+
+
+
     }
 }
 
