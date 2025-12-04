@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using PMS.API.Services.GRNService;
 using PMS.Application.DTOs.GRN;
 using PMS.Core.Domain.Constant;
 using PMS.Core.DTO.Content;
+using PMS.Data.UnitOfWork;
 
 namespace PMS.API.Controllers
 {
@@ -14,11 +16,13 @@ namespace PMS.API.Controllers
     public class GRNController : BaseController
     {
         private readonly IGRNService _IGRNService;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<GRNController> _logger;
-        public GRNController(IGRNService IGRNService, ILogger<GRNController> logger)
+        public GRNController(IGRNService IGRNService, ILogger<GRNController> logger, IUnitOfWork unitOfWork )
         {
             _IGRNService = IGRNService;
             _logger = logger;
+            _unitOfWork = unitOfWork;
         }
 
         /// <summary>
@@ -128,6 +132,64 @@ namespace PMS.API.Controllers
         {
             var pdfBytes = await _IGRNService.GeneratePDFGRNAsync(grnId);
             return File(pdfBytes, "application/pdf", $"GRN_{grnId}.pdf");
+        }
+
+
+        /// <summary>
+        /// http://localhost:5137/api/GRN/ImportStatisticsByMonth/
+        /// </summary>
+        /// <param name="year"></param>
+        /// <returns></returns>
+        [HttpGet("ImportStatisticsByMonth/{year}")]
+        public async Task<IActionResult> GetImportStatsByMonth(int year)
+        {
+            var grns = await _unitOfWork.GoodReceiptNote.Query()
+                .Where(g => g.CreateDate.Year == year)
+                .Include(g => g.GoodReceiptNoteDetails)
+                    .ThenInclude(d => d.Product)
+                .ToListAsync();
+
+            if (!grns.Any())
+                return Ok(new ImportStatisticsByMonthDto { Year = year });
+
+            var monthlyData = grns
+                .SelectMany(g => g.GoodReceiptNoteDetails)
+                .GroupBy(d => d.GoodReceiptNote.CreateDate.Month)
+                .Select(monthGroup =>
+                {
+                    int totalQuantity = monthGroup.Sum(x => x.Quantity);
+
+                    var productList = monthGroup
+                        .GroupBy(x => new { x.ProductID, x.Product.ProductName })
+                        .Select(p => new ProductImportPercentageDto
+                        {
+                            ProductID = p.Key.ProductID,
+                            ProductName = p.Key.ProductName,
+                            Quantity = p.Sum(x => x.Quantity),
+                            Percentage = totalQuantity == 0
+                                ? 0
+                                : Math.Round((decimal)p.Sum(x => x.Quantity) * 100 / totalQuantity, 2)
+                        })
+                        .OrderByDescending(x => x.Percentage)
+                        .ToList();
+
+                    return new MonthlyImportWithProductsDto
+                    {
+                        Month = monthGroup.Key,
+                        TotalQuantity = totalQuantity,
+                        Products = productList
+                    };
+                })
+                .OrderBy(x => x.Month)
+                .ToList();
+
+            var result = new ImportStatisticsByMonthDto
+            {
+                Year = year,
+                MonthlyData = monthlyData
+            };
+
+            return Ok(result);
         }
     }
 }
