@@ -1977,5 +1977,188 @@ namespace PMS.Application.Services.SalesOrder
                 };
             }
         }
+
+
+        #region statistics 
+        public async Task<ServiceResult<List<MonthlyRevenueDTO>>> GetYearRevenueAsync(int year)
+        {
+            try
+            {
+                // Lọc các đơn đã thanh toán đủ trong năm đó
+                var query = _unitOfWork.SalesOrder.Query()
+                    .AsNoTracking()
+                    .Where(o =>
+                        o.CreateAt.Year == year &&
+                        (o.PaymentStatus == PaymentStatus.Deposited ||
+                         o.PaymentStatus == PaymentStatus.PartiallyPaid ||
+                         o.PaymentStatus == PaymentStatus.Paid));
+
+                // Group theo tháng, sum PaidAmount
+                var monthlyData = await query
+                    .GroupBy(o => o.CreateAt.Month)
+                    .Select(g => new
+                    {
+                        Month = g.Key,
+                        Amount = g.Sum(x => x.PaidAmount)
+                    })
+                    .ToListAsync();
+
+                var totalYearRevenue = monthlyData.Sum(x => x.Amount);
+
+                var result = Enumerable.Range(1, 12)
+                    .Select(m =>
+                    {
+                        var data = monthlyData.FirstOrDefault(x => x.Month == m);
+                        var amount = data?.Amount ?? 0m;
+
+                        var percentage = totalYearRevenue == 0
+                            ? 0m
+                            : Math.Round((amount / totalYearRevenue) * 100, 2);
+
+                        return new MonthlyRevenueDTO
+                        {
+                            Month = m,
+                            Amount = amount,
+                            Percentage = percentage
+                        };
+                    })
+                    .ToList();
+
+                return new ServiceResult<List<MonthlyRevenueDTO>>
+                {
+                    StatusCode = 200,
+                    Message = "Thành công",
+                    Data = result
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult<List<MonthlyRevenueDTO>>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi hệ thống: " + ex.Message,
+                    Data = null
+                };
+            }
+        }
+
+        /// <summary>
+        /// Thống kê số lượng sản phẩm bán theo năm:
+        /// - Input: year
+        /// - Output: chia theo tháng, trong mỗi tháng có % từng mặt hàng (LotId).
+        /// </summary>
+        public async Task<ServiceResult<List<MonthlyProductStatisticDTO>>> GetProductQuantityByYearAsync(int year)
+        {
+            try
+            {
+                var sodQuery = _unitOfWork.SalesOrderDetails.Query().AsNoTracking();
+                var soQuery = _unitOfWork.SalesOrder.Query().AsNoTracking();
+                var lotQuery = _unitOfWork.LotProduct.Query().AsNoTracking();
+                var prodQuery = _unitOfWork.Product.Query().AsNoTracking();
+
+                var raw = await (
+                    from sod in sodQuery
+                    join so in soQuery on sod.SalesOrderId equals so.SalesOrderId
+                    join lot in lotQuery on sod.LotId equals lot.LotID
+                    join p in prodQuery on lot.ProductID equals p.ProductID
+                    where so.CreateAt.Year == year
+                          && so.SalesOrderStatus == SalesOrderStatus.Approved
+                    select new
+                    {
+                        Month = so.CreateAt.Month,
+                        sod.LotId,
+                        sod.Quantity,
+
+                        ProductId = p.ProductID,
+                        ProductName = p.ProductName,
+                        UnitName = p.Unit,
+                        ExpiredDate = lot.ExpiredDate
+                    }
+                ).ToListAsync();
+
+                var grouped = raw
+                    .GroupBy(x => new
+                    {
+                        x.Month,
+                        x.LotId,
+                        x.ProductId,
+                        x.ProductName,
+                        x.UnitName,
+                        x.ExpiredDate
+                    })
+                    .Select(g => new
+                    {
+                        g.Key.Month,
+                        g.Key.LotId,
+                        g.Key.ProductId,
+                        g.Key.ProductName,
+                        g.Key.UnitName,
+                        g.Key.ExpiredDate,
+                        Quantity = g.Sum(x => x.Quantity)
+                    })
+                    .ToList();
+
+
+                var result = new List<MonthlyProductStatisticDTO>();
+
+                for (int month = 1; month <= 12; month++)
+                {
+                    var monthItems = grouped
+                        .Where(x => x.Month == month)
+                        .ToList();
+
+                    var totalQuantityOfMonth = monthItems.Sum(x => x.Quantity);
+
+                    var productList = monthItems
+                        .Select(x =>
+                        {
+                            decimal percentage = totalQuantityOfMonth == 0
+                                ? 0m
+                                : Math.Round((decimal)x.Quantity / totalQuantityOfMonth * 100, 2);
+
+                            return new ProductPercentageDTO
+                            {
+                                LotId = x.LotId,
+                                Quantity = x.Quantity,
+                                Percentage = percentage,
+                                Product = new ProductInfoDTO
+                                {
+                                    ProductId = x.ProductId,
+                                    ProductName = x.ProductName ?? string.Empty,
+                                    UnitName = x.UnitName ?? string.Empty,
+                                    ExpiredDate = x.ExpiredDate
+                                }
+                            };
+                        })
+                        .OrderByDescending(p => p.Quantity)
+                        .ToList();
+
+                    result.Add(new MonthlyProductStatisticDTO
+                    {
+                        Month = month,
+                        TotalQuantity = totalQuantityOfMonth,
+                        Products = productList
+                    });
+                }
+
+                return new ServiceResult<List<MonthlyProductStatisticDTO>>
+                {
+                    StatusCode = 200,
+                    Message = "Thành công",
+                    Data = result
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult<List<MonthlyProductStatisticDTO>>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi hệ thống: " + ex.Message,
+                    Data = null
+                };
+            }
+        }
+
+        #endregion
     }
 }
