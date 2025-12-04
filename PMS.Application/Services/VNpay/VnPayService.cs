@@ -151,7 +151,6 @@ namespace PMS.Application.Services.VNpay
                     return ServiceResult<VnPayInitResponseDTO>.Fail(
                         "Số tiền thanh toán không hợp lệ.", 400);
 
-                // TxnRef kiểu cũ: "SOID-yyyyMMddHHmmssfff"
                 var (url, qr, txnRef) = await _gateway.BuildPaymentAsync(
                     order.SalesOrderId,
                     amount,

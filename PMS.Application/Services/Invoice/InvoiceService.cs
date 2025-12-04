@@ -5,6 +5,7 @@ using PMS.Application.DTOs.Invoice;
 using PMS.Application.Services.Base;
 using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.Notification;
+using PMS.Application.Services.SmartCA;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
@@ -22,7 +23,8 @@ namespace PMS.Application.Services.Invoice
         ILogger<InvoiceService> logger,
         IPdfService pdfService,
         IEmailService emailService,
-        INotificationService notificationService) : Service(unitOfWork, mapper), IInvoiceService
+        INotificationService notificationService,
+        ISmartCAService smartCAService) : Service(unitOfWork, mapper), IInvoiceService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
@@ -30,6 +32,7 @@ namespace PMS.Application.Services.Invoice
         private readonly IPdfService _pdfService = pdfService;
         private readonly IEmailService _emailService = emailService;
         private readonly INotificationService _noti = notificationService;
+        private readonly ISmartCAService _smartCAService = smartCAService;
 
         public async Task<ServiceResult<InvoiceDTO>>
             GenerateInvoiceFromGINAsync(GenerateInvoiceFromGINRequestDTO request)
@@ -813,6 +816,8 @@ namespace PMS.Application.Services.Invoice
                     .Include(n => n.StockExportOrder)
                     .Where(n => n.StockExportOrder.SalesOrderId == order.SalesOrderId)
                     .Where(n => !string.IsNullOrEmpty(n.GoodsIssueNoteCode))
+                    .Where(n => !n.InvoiceDetails.Any())
+                    .Where(n => n.Status == GoodsIssueNoteStatus.Exported)
                     .Select(n => n.GoodsIssueNoteCode!)
                     .Distinct()
                     .OrderBy(c => c)
@@ -852,7 +857,7 @@ namespace PMS.Application.Services.Invoice
                         .ThenInclude(so => so.Customer)  
                     .Include(i => i.InvoiceDetails)
                         .ThenInclude(d => d.GoodsIssueNote)
-                    .Where(i => i.SalesOrder.CreateBy == userId)
+                    .Where(i => i.SalesOrder.CreateBy == userId && i.Status == InvoiceStatus.Send)
                     .ToListAsync();
 
                 if (!invoices.Any())
@@ -900,7 +905,57 @@ namespace PMS.Application.Services.Invoice
             }
         }
 
+        public async Task<ServiceResult<InvoiceSmartCASignResponseDTO>> CreateSmartCASignTransactionAsync(int invoiceId, SmartCASignInvoiceRequestDTO request)
+        {
+            try
+            {
+                var invoice = await _unitOfWork.Invoices.Query()
+                    .Include(i => i.SalesOrder)
+                        .ThenInclude(so => so.Customer)
+                    .Include(i => i.InvoiceDetails)
+                        .ThenInclude(d => d.GoodsIssueNote)
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId);
 
+                if (invoice == null)
+                    return ServiceResult<InvoiceSmartCASignResponseDTO>
+                        .Fail("Không tìm thấy hóa đơn.", 404);
+
+                // 1. Render PDF (giống GenerateInvoicePdfAsync)
+                var html = InvoiceTemplate.GenerateInvoiceHtml(invoice);
+                var pdfBytes = _pdfService.GeneratePdfFromHtml(html);
+
+                // 2. Gọi SmartCA tạo giao dịch ký hash
+                var docId = invoice.InvoiceCode; // hoặc bất kỳ mã tài liệu nào anh muốn
+                var signResult = await _smartCAService.SignPdfHashAsync(
+                    pdfBytes,
+                    docId,
+                    request);
+
+                // TODO: Lưu transactionId / tranCode vào Invoice nếu muốn
+                // invoice.SmartCATransactionId = signResult.TransactionId;
+                // _unitOfWork.Invoices.Update(invoice);
+                // await _unitOfWork.CommitAsync();
+
+                var dto = new InvoiceSmartCASignResponseDTO
+                {
+                    InvoiceId = invoice.Id,
+                    InvoiceCode = invoice.InvoiceCode,
+                    TransactionId = signResult.TransactionId,
+                    TranCode = signResult.TranCode
+                };
+
+                return ServiceResult<InvoiceSmartCASignResponseDTO>.SuccessResult(
+                    dto,
+                    "Tạo giao dịch ký số SmartCA thành công. Vui lòng xác nhận trên app SmartCA.",
+                    200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "CreateSmartCASignTransactionAsync({InvoiceId}) error", invoiceId);
+                return ServiceResult<InvoiceSmartCASignResponseDTO>.Fail(
+                    "Có lỗi xảy ra khi tạo giao dịch ký số.", 500);
+            }
+        }
 
         #region Helpers
 

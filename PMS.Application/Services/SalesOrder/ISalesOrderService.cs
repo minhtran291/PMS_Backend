@@ -49,7 +49,7 @@ namespace PMS.Application.Services.SalesOrder
         public Task<ServiceResult<SalesOrderDepositCheckDetailDTO>> GetDepositCheckDetailForCustomerAsync(int requestId, string customerId);
         public Task<ServiceResult<bool>> UpdateDepositCheckRequestAsync(int requestId, string customerId, UpdateSalesOrderDepositCheckRequestDTO dto);
         public Task<ServiceResult<bool>> DeleteDepositCheckRequestAsync(int requestId, string customerId);
-
+        public Task<ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>> ListDepositChecksAsync(DepositCheckStatus? status = null);
         //
         Task<ServiceResult<bool>> CheckAndUpdateDeliveredStatusAsync();
 
