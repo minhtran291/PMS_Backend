@@ -748,6 +748,9 @@ namespace PMS.Application.Services.GoodsIssueNote
                     .Include(g => g.GoodsIssueNoteDetails)
                         .ThenInclude(d => d.LotProduct)
                             .ThenInclude(lp => lp.Product)
+                    .Include(g => g.GoodsIssueNoteDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.WarehouseLocation)
                     .ToListAsync();
 
                 var details = notes.SelectMany(g => g.GoodsIssueNoteDetails)
@@ -761,6 +764,8 @@ namespace PMS.Application.Services.GoodsIssueNote
                         d.LotProduct.LotID,
                         d.LotProduct.Product.ProductID,
                         d.LotProduct.Product.ProductName,
+                        d.LotProduct.ExpiredDate,
+                        d.LotProduct.WarehouseLocation.LocationName,
                     })
                     .Select(p => new
                     {
@@ -768,6 +773,8 @@ namespace PMS.Application.Services.GoodsIssueNote
                         productID = p.Key.ProductID,
                         productName = p.Key.ProductName,
                         quatity = p.Sum(x => x.Quantity),
+                        expiredDate = p.Key.ExpiredDate,
+                        warehouseLocation = p.Key.LocationName,
                         percentage = totalQuantity == 0
                             ? 0
                             : Math.Round((double)p.Sum(x => x.Quantity) / totalQuantity * 100, 2)
