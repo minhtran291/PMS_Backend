@@ -664,5 +664,179 @@ namespace PMS.Application.Services.GoodsIssueNote
             }
 
         }
+
+        public async Task<ServiceResult<object>> StatisticAsync()
+        {
+            try
+            {
+                int year = DateTime.Now.Year;
+
+                var query = await _unitOfWork.GoodsIssueNote.Query()
+                    .AsNoTracking()
+                    .Where(g => g.CreateAt.Year == year && g.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Exported)
+                    .Include(g => g.GoodsIssueNoteDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.Product)
+                    .ToListAsync();
+
+                var monthlyData = query.GroupBy(g => g.CreateAt.Month)
+                    .Select(monthGroup =>
+                    {
+                        var details = monthGroup
+                            .SelectMany(g => g.GoodsIssueNoteDetails)
+                            .Where(d => d.LotProduct != null)
+                            .ToList();
+
+                        var totalQuantity = details.Sum(d => d.Quantity);
+
+                        var products = details.GroupBy(d => new
+                        {
+                            d.LotProduct.Product.ProductID,
+                            d.LotProduct.Product.ProductName,
+                        })
+                        .Select(p => new
+                        {
+                            productID = p.Key.ProductID,
+                            productName = p.Key.ProductName,
+                            quantity = p.Sum(x => x.Quantity),
+                            percentage = totalQuantity == 0 ? 0 : Math.Round((double)p.Sum(x => x.Quantity) / totalQuantity * 100, 2)
+                        })
+                        .OrderByDescending(p => p.quantity)
+                        .ToList();
+
+                        return new
+                        {
+                            month = monthGroup.Key,
+                            totalQuantity,
+                            products
+                        };
+                    })
+                    .OrderBy(m => m.month)
+                    .ToList();
+
+                var result = new
+                {
+                    year = year,
+                    monthlyData
+                };
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = result
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
+
+        public async Task<ServiceResult<object>> NotExportedAsync()
+        {
+            try
+            {
+                var notes = await _unitOfWork.GoodsIssueNote.Query()
+                    .AsNoTracking()
+                    .Where(g => g.Status != Core.Domain.Enums.GoodsIssueNoteStatus.Exported)
+                    .Include(g => g.GoodsIssueNoteDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.Product)
+                    .ToListAsync();
+
+                var details = notes.SelectMany(g => g.GoodsIssueNoteDetails)
+                    .ToList();
+
+                var totalQuantity = details.Sum(d => d.Quantity);
+
+                var products = details
+                    .GroupBy(d => new
+                    {
+                        d.LotProduct.LotID,
+                        d.LotProduct.Product.ProductID,
+                        d.LotProduct.Product.ProductName,
+                    })
+                    .Select(p => new
+                    {
+                        lotId = p.Key.LotID,
+                        productID = p.Key.ProductID,
+                        productName = p.Key.ProductName,
+                        quatity = p.Sum(x => x.Quantity),
+                        percentage = totalQuantity == 0
+                            ? 0
+                            : Math.Round((double)p.Sum(x => x.Quantity) / totalQuantity * 100, 2)
+                    })
+                    .OrderByDescending(p => p.quatity)
+                    .ToList();
+
+                var result = new
+                {
+                    totalQuantity,
+                    products
+                };
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = result
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
+
+        public async Task CheckQuantity(string userId)
+        {
+            try
+            {
+                var products = await _unitOfWork.Product.Query()
+                    .Include(p => p.LotProducts)
+                    .ToListAsync();
+
+                var lowStockProducts = new List<string>();
+
+                foreach(var product in products)
+                {
+                    var totalQuantity = product.LotProducts.Sum(lp => lp.LotQuantity);
+
+                    if(totalQuantity < product.MinQuantity)
+                    {
+                        var name = product.ProductName;
+                        lowStockProducts.Add(name);
+                    }
+                }
+
+                if (lowStockProducts.Any())
+                {
+                    var productName = string.Join(",", lowStockProducts);
+
+                    await _notificationService.SendNotificationToRolesAsync(
+                        userId,
+                        [UserRoles.PURCHASES_STAFF],
+                        "Bạn nhận được 1 thông báo mới",
+                        $"Có sản phẩm có số lượng tồn kho nhỏ hơn số lượng tối thiểu: {productName}.",
+                        Core.Domain.Enums.NotificationType.Message
+                        );
+                }
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+            }
+        }
     }
 }

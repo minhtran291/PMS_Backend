@@ -311,6 +311,48 @@ namespace PMS.API.Controllers
             });
         }
 
+        #region salesOrderStatistics
+
+        /// <summary>
+        /// GET  https://api.bbpharmacy.site/api/SalesOrder/revenue/{year}
+        /// </summary>
+        /// <param name="year"></param>
+        /// <returns></returns>
+        [HttpGet("revenue/{year}")]
+        [Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
+        public async Task<IActionResult> GetYearRevenue(int year)
+        {
+            var result = await _service.GetYearRevenueAsync(year);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// GET https://api.bbpharmacy.site/api/SalesOrder/sales-product-quantity/{year}
+        /// </summary>
+        /// <param name="year"></param>
+        /// <returns></returns>
+        [HttpGet("sales-product-quantity/{year}")]
+        [Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
+        public async Task<IActionResult> GetProductQuantityByYear(int year)
+        {
+            var result = await _service.GetProductQuantityByYearAsync(year);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        #endregion
+
         #region depositmanual
 
         /// <summary>
