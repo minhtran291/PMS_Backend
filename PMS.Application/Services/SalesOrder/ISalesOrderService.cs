@@ -55,5 +55,10 @@ namespace PMS.Application.Services.SalesOrder
 
         //Lấy ra toàn bộ SalesOrder chưa lấy hết hàng
         Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListSaleOrderNotDeliveredAsync();
+
+        //Dashboard cho Sales Staff
+        public Task<ServiceResult<List<MonthlyRevenueDTO>>> GetYearRevenueAsync(int year);
+        public Task<ServiceResult<List<MonthlyProductStatisticDTO>>> GetProductQuantityByYearAsync(int year);
+
     }
 }
