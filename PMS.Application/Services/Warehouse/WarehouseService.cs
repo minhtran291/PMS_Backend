@@ -454,14 +454,14 @@ namespace PMS.Application.Services.Warehouse
             int row = headerRow + 1;
             foreach (var h in historiesResult.Data)
             {
-                var checker = await _unitOfWork.Users.UserManager.FindByIdAsync(h.InventoryBy);
+               
                 ws.Cells[row, 1].Value = h.LotID;
                 ws.Cells[row, 2].Value = h.ProductName;
                 ws.Cells[row, 3].Value = h.SystemQuantity;
                 ws.Cells[row, 4].Value = h.ActualQuantity;
                 ws.Cells[row, 5].Value = h.Diff;
                 ws.Cells[row, 6].Value = h.Note;
-                ws.Cells[row, 7].Value = checker?.FullName ?? "Không xác định";
+                ws.Cells[row, 7].Value = h.InventoryByName;
                 ws.Cells[row, 8].Value = h.LastUpdated.ToString("dd/MM/yyyy HH:mm");
 
                 row++;
@@ -690,6 +690,8 @@ namespace PMS.Application.Services.Warehouse
             {
                 InventoryHistoryID = h.InventoryHistoryID,
                 LotID = h.LotID,
+                InventoryById = h.InventoryBy,
+                InventoryByName = users.FirstOrDefault(u => u.Id == h.InventoryBy)?.FullName ?? "",
                 ProductName = h.LotProduct?.Product?.ProductName ?? "",
                 SystemQuantity = h.SystemQuantity,
                 ActualQuantity = h.ActualQuantity,
