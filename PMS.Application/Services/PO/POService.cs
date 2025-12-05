@@ -1089,8 +1089,16 @@ namespace PMS.API.Services.POService
 
         public async Task<ServiceResult<IEnumerable<PendingReceivingProductDTO>>> GetPendingReceivingProductsAsync()
         {
+            var excludedStatuses = new[]
+            {
+                PurchasingOrderStatus.rejected,
+                PurchasingOrderStatus.draft,
+                PurchasingOrderStatus.sent
+            };
+
             var poList = await _unitOfWork.PurchasingOrder.Query()
                 .AsNoTracking()
+                .Where(po => !excludedStatuses.Contains(po.Status))
                 .Include(po => po.PurchasingOrderDetails)
                 .Include(po => po.GoodReceiptNotes)
                     .ThenInclude(grn => grn.GoodReceiptNoteDetails)
