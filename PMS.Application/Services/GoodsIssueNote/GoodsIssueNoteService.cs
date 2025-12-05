@@ -758,11 +758,13 @@ namespace PMS.Application.Services.GoodsIssueNote
                 var products = details
                     .GroupBy(d => new
                     {
+                        d.LotProduct.LotID,
                         d.LotProduct.Product.ProductID,
                         d.LotProduct.Product.ProductName,
                     })
                     .Select(p => new
                     {
+                        lotId = p.Key.LotID,
                         productID = p.Key.ProductID,
                         productName = p.Key.ProductName,
                         quatity = p.Sum(x => x.Quantity),
