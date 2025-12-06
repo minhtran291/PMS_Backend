@@ -176,14 +176,28 @@ namespace PMS.Application.Services.SalesQuotation
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Ngày hết hạn không hợp lệ"
+                        Message = "Ngày hết hạn cho báo giá không được nhỏ hơn hôm nay"
                     };
 
-                if(dto.DepositDueDays >= dto.ExpectedDeliveryDate)
+                if(dto.ExpiredDate.Date > DateTime.Today.AddDays(30))
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Ngày hết hạn cho báo giá không được vượt quá 30 ngày"
+                    };
+
+                if (dto.DepositDueDays >= dto.ExpectedDeliveryDate)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
                         Message = "Thời hạn thanh toán cọc không được bằng hoặc vượt quá ngày giao hàng dự kiến"
+                    };
+
+                if (dto.ExpectedDeliveryDate > 365)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Thời hạn giao hàng dự kiến không được quá 1 năm"
                     };
 
                 var lotIdsInDto = dto.Details
@@ -586,7 +600,14 @@ namespace PMS.Application.Services.SalesQuotation
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Ngày hết hạn không hợp lệ"
+                        Message = "Ngày hết hạn cho báo giá không được nhỏ hơn hôm nay"
+                    };
+
+                if (dto.ExpiredDate.Date > DateTime.Today.AddDays(30))
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Ngày hết hạn cho báo giá không được vượt quá 30 ngày"
                     };
 
                 if (dto.DepositDueDays >= dto.ExpectedDeliveryDate)
@@ -594,6 +615,13 @@ namespace PMS.Application.Services.SalesQuotation
                     {
                         StatusCode = 400,
                         Message = "Thời hạn thanh toán cọc không được bằng hoặc vượt quá ngày giao hàng dự kiến"
+                    };
+
+                if(dto.ExpectedDeliveryDate > 365)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Thời hạn giao hàng dự kiến không được quá 1 năm"
                     };
 
                 var lotIdsInDto = dto.Details
@@ -962,7 +990,7 @@ namespace PMS.Application.Services.SalesQuotation
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Ngày hết hạn không còn hợp lệ nữa"
+                        Message = "Ngày hết hạn không được nhỏ hơn hôm nay"
                     };
 
                 await _unitOfWork.BeginTransactionAsync();

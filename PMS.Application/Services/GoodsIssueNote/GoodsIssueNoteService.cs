@@ -67,6 +67,24 @@ namespace PMS.Application.Services.GoodsIssueNote
                     .Where(l => l.LotQuantity > 0 && l.ExpiredDate > DateTime.Today)
                     .ToListAsync();
 
+                var goodsIssueNoteNotExported = await _unitOfWork.GoodsIssueNote.Query()
+                    .Include(g => g.GoodsIssueNoteDetails)
+                    .Where(g => g.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Sent && g.StockExportOrderId != seo.Id)
+                    .ToListAsync();
+
+                var pendingLotQuantity = new Dictionary<int, int>();
+
+                foreach(var gin in goodsIssueNoteNotExported)
+                {
+                    foreach(var detail in gin.GoodsIssueNoteDetails)
+                    {
+                        if (!pendingLotQuantity.ContainsKey(detail.LotId))
+                            pendingLotQuantity[detail.LotId] = 0;
+
+                        pendingLotQuantity[detail.LotId] += detail.Quantity;
+                    }
+                }
+
                 var lotExportMap = new Dictionary<int, int>();
 
                 var warehouseMap = new Dictionary<int, List<GoodsIssueNoteDetails>>();
@@ -78,7 +96,13 @@ namespace PMS.Application.Services.GoodsIssueNote
                                                 && l.ExpiredDate == item.LotProduct.ExpiredDate
                                                 && l.SupplierID == item.LotProduct.SupplierID
                                                 && l.ProductID == item.LotProduct.ProductID)
-                        .OrderBy(l => l.WarehouselocationID)
+                        .Select(l => new
+                        {
+                            Lot = l,
+                            AvailableQuantity = l.LotQuantity - (pendingLotQuantity.ContainsKey(l.LotID) ? pendingLotQuantity[l.LotID] : 0)
+                        })
+                        .Where(x => x.AvailableQuantity > 0)
+                        .OrderBy(x => x.Lot.WarehouselocationID)
                         .ToList();
 
                     var requiredQuantity = item.Quantity;
@@ -88,23 +112,23 @@ namespace PMS.Application.Services.GoodsIssueNote
                         if (requiredQuantity <= 0)
                             break;
 
-                        var export = Math.Min(requiredQuantity, group.LotQuantity);
+                        var export = Math.Min(requiredQuantity, group.AvailableQuantity);
 
                         requiredQuantity -= export;
 
-                        if (!lotExportMap.ContainsKey(group.LotID))
-                            lotExportMap[group.LotID] = 0;
+                        if (!lotExportMap.ContainsKey(group.Lot.LotID))
+                            lotExportMap[group.Lot.LotID] = 0;
 
-                        lotExportMap[group.LotID] += export;
+                        lotExportMap[group.Lot.LotID] += export;
 
-                        int warehouseId = group.WarehouseLocation.Warehouse.Id;
+                        int warehouseId = group.Lot.WarehouseLocation.Warehouse.Id;
 
                         if (!warehouseMap.ContainsKey(warehouseId))
                             warehouseMap[warehouseId] = new List<GoodsIssueNoteDetails>();
 
                         warehouseMap[warehouseId].Add(new GoodsIssueNoteDetails
                         {
-                            LotId = group.LotID,
+                            LotId = group.Lot.LotID,
                             Quantity = export,
                         });
                     }
