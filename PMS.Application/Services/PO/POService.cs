@@ -725,7 +725,18 @@ namespace PMS.API.Services.POService
                 // Kiểm tra tiền thanh toán không vượt tổng đơn hàng
                 if (pOUpdateDTO.paid > existingPO.Total)
                     return ServiceResult<POPaidViewDTO>.Fail("Thanh toán vượt quá tổng giá trị đơn hàng", 400);
+                if (pOUpdateDTO.paid == existingPO.Total)
+                {
+                    existingPO.Status = PurchasingOrderStatus.compeleted;
+                    existingPO.Deposit = pOUpdateDTO.paid;
+                    existingPO.Debt = existingPO.Total - pOUpdateDTO.paid;
+                    existingPO.PaymentDate = DateTime.Now;
+                    existingPO.DepositDate = DateTime.Now;
+                    existingPO.PaymentBy = userId;
 
+                    _unitOfWork.PurchasingOrder.Update(existingPO);
+                    await _unitOfWork.CommitAsync();
+                }
                 // Cập nhật trạng thái đơn hàng (deposit lần 1)
                 existingPO.Status = PurchasingOrderStatus.deposited;
                 existingPO.Deposit = pOUpdateDTO.paid;
@@ -733,7 +744,7 @@ namespace PMS.API.Services.POService
                 existingPO.PaymentDate = DateTime.Now;
                 existingPO.DepositDate = DateTime.Now;
                 existingPO.PaymentBy = userId;
-
+               
                 _unitOfWork.PurchasingOrder.Update(existingPO);
                 await _unitOfWork.CommitAsync();
 
