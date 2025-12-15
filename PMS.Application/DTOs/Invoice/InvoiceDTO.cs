@@ -12,6 +12,7 @@ namespace PMS.Application.DTOs.Invoice
         public int Id { get; set; }
         public string InvoiceCode { get; set; } = string.Empty;
         public int SalesOrderId { get; set; }
+        public string  SalesOrderCode { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime IssuedAt { get; set; }
         public InvoiceStatus Status { get; set; }
