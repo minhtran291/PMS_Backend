@@ -725,7 +725,18 @@ namespace PMS.API.Services.POService
                 // Kiểm tra tiền thanh toán không vượt tổng đơn hàng
                 if (pOUpdateDTO.paid > existingPO.Total)
                     return ServiceResult<POPaidViewDTO>.Fail("Thanh toán vượt quá tổng giá trị đơn hàng", 400);
+                if (pOUpdateDTO.paid == existingPO.Total)
+                {
+                    existingPO.Status = PurchasingOrderStatus.compeleted;
+                    existingPO.Deposit = pOUpdateDTO.paid;
+                    existingPO.Debt = existingPO.Total - pOUpdateDTO.paid;
+                    existingPO.PaymentDate = DateTime.Now;
+                    existingPO.DepositDate = DateTime.Now;
+                    existingPO.PaymentBy = userId;
 
+                    _unitOfWork.PurchasingOrder.Update(existingPO);
+                    await _unitOfWork.CommitAsync();
+                }
                 // Cập nhật trạng thái đơn hàng (deposit lần 1)
                 existingPO.Status = PurchasingOrderStatus.deposited;
                 existingPO.Deposit = pOUpdateDTO.paid;
@@ -733,7 +744,7 @@ namespace PMS.API.Services.POService
                 existingPO.PaymentDate = DateTime.Now;
                 existingPO.DepositDate = DateTime.Now;
                 existingPO.PaymentBy = userId;
-
+               
                 _unitOfWork.PurchasingOrder.Update(existingPO);
                 await _unitOfWork.CommitAsync();
 
@@ -1085,6 +1096,75 @@ namespace PMS.API.Services.POService
             {
                 return ServiceResult<DebtReportDTO>.Fail($"Lỗi khi lấy thông tin tài chính: {ex.Message}", 500);
             }
+        }
+
+        public async Task<ServiceResult<IEnumerable<PendingReceivingProductDTO>>> GetPendingReceivingProductsAsync()
+        {
+            var excludedStatuses = new[]
+            {
+                PurchasingOrderStatus.rejected,
+                PurchasingOrderStatus.draft,
+                PurchasingOrderStatus.sent
+            };
+
+            var poList = await _unitOfWork.PurchasingOrder.Query()
+                .AsNoTracking()
+                .Where(po => !excludedStatuses.Contains(po.Status))
+                .Include(po => po.PurchasingOrderDetails)
+                .Include(po => po.GoodReceiptNotes)
+                    .ThenInclude(grn => grn.GoodReceiptNoteDetails)
+                .ToListAsync();
+
+            if (!poList.Any())
+                return ServiceResult<IEnumerable<PendingReceivingProductDTO>>.SuccessResult(
+                    new List<PendingReceivingProductDTO>(),
+                    "Không có PO nào."
+                );
+
+            var pendingProducts = new List<PendingReceivingProductDTO>();
+
+            foreach (var po in poList)
+            {
+                var poDetails = po.PurchasingOrderDetails;
+
+                var grnReceivedMap = po.GoodReceiptNotes
+                    .SelectMany(g => g.GoodReceiptNoteDetails)
+                    .GroupBy(g => (g.ProductID, g.UnitPrice))
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.Sum(x => x.Quantity)
+                    );
+
+                foreach (var pod in poDetails)
+                {
+                    var key = (pod.ProductID, pod.UnitPrice);
+                    int receivedQty = grnReceivedMap.ContainsKey(key)
+                        ? grnReceivedMap[key]
+                        : 0;
+
+                    int remaining = pod.Quantity - receivedQty;
+
+                    if (remaining > 0)
+                    {
+                        pendingProducts.Add(new PendingReceivingProductDTO
+                        {
+                            POID = po.POID,
+                            ProductID = pod.ProductID,
+                            ProductName = pod.ProductName,
+                            UnitPrice = pod.UnitPrice,
+                            OrderedQuantity = pod.Quantity,
+                            ReceivedQuantity = receivedQty,
+                            RemainingQuantity = remaining,
+                            ExpiredDate = pod.ExpiredDate   
+                        });
+                    }
+                }
+            }
+
+            return ServiceResult<IEnumerable<PendingReceivingProductDTO>>.SuccessResult(
+                pendingProducts,
+                "Lấy danh sách sản phẩm chờ nhập thành công."
+            );
         }
 
     }

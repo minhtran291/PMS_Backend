@@ -42,5 +42,7 @@ namespace PMS.Application.Services.PO
 
         Task<ServiceResult<POViewDTO2>> ViewDetailPObyID2(int poid);
 
+        Task<ServiceResult<IEnumerable<PendingReceivingProductDTO>>> GetPendingReceivingProductsAsync();
+
     }
 }

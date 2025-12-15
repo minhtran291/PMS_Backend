@@ -17,6 +17,8 @@ namespace PMS.Application.DTOs.Product
         public int Diff => ActualQuantity - SystemQuantity;
         public string? Note { get; set; }
         public string? InventoryBy { get; set; }
+        public string? InventoryById { get; set; }   // giữ userId gốc từ DB
+        public string? InventoryByName { get; set; } // tên người kiểm kê (FullName)
         public DateTime LastUpdated { get; set; }
     }
 }
