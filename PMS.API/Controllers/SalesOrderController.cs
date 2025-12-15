@@ -311,6 +311,45 @@ namespace PMS.API.Controllers
             });
         }
 
+        /// <summary>
+        /// PUT: api/SalesOrder/{salesOrderId}/mark-backorder
+        /// Nếu tồn tại StockExportOrder có trạng thái NotEnough thì chuyển SalesOrder sang BackSalesOrder.
+        /// </summary>
+        [HttpPut("{salesOrderId}/mark-backorder")]
+        [Authorize(Roles = UserRoles.SALES_STAFF)]
+        public async Task<IActionResult> MarkBackSalesOrder(int salesOrderId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            var result = await _service.MarkBackSalesOrderAsync(salesOrderId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// PUT: api/SalesOrder/{salesOrderId}/mark-not-complete
+        /// Chuyển SalesOrder sang NotComplete và chuyển trạng thái thanh toán thành Refunded.
+        /// </summary>
+        [HttpPut("{salesOrderId}/mark-not-complete")]
+        [Authorize(Roles = UserRoles.SALES_STAFF)]
+        public async Task<IActionResult> MarkNotComplete(int salesOrderId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            var result = await _service.MarkNotCompleteAndRefundAsync(salesOrderId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+
         #region salesOrderStatistics
 
         /// <summary>

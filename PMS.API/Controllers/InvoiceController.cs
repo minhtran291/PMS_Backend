@@ -254,6 +254,23 @@ namespace PMS.API.Controllers
             });
         }
 
+        /// <summary>
+        /// DELETE: http://localhost:5137/api/Invoice/{id}/delete-draft
+        /// Xóa Invoice khi còn ở trạng thái Draft.
+        /// </summary>
+        [HttpDelete("{id}/delete-draft")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        public async Task<IActionResult> DeleteDraftInvoice(int id)
+        {
+            var result = await _invoiceService.DeleteDraftInvoiceAsync(id);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
 
     }
 }
