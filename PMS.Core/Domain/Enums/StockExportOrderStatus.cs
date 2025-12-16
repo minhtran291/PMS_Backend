@@ -12,6 +12,8 @@ namespace PMS.Core.Domain.Enums
         Sent = 1,
         Exported = 2,
         NotEnough = 3,
-        Late = 4
+        Await = 4,
+        Cancel = 5,
+        ReadyToExport = 6,
     }
 }
