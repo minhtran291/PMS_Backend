@@ -1,8 +1,9 @@
 ﻿
+using System.Net.Mail;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using PMS.Application.DTOs.PRFQ;
 using PMS.Core.ConfigOptions;
-using System.Net.Mail;
 
 namespace PMS.Application.Services.ExternalService
 {
@@ -124,6 +125,65 @@ namespace PMS.Application.Services.ExternalService
             {
                 stream.Dispose();
                 attachment.Dispose();
+            }
+        }
+
+
+        public async Task SendEmailWithManyAttachmentsAsync(string recipientEmail, string subject, string body, List<EmailAttachment>? attachments)
+        {
+            try
+            {
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(_emailConfig.FromName, _emailConfig.FromEmail));
+                message.To.Add(MailboxAddress.Parse(recipientEmail));
+                message.Subject = subject;
+
+                var builder = new BodyBuilder
+                {
+                    TextBody = body
+                };
+
+                
+                if (attachments != null && attachments.Any())
+                {
+                    foreach (var attachment in attachments)
+                    {
+                        if (attachment.FileBytes != null && attachment.FileBytes.Length > 0)
+                        {
+                            builder.Attachments.Add(
+                                attachment.FileName,
+                                attachment.FileBytes,
+                                ContentType.Parse(
+                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                )
+                            );
+                        }
+                    }
+                }
+
+                message.Body = builder.ToMessageBody();
+
+                using var client = new MailKit.Net.Smtp.SmtpClient();
+                await client.ConnectAsync(
+                    _emailConfig.Host,
+                    int.Parse(_emailConfig.Port ?? "587"),
+                    MailKit.Security.SecureSocketOptions.StartTls
+                );
+
+                await client.AuthenticateAsync(
+                    _emailConfig.Username,
+                    _emailConfig.Password
+                );
+
+                await client.SendAsync(message);
+                await client.DisconnectAsync(true);
+
+                Console.WriteLine($"[EmailService] Email sent to {recipientEmail}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[EmailService] Error sending email: {ex.Message}");
+                throw new Exception($"Gửi email thất bại: {ex.Message}", ex);
             }
         }
     }
