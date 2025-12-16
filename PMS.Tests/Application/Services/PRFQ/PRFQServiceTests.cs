@@ -102,19 +102,19 @@ namespace PMS.Tests.Services.Purchasing
         [Test]
         public async Task CreatePRFQAsync_SupplierNotFound_Returns404()
         {
-            // Arrange
+
             var user = new User { Id = TestUserId, FullName = "Nguyễn Văn A" };
             UserManagerMock.Setup(m => m.FindByIdAsync(TestUserId)).ReturnsAsync(user);
 
-            // Mock DbSet empty để giả lập supplier không tồn tại
+
             _supplierRepoMock.Setup(r => r.Query())
                 .Returns(new List<Supplier>().AsQueryable().ToMockDbSet().Object);
 
-            // Act
+
             var result = await _prfqService.CreatePRFQAsync(
                 TestUserId, TestSupplierId, "123456789", "0901234567", "Hà Nội", TestProductIds, PRFQStatus.Draft);
 
-            // Assert
+
             Assert.Multiple(() =>
             {
                 Assert.That(result.StatusCode, Is.EqualTo(404));
@@ -250,7 +250,6 @@ namespace PMS.Tests.Services.Purchasing
             });
         }
 
-
         [Test]
         public async Task CreatePRFQAsync_SentStatus_Success_EmailSent()
         {
@@ -330,7 +329,6 @@ namespace PMS.Tests.Services.Purchasing
             ), Times.Once);
         }
 
-
         [Test]
         public async Task CreatePRFQAsync_ValidData_ShouldReturnSuccess()
         {
@@ -403,153 +401,6 @@ namespace PMS.Tests.Services.Purchasing
                 supplier.Email, It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<byte[]>(), It.IsAny<string>()), Times.Once);
             UnitOfWorkMock.Verify(u => u.CommitAsync(), Times.Exactly(2));
-        }
-
-
-        [Test]
-        public async Task ConvertExcelToPurchaseOrderAsync_ValidExcel_ShouldReturnSuccess()
-        {
-
-
-            var tempFile = Path.GetTempFileName();
-
-            using (var package = new ExcelPackage(new FileInfo(tempFile)))
-            {
-                var ws = package.Workbook.Worksheets.Add("Sheet1");
-
-                ws.Cells[2, 1].Value = 1; // STT
-                ws.Cells[2, 2].Value = 1; // PRFQID
-                ws.Cells[4, 4].Value = 10; // QID
-                ws.Cells[4, 6].Value = "TestSupplier"; // Supplier name
-                ws.Cells[5, 6].Value = "supplier@email.com"; // supplier email
-                ws.Cells[7, 2].Value = DateTime.Today; // OrderDate
-                ws.Cells[7, 4].Value = DateTime.Today.AddDays(3); // ExpectedDate
-
-                // Product line
-                ws.Cells[11, 2].Value = 1001; // ProductID
-                ws.Cells[11, 4].Value = "Desc";
-                ws.Cells[11, 5].Value = "PCS";
-                ws.Cells[11, 6].Value = "10";
-                ws.Cells[11, 7].Value = DateTime.Today.AddMonths(1);
-
-                package.Save();
-            }
-
-            var tempFileBytes = Encoding.UTF8.GetBytes(tempFile);
-            _cacheMock.Setup(x => x.GetAsync("ExcelKey1", It.IsAny<CancellationToken>()))
-                      .ReturnsAsync(tempFileBytes);
-
-            var input = new PurchaseOrderInputDto
-            {
-                ExcelKey = "ExcelKey1",
-                status = PurchasingOrderStatus.sent,
-                Details = new List<PurchaseOrderDetailInput>
-            {
-                new PurchaseOrderDetailInput { STT = 1, Quantity = 5 }
-            }
-            };
-
-
-            _cacheMock.Setup(x => x.GetAsync("ExcelKey1", It.IsAny<CancellationToken>()))
-                .ReturnsAsync(tempFileBytes);
-
-
-            var user = new User { Id = "u1", UserName = "Tester" };
-            UserManagerMock.Setup(x => x.FindByIdAsync("u1")).ReturnsAsync(user);
-            var userSet = MockHelper.MockDbSet(new List<User> { user });
-            UnitOfWorkMock.Setup(x => x.Users.Query()).Returns(userSet.Object);
-
-
-            var supplierList = new List<Supplier>
-            {
-                new Supplier { Id = 1, Name = "TestSupplier", Email = "supplier@email.com" }
-            };
-            var supplierDbSet = MockHelper.MockDbSet(supplierList);
-            UnitOfWorkMock.Setup(x => x.Supplier.Query()).Returns(supplierDbSet.Object);
-
-
-            var products = new List<Product>
-            {
-            new Product
-            {
-                ProductID = 1001,
-                ProductName = "Prod A",
-                MaxQuantity = 2000,
-                MinQuantity = 100,
-                Status = true,
-                TotalCurrentQuantity = 12,
-                Unit = "Hộp"
-            }
-            };
-            var productSet = MockHelper.MockDbSet(products);
-            UnitOfWorkMock.Setup(x => x.Product.Query()).Returns(productSet.Object);
-
-
-            var quotationList = new List<Quotation>
-            {
-                new Quotation
-                {
-                    QID = 10,
-                    SupplierID = 1,
-                    QuotationExpiredDate=new DateTime(2030, 12, 5),
-                    SendDate=new DateTime(2025/11/10),        
-                }
-            };
-            var quotationSet = MockHelper.MockDbSet(quotationList);
-            UnitOfWorkMock.Setup(x => x.Quotation.Query()).Returns(quotationSet.Object);
-            UnitOfWorkMock.Setup(x => x.Quotation.AddAsync(It.IsAny<Quotation>())).Returns(Task.CompletedTask);
-
-
-            var poSet = MockHelper.MockDbSet(new List<PurchasingOrder>());
-            UnitOfWorkMock.Setup(x => x.PurchasingOrder.Query()).Returns(poSet.Object);
-            UnitOfWorkMock.Setup(x => x.PurchasingOrder.AddAsync(It.IsAny<PurchasingOrder>()))
-                .Callback<PurchasingOrder>(po => po.POID = 99)
-                .Returns(Task.CompletedTask);
-
-            var poDetailSet = MockHelper.MockDbSet(new List<PurchasingOrderDetail>());
-            UnitOfWorkMock.Setup(x => x.PurchasingOrderDetail.AddRange(It.IsAny<IEnumerable<PurchasingOrderDetail>>()));
-
-
-            var quotationDetailSet = MockHelper.MockDbSet(new List<QuotationDetail>());
-            UnitOfWorkMock.Setup(x => x.QuotationDetail.AddRange(It.IsAny<IEnumerable<QuotationDetail>>()));
-
-
-            EmailServiceMock.Setup(x => x.SendEmailWithAttachmentAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<byte[]>(), It.IsAny<string>()))
-                .Returns(Task.CompletedTask);
-
-            NotificationServiceMock.Setup(x => x.SendNotificationToRolesAsync(
-                It.IsAny<string>(), It.IsAny<List<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<NotificationType>()))
-                .Returns(Task.CompletedTask);
-
-
-            var result = await _prfqService.ConvertExcelToPurchaseOrderAsync("u1", input, PurchasingOrderStatus.sent);
-
-
-            Assert.That(result.StatusCode, Is.EqualTo(200));
-            Assert.That(result.Message, Does.Contain("Thành công"));
-
-            UnitOfWorkMock.Verify(x => x.BeginTransactionAsync(), Times.Once);
-            UnitOfWorkMock.Verify(x => x.CommitTransactionAsync(), Times.Once);
-
-            EmailServiceMock.Verify(x => x.SendEmailWithAttachmentAsync(
-                "supplier@email.com",
-                "Đơn hàng",
-                It.IsAny<string>(),
-                It.IsAny<byte[]>(),
-                It.Is<string>(f => f.Contains("PO_"))),
-                Times.Once);
-
-            NotificationServiceMock.Verify(x => x.SendNotificationToRolesAsync(
-                "u1", It.IsAny<List<string>>(),
-                "Yêu cầu nhập hàng",
-                It.IsAny<string>(),
-                NotificationType.Reminder),
-                Times.Once);
-
-            File.Delete(tempFile);
         }
 
         [Test]

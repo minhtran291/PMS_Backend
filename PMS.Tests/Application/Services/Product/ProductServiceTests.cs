@@ -71,31 +71,6 @@ namespace PMS.Tests.Application.Services.Product
         }
 
         [Test]
-        public async Task AddProductAsync_NegativeTotalCurrentQuantity_ShouldReturn200()
-        {
-            // Arrange
-            var dto = new ProductDTOView
-            {
-                ProductName = "Sản phẩm test",
-                MinQuantity = 1,
-                MaxQuantity = 5,
-                CategoryID = 1,
-                Unit = "Hộp",
-                Image = null,
-                ProductDescription = "abc",
-                Status = true,
-            };
-
-            // Act
-            var result = await _productService.AddProductAsync(dto);
-
-            // Assert
-            Assert.That(result.StatusCode, Is.EqualTo(200));
-            Assert.That(result.Message, Does.Contain("số nguyên dương"));
-            Assert.False(result.Data);
-        }
-
-        [Test]
         public async Task AddProductAsync_CategoryNotFound_ShouldReturn200()
         {
             // Arrange

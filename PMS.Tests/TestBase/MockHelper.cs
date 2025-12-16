@@ -124,6 +124,9 @@ namespace PMS.Tests.TestBase
             return mockSet;
         }
 
-
+        internal static object MockUserManager(List<User> users)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
