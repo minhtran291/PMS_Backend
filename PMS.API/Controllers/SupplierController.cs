@@ -124,5 +124,23 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
+
+
+        /// <summary>
+        /// Lấy danh sách sản phẩm (theo từng lot) của nhà cung cấp
+        /// http://localhost:5137/api/Supplier/BySupplier/{supplierId}
+        /// </summary>
+        /// <param name="supplierId">ID nhà cung cấp</param>
+        /// <returns>Danh sách LotProduct theo Supplier</returns>
+        [HttpGet("BySupplier/{supplierId}")]
+        public async Task<IActionResult> GetProductsBySupplier(string supplierId)
+        {
+            var result = await _service.ListProductBySupId(supplierId);
+
+            if (result.Equals(0))
+                return BadRequest(result);
+
+            return Ok(result);
+        }
     }
 }
