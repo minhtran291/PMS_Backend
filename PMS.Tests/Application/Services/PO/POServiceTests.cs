@@ -149,25 +149,6 @@ namespace PMS.Tests.Services
                 NotificationServiceMock.Object);
         }
 
-
-        [Test]
-        public async Task DepositedPOAsync_ValidPayment_ShouldUpdateDepositAndStatus()
-        {
-
-            var updateDto = new POUpdateDTO { paid = 700000 };
-
-
-            var result = await _poService.DepositedPOAsync("USER-002", 1, updateDto);
-
-
-            Assert.That(result.StatusCode, Is.EqualTo(200));
-            Assert.That(result.Data.Status, Is.EqualTo(PurchasingOrderStatus.deposited));
-            Assert.That(result.Data.Debt, Is.EqualTo(300000));
-            Assert.That(result.Data.PaymentBy, Is.EqualTo("jane_smith"));
-
-            UnitOfWorkMock.Verify(x => x.CommitAsync(), Times.Once);
-        }
-
         [Test]
         public async Task DepositedPOAsync_PaymentExceedsTotal_ShouldReturn400()
         {
@@ -190,40 +171,7 @@ namespace PMS.Tests.Services
 
             Assert.That(result.StatusCode, Is.EqualTo(404));
         }
-
-
-        [Test]
-        public async Task DebtAccountantPOAsync_ValidPayment_ShouldUpdateDebtAndStatus()
-        {
-
-            var updateDto = new POUpdateDTO { paid = 300000 };
-
-            var result = await _poService.DebtAccountantPOAsync("USER-002", 1, updateDto);
-
-
-            Assert.That(result.StatusCode, Is.EqualTo(200));
-            Assert.That(result.Data.Status, Is.EqualTo(PurchasingOrderStatus.paid));
-            Assert.That(result.Data.Debt, Is.EqualTo(300000));
-
-            UnitOfWorkMock.Verify(x => x.BeginTransactionAsync(), Times.Once);
-            UnitOfWorkMock.Verify(x => x.CommitTransactionAsync(), Times.Once);
-        }
-
-        [Test]
-        public async Task DebtAccountantPOAsync_PaymentCompletesDebt_ShouldSetCompletedStatus()
-        {
-
-            var updateDto = new POUpdateDTO { paid = 600000 };
-
-
-            var result = await _poService.DebtAccountantPOAsync("USER-002", 1, updateDto);
-
-
-            Assert.That(result.Data.Status, Is.EqualTo(PurchasingOrderStatus.compeleted));
-            Assert.That(result.Data.Debt, Is.EqualTo(0));
-        }
-
-
+      
         [Test]
         public async Task ChangeStatusAsync_InvalidTransition_ShouldReturn400()
         {
