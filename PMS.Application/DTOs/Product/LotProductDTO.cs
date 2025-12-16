@@ -16,9 +16,7 @@ namespace PMS.Application.DTOs.Product
         public decimal SalePrice { get; set; } = 0;
 
         public required decimal InputPrice { get; set; }
-        public required string ProductName { get; set; }
-
-        
+        public required string ProductName { get; set; }  
         public string? ExpiredDate { get; set; }
 
         public int LotQuantity { get; set; }

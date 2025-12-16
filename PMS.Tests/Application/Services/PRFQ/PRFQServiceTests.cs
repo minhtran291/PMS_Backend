@@ -320,13 +320,18 @@ namespace PMS.Tests.Services.Purchasing
             Assert.That(result.Data, Is.EqualTo(prfqId));
 
 
-            EmailServiceMock.Verify(e => e.SendEmailWithAttachmentAsync(
-                supplier.Email,
-                "Yêu cầu báo giá",
-                "Kính gửi, đính kèm yêu cầu báo giá.",
-                It.Is<byte[]>(b => b.Length > 0),
-                $"PRFQ_{prfqId}.xlsx"
-            ), Times.Once);
+            EmailServiceMock.Verify(e => e.SendEmailWithManyAttachmentsAsync(
+                 supplier.Email,
+                 "Yêu cầu báo giá và mẫu báo giá",
+                 "Kính gửi, đính kèm yêu cầu báo giá và mẫu báo giá.",
+                 It.Is<List<EmailAttachment>>(attachments =>
+                     attachments != null &&
+                     attachments.Count == 2 &&
+                     attachments.All(a => a.FileBytes.Length > 0) &&
+                     attachments.Any(a => a.FileName.StartsWith($"PRFQ_{prfqId}")) &&
+                     attachments.Any(a => a.FileName.Contains($"Q_{prfqId}"))
+                 )
+             ), Times.Once);
         }
 
         [Test]
@@ -397,9 +402,17 @@ namespace PMS.Tests.Services.Purchasing
 
             Assert.That(result.StatusCode, Is.EqualTo(200));
             Assert.That(result.Data, Is.EqualTo(99));
-            EmailServiceMock.Verify(e => e.SendEmailWithAttachmentAsync(
-                supplier.Email, It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<byte[]>(), It.IsAny<string>()), Times.Once);
+
+            EmailServiceMock.Verify(e => e.SendEmailWithManyAttachmentsAsync(
+                supplier.Email,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.Is<List<EmailAttachment>>(attachments =>
+                    attachments.Count == 2 &&
+                    attachments.All(a => a.FileBytes.Length > 0)
+                )
+            ), Times.Once);
+
             UnitOfWorkMock.Verify(u => u.CommitAsync(), Times.Exactly(2));
         }
 
