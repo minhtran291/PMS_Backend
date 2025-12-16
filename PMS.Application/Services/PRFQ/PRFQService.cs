@@ -116,10 +116,23 @@ namespace PMS.API.Services.PRFQService
             await _unitOfWork.CommitAsync();
 
             // Generate Excel và gửi email
-            var excelBytes = GenerateExcel(prfq);
+            var attachments = new List<EmailAttachment>
+{
+                new()
+                {
+                    FileName = $"PRFQ_{prfq.PRFQID}.xlsx",
+                    FileBytes = GenerateExcel(prfq)
+                },
+                new()
+                {
+                    FileName = $"Q_{prfq.PRFQID}.xlsx",
+                    FileBytes = GenerateExcelQuotation(prfq)
+                }
+            };
             if (status == PRFQStatus.Sent)
             {
-                await _emailService.SendEmailWithAttachmentAsync(supplier.Email, "Yêu cầu báo giá", "Kính gửi, đính kèm yêu cầu báo giá.", excelBytes, $"PRFQ_{prfq.PRFQID}.xlsx");
+
+                await _emailService.SendEmailWithManyAttachmentsAsync(supplier.Email, "Yêu cầu báo giá và mẫu báo giá", "Kính gửi, đính kèm yêu cầu báo giá và mẫu báo giá.", attachments);
             }
             return new ServiceResult<int>
             {
@@ -195,10 +208,24 @@ namespace PMS.API.Services.PRFQService
 
                 await _unitOfWork.CommitAsync();
 
-                var excelBytes = GenerateExcel(currentPrfq);
+                // Generate Excel và gửi email
+                var attachments = new List<EmailAttachment>
+                {
+                    new()
+                    {
+                        FileName = $"PRFQ_{currentPrfq.PRFQID}.xlsx",
+                        FileBytes = GenerateExcel(currentPrfq)
+                    },
+                    new()
+                    {
+                        FileName = $"Q_{currentPrfq.PRFQID}.xlsx",
+                        FileBytes = GenerateExcelQuotation(currentPrfq)
+                    }
+                };
                 if (currentPrfq.Status == PRFQStatus.Sent)
                 {
-                    await _emailService.SendEmailWithAttachmentAsync(currentPrfq.Supplier.Email, "Yêu cầu báo giá", "Kính gửi, đính kèm yêu cầu báo giá.", excelBytes, $"PRFQ_{currentPrfq.PRFQID}.xlsx");
+
+                    await _emailService.SendEmailWithManyAttachmentsAsync(currentPrfq.Supplier.Email, "Yêu cầu báo giá và mẫu báo giá", "Kính gửi, đính kèm yêu cầu báo giá và mẫu báo giá.", attachments);
                 }
                 return new ServiceResult<int>
                 {
@@ -478,7 +505,7 @@ namespace PMS.API.Services.PRFQService
 
 
             ws.Cells[row, 1].Value = "Bên gửi";
-            ws.Cells[row, 2].Value = "CÔNG TY TNHH DƯỢC PHẨM BBPHARMACY";
+            ws.Cells[row, 2].Value = "NHÀ THUỐC DƯỢC PHẨM SỐ 17";
             ws.Cells[row, 3].Value = "Số PRFQID:";
             ws.Cells[row, 4].Value = prfq.PRFQID;
 
@@ -590,6 +617,162 @@ namespace PMS.API.Services.PRFQService
             return package.GetAsByteArray();
         }
 
+        private byte[] GenerateExcelQuotation(PurchasingRequestForQuotation prfq)
+        {
+
+            var fullPrfq = _unitOfWork.PurchasingRequestForQuotation
+                .GetByIdAsync(prfq.PRFQID, q => q
+                    .Include(p => p.Supplier)
+                    .Include(p => p.User)
+                    .Include(p => p.PRPS).ThenInclude(prp => prp.Product))
+                .Result;
+
+            if (fullPrfq == null)
+                throw new Exception("PRFQ không tồn tại");
+
+            using var package = new ExcelPackage();
+            var ws = package.Workbook.Worksheets.Add("Yêu cầu báo giá");
+
+
+            ws.Cells.Style.Font.Name = "Arial";
+            ws.Cells.Style.Font.Size = 11;
+            ws.DefaultRowHeight = 18;
+            ws.Cells.Style.WrapText = false;
+
+
+            ws.Cells[1, 1, 1, 8].Merge = true;
+            ws.Cells[1, 1].Value = "BÁO GIÁ (QUOTATION)";
+            ws.Cells[1, 1].Style.ApplyTitleStyle(18, Color.FromArgb(0, 102, 204));
+
+
+            var logoPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "logo.png");
+            if (File.Exists(logoPath))
+            {
+                var picture = ws.Drawings.AddPicture("Logo", new FileInfo(logoPath));
+                picture.SetPosition(0, 0, 7, 0);
+                picture.SetSize(120, 50);
+            }
+
+            ws.Cells[2, 1].Value = "Mã số YC";
+            ws.Cells[2, 2].Value = prfq.PRFQID;
+            ws.Cells[2, 5].Value = "Lưu ý:";
+            ws.Cells[2, 6].Value = "Ngày đáo hạn thanh toán phần tiền còn lại không quá";
+            ws.Cells[2, 7].Value = "???";
+            ws.Cells[2, 8].Value = "ngày kể từ khi hàng được hoàn tất thanh toán đợt 1";
+            ws.Cells[7, 3].Value = "Ngày hết hạn";
+            ws.Cells[7, 4].Value = "???";
+
+            int row = 3;
+
+
+            ws.Cells[row, 1, row, 4].Merge = true;
+            ws.Cells[row, 1].Value = "BÊN NHẬN / RECEIVER";
+            ws.Cells[row, 1].Style.ApplyHeaderBox(Color.FromArgb(240, 240, 255));
+
+            ws.Cells[row, 5, row, 8].Merge = true;
+            ws.Cells[row, 5].Value = "BÊN GỬI / SENDER";
+            ws.Cells[row, 5].Style.ApplyHeaderBox(Color.FromArgb(240, 240, 255));
+
+            row++;
+
+
+            ws.Cells[row, 1].Value = "Bên Nhận";
+            ws.Cells[row, 2].Value = "NHÀ THUỐC DƯỢC PHẨM SỐ 17";
+            ws.Cells[row, 3].Value = "Mã số quotation:";
+            ws.Cells[row, 4].Value = "???";
+
+            ws.Cells[row, 5].Value = "Tên NCC:";
+            ws.Cells[row, 6, row, 8].Merge = true;
+            ws.Cells[row, 6].Value = fullPrfq.Supplier?.Name ?? "—";
+            row++;
+
+            ws.Cells[row, 1].Value = "Mã số thuế:";
+            ws.Cells[row, 2].Value = fullPrfq.TaxCode ?? "—";
+            ws.Cells[row, 3].Value = "SĐT:";
+            ws.Cells[row, 4].Value = fullPrfq.MyPhone ?? "—";
+
+            ws.Cells[row, 5].Value = "Email:";
+            ws.Cells[row, 6, row, 8].Merge = true;
+            ws.Cells[row, 6].Value = fullPrfq.Supplier?.Email ?? "—";
+            row++;
+
+            ws.Cells[row, 1].Value = "Địa chỉ:";
+            ws.Cells[row, 2, row, 4].Merge = true;
+            ws.Cells[row, 2].Value = fullPrfq.MyAddress ?? "—";
+
+            ws.Cells[row, 5].Value = "Địa chỉ:";
+            ws.Cells[row, 6, row, 8].Merge = true;
+            ws.Cells[row, 6].Value = fullPrfq.Supplier?.Address ?? "—";
+            row++;
+
+            ws.Cells[row, 1].Value = "Ngày gửi: Hải Phòng ngày,";
+            ws.Cells[row, 2].Value = fullPrfq.RequestDate.ToString("dd/MM/yyyy");
+
+            ws.Cells[row, 5].Value = "Liên lạc:";
+            ws.Cells[row, 6, row, 8].Merge = true;
+            ws.Cells[row, 6].Value = fullPrfq.Supplier?.PhoneNumber ?? "—";
+
+            ws.Cells[3, 1, row, 4].Style.Border.BorderAround(ExcelBorderStyle.Medium);
+            ws.Cells[3, 5, row, 8].Style.Border.BorderAround(ExcelBorderStyle.Medium);
+            row += 2;
+
+
+            ws.Cells[row, 1, row, 8].Merge = true;
+            ws.Cells[row, 1].Value = "DANH SÁCH SẢN PHẨM (PRODUCT LIST)";
+            ws.Cells[row, 1].Style.ApplyTitleSection(Color.LightGray);
+            row++;
+
+
+            string[] headers = { "Số thứ tự", "Mã số", "Tên sản phẩm", "Mô tả", "Đơn vị", "Gía thành", "Thuế", "Hạn dùng" };
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cells[row, i + 1].Value = headers[i];
+
+            ws.Cells[row, 1, row, 8].Style.ApplyTableHeader(Color.FromArgb(0, 153, 0));
+            row++;
+
+
+            int index = 1;
+            foreach (var prp in fullPrfq.PRPS)
+            {
+                ws.Cells[row, 1].Value = index++;
+                ws.Cells[row, 2].Value = prp.Product.ProductID;
+                ws.Cells[row, 3].Value = prp.Product.ProductName;
+                ws.Cells[row, 4].Value = prp.Product.ProductDescription;
+                ws.Cells[row, 5].Value = prp.Product.Unit;
+                row++;
+            }
+
+
+            var tableRange = ws.Cells[11, 1, row - 1, 8];
+            tableRange.Style.ApplyThinBorder();
+
+            row += 2;
+
+            //Ghi chú
+            ws.Cells[row, 1, row, 8].Merge = true;
+            ws.Cells[row, 1].Value = "GHI CHÚ (NOTES)";
+            ws.Cells[row, 1].Style.ApplyHeaderBox(Color.FromArgb(240, 240, 255));
+            row++;
+
+            string[] notes = {
+        "ghi chú ở đây"
+    };
+            foreach (var note in notes)
+            {
+                ws.Cells[row, 1, row, 8].Merge = true;
+                ws.Cells[row, 1].Value = note;
+                ws.Cells[row, 1].Style.Font.Italic = true;
+                ws.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+                row++;
+            }
+            // Điều chỉnh 
+            ws.Cells[ws.Dimension.Address].AutoFitColumns();
+            for (int i = 1; i <= 8; i++)
+                ws.Column(i).Width = Math.Min(ws.Column(i).Width, 100);
+            ws.View.ZoomScale = 100;
+
+            return package.GetAsByteArray();
+        }
 
         private async Task<byte[]> GeneratePOExcelAsync(string userId, PurchasingOrder po)
         {
@@ -1168,7 +1351,7 @@ namespace PMS.API.Services.PRFQService
             };
         }
 
-        
+
         private async Task<Quotation?> GetOrCreateQuotationAsync(ExcelData data, int supplierId)
         {
             var existingQuotation = await _unitOfWork.Quotation.Query()
@@ -1769,7 +1952,7 @@ namespace PMS.API.Services.PRFQService
                     StatusCode = 400,
                     Success = false
                 };
-               
+
             }
             catch (Exception ex)
             {
