@@ -29,6 +29,7 @@ namespace PMS.Application.Services.Invoice
         Task<ServiceResult<InvoiceSmartCASignResponseDTO>>CreateSmartCASignTransactionAsync(
             int invoiceId,
             SmartCASignInvoiceRequestDTO request);
+        Task<ServiceResult<bool>> DeleteDraftInvoiceAsync(int invoiceId);
 
     }
 }

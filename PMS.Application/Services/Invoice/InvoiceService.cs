@@ -334,6 +334,7 @@ namespace PMS.Application.Services.Invoice
                     Id = i.Id,
                     InvoiceCode = i.InvoiceCode,
                     SalesOrderId = i.SalesOrderId,
+                    SalesOrderCode = i.SalesOrder.SalesOrderCode,
                     CreatedAt = i.CreatedAt,
                     IssuedAt = i.IssuedAt,
                     Status = i.Status,
@@ -383,6 +384,7 @@ namespace PMS.Application.Services.Invoice
                     Id = invoice.Id,
                     InvoiceCode = invoice.InvoiceCode,
                     SalesOrderId = invoice.SalesOrderId,
+                    SalesOrderCode = invoice.SalesOrder.SalesOrderCode,
                     CreatedAt = invoice.CreatedAt,
                     IssuedAt = invoice.IssuedAt,
                     Status = invoice.Status,
@@ -532,7 +534,7 @@ namespace PMS.Application.Services.Invoice
                 {
                     return new ServiceResult<InvoiceDTO>
                     {
-                        StatusCode = 500,
+                        StatusCode = 400,
                         Message = "Hóa đơn không gắn với SalesOrder hợp lệ.",
                         Data = null
                     };
@@ -763,12 +765,20 @@ namespace PMS.Application.Services.Invoice
         {
             try
             {
-                var codes = await _unitOfWork.SalesOrder.Query()
-                    .Where(o => !string.IsNullOrEmpty(o.SalesOrderCode))
-                    .Select(o => o.SalesOrderCode!)
+                var codes = await _unitOfWork.GoodsIssueNote.Query()
+                    .Where(g => g.StockExportOrder.SalesOrder != null && !string.IsNullOrEmpty(g.StockExportOrder.SalesOrder.SalesOrderCode))
+                    .Select(g => g.StockExportOrder.SalesOrder!.SalesOrderCode!)
                     .Distinct()
                     .OrderBy(c => c)
                     .ToListAsync();
+
+                //var codes = await _unitOfWork.SalesOrder.Query()
+                //    .Where(o => !string.IsNullOrEmpty(o.SalesOrderCode))
+                //    .Where(o => o.StockExportOrders.Any())
+                //    .Select(o => o.SalesOrderCode!)
+                //    .Distinct()
+                //    .OrderBy(c => c)
+                //    .ToListAsync();
 
                 if (!codes.Any())
                 {
@@ -871,6 +881,7 @@ namespace PMS.Application.Services.Invoice
                     Id = inv.Id,
                     InvoiceCode = inv.InvoiceCode,
                     SalesOrderId = inv.SalesOrderId,
+                    SalesOrderCode = inv.SalesOrder.SalesOrderCode,
                     CreatedAt = inv.CreatedAt,
                     IssuedAt = inv.IssuedAt,
                     Status = inv.Status,
@@ -956,6 +967,54 @@ namespace PMS.Application.Services.Invoice
                     "Có lỗi xảy ra khi tạo giao dịch ký số.", 500);
             }
         }
+
+        public async Task<ServiceResult<bool>> DeleteDraftInvoiceAsync(int invoiceId)
+        {
+            try
+            {
+                var invoice = await _unitOfWork.Invoices.Query()
+                    .Include(i => i.InvoiceDetails)
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId);
+
+                if (invoice == null)
+                {
+                    return ServiceResult<bool>.Fail(
+                        "Không tìm thấy hóa đơn.", 404);
+                }
+
+                if (invoice.Status != InvoiceStatus.Draft)
+                {
+                    return ServiceResult<bool>.Fail(
+                        "Chỉ được phép xóa hóa đơn khi đang ở trạng thái nháp.", 400);
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                if (invoice.InvoiceDetails.Any())
+                {
+                    _unitOfWork.InvoicesDetails.RemoveRange(invoice.InvoiceDetails);
+                }
+
+                _unitOfWork.Invoices.Remove(invoice);
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return ServiceResult<bool>.SuccessResult(
+                    true,
+                    "Xóa hóa đơn nháp thành công.",
+                    200);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "DeleteDraftInvoiceAsync({InvoiceId}) error", invoiceId);
+
+                return ServiceResult<bool>.Fail(
+                    "Có lỗi xảy ra khi xóa hóa đơn.", 500);
+            }
+        }
+
 
         #region Helpers
 
