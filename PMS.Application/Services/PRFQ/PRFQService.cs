@@ -132,7 +132,22 @@ namespace PMS.API.Services.PRFQService
             if (status == PRFQStatus.Sent)
             {
 
-                await _emailService.SendEmailWithManyAttachmentsAsync(supplier.Email, "Yêu cầu báo giá và mẫu báo giá", "Kính gửi, đính kèm yêu cầu báo giá và mẫu báo giá.", attachments);
+                await _emailService.SendEmailWithManyAttachmentsAsync(
+                    supplier.Email,
+                    "Yêu cầu báo giá và mẫu báo giá",
+
+                    @"Kính gửi Quý Nhà cung cấp,
+
+                    Chúng tôi xin gửi đến Quý Nhà cung cấp Yêu cầu báo giá kèm theo mẫu báo giá để Quý Nhà cung cấp tham khảo và phản hồi.
+
+                    Kính mong Quý Nhà cung cấp xem xét nội dung đính kèm và gửi báo giá theo mẫu trong thời gian sớm nhất.
+
+                    Xin chân thành cảm ơn sự hợp tác của Quý Nhà cung cấp.
+
+                    Trân trọng kính chào,
+                    [Phòng Mua Hàng / Nhà thuốc HDK dược phẩm số 17]",
+                    attachments
+                );
             }
             return new ServiceResult<int>
             {
@@ -723,7 +738,7 @@ namespace PMS.API.Services.PRFQService
             row++;
 
 
-            string[] headers = { "Số thứ tự", "Mã số", "Tên sản phẩm", "Mô tả", "Đơn vị", "Gía thành", "Thuế", "Hạn dùng" };
+            string[] headers = { "Số thứ tự", "Mã số", "Tên sản phẩm", "Mô tả", "Đơn vị", "Giá thành", "Thuế", "Hạn dùng" };
             for (int i = 0; i < headers.Length; i++)
                 ws.Cells[row, i + 1].Value = headers[i];
 
