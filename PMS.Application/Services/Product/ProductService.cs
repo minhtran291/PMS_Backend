@@ -506,15 +506,17 @@ namespace PMS.Application.Services.Product
         {
             try
             {
-                var products = await _unitOfWork.LotProduct.Query()
+                var lots = await _unitOfWork.LotProduct.Query()
                     .Where(p => p.ProductID == productId)
                     .Include(p => p.Product)
+                    .Include(p => p.WarehouseLocation)
                     .ToListAsync();
 
-                if (!products.Any())
-                    return ServiceResult<List<LotProductDTO2>>.Fail("Không tìm thấy lô hàng nào cho sản phẩm này.");
+                if (!lots.Any())
+                    return ServiceResult<List<LotProductDTO2>>
+                        .Fail("Không tìm thấy lô hàng nào cho sản phẩm này.");
 
-                var result = products.Select(p => new LotProductDTO2
+                var result = lots.Select(p => new LotProductDTO2
                 {
                     LotID = p.LotID,
                     InputDate = p.InputDate.ToString("dd/MM/yyyy"),
@@ -526,14 +528,17 @@ namespace PMS.Application.Services.Product
                     SupplierID = p.SupplierID,
                     ProductID = p.ProductID,
                     WarehouselocationID = p.WarehouselocationID,
+                    warehouseName = p.WarehouseLocation?.LocationName ?? "Unknown",
                     LastCheckedDate = p.LastCheckedDate
                 }).ToList();
 
-                return ServiceResult<List<LotProductDTO2>>.SuccessResult(result, "Lấy danh sách lô hàng thành công.");
+                return ServiceResult<List<LotProductDTO2>>
+                    .SuccessResult(result, "Lấy danh sách lô hàng thành công.");
             }
             catch (Exception ex)
             {
-                return ServiceResult<List<LotProductDTO2>>.Fail($"Lỗi khi lấy lô sản phẩm: {ex.Message}");
+                return ServiceResult<List<LotProductDTO2>>
+                    .Fail($"Lỗi khi lấy lô sản phẩm: {ex.Message}");
             }
         }
 

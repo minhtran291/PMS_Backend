@@ -521,7 +521,7 @@ namespace PMS.API.Services.PRFQService
 
             ws.Cells[row, 1].Value = "Bên gửi";
             ws.Cells[row, 2].Value = "NHÀ THUỐC DƯỢC PHẨM SỐ 17";
-            ws.Cells[row, 3].Value = "Số PRFQID:";
+            ws.Cells[row, 3].Value = "Mã số YC:";
             ws.Cells[row, 4].Value = prfq.PRFQID;
 
             ws.Cells[row, 5].Value = "Tên NCC:";
