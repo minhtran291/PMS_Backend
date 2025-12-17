@@ -67,6 +67,24 @@ namespace PMS.Application.Services.GoodsIssueNote
                     .Where(l => l.LotQuantity > 0 && l.ExpiredDate > DateTime.Today)
                     .ToListAsync();
 
+                var goodsIssueNoteNotExported = await _unitOfWork.GoodsIssueNote.Query()
+                    .Include(g => g.GoodsIssueNoteDetails)
+                    .Where(g => g.Status == Core.Domain.Enums.GoodsIssueNoteStatus.Sent && g.StockExportOrderId != seo.Id)
+                    .ToListAsync();
+
+                var pendingLotQuantity = new Dictionary<int, int>();
+
+                foreach(var gin in goodsIssueNoteNotExported)
+                {
+                    foreach(var detail in gin.GoodsIssueNoteDetails)
+                    {
+                        if (!pendingLotQuantity.ContainsKey(detail.LotId))
+                            pendingLotQuantity[detail.LotId] = 0;
+
+                        pendingLotQuantity[detail.LotId] += detail.Quantity;
+                    }
+                }
+
                 var lotExportMap = new Dictionary<int, int>();
 
                 var warehouseMap = new Dictionary<int, List<GoodsIssueNoteDetails>>();
@@ -78,7 +96,13 @@ namespace PMS.Application.Services.GoodsIssueNote
                                                 && l.ExpiredDate == item.LotProduct.ExpiredDate
                                                 && l.SupplierID == item.LotProduct.SupplierID
                                                 && l.ProductID == item.LotProduct.ProductID)
-                        .OrderBy(l => l.WarehouselocationID)
+                        .Select(l => new
+                        {
+                            Lot = l,
+                            AvailableQuantity = l.LotQuantity - (pendingLotQuantity.ContainsKey(l.LotID) ? pendingLotQuantity[l.LotID] : 0)
+                        })
+                        .Where(x => x.AvailableQuantity > 0)
+                        .OrderBy(x => x.Lot.WarehouselocationID)
                         .ToList();
 
                     var requiredQuantity = item.Quantity;
@@ -88,23 +112,23 @@ namespace PMS.Application.Services.GoodsIssueNote
                         if (requiredQuantity <= 0)
                             break;
 
-                        var export = Math.Min(requiredQuantity, group.LotQuantity);
+                        var export = Math.Min(requiredQuantity, group.AvailableQuantity);
 
                         requiredQuantity -= export;
 
-                        if (!lotExportMap.ContainsKey(group.LotID))
-                            lotExportMap[group.LotID] = 0;
+                        if (!lotExportMap.ContainsKey(group.Lot.LotID))
+                            lotExportMap[group.Lot.LotID] = 0;
 
-                        lotExportMap[group.LotID] += export;
+                        lotExportMap[group.Lot.LotID] += export;
 
-                        int warehouseId = group.WarehouseLocation.Warehouse.Id;
+                        int warehouseId = group.Lot.WarehouseLocation.Warehouse.Id;
 
                         if (!warehouseMap.ContainsKey(warehouseId))
                             warehouseMap[warehouseId] = new List<GoodsIssueNoteDetails>();
 
                         warehouseMap[warehouseId].Add(new GoodsIssueNoteDetails
                         {
-                            LotId = group.LotID,
+                            LotId = group.Lot.LotID,
                             Quantity = export,
                         });
                     }
@@ -748,6 +772,9 @@ namespace PMS.Application.Services.GoodsIssueNote
                     .Include(g => g.GoodsIssueNoteDetails)
                         .ThenInclude(d => d.LotProduct)
                             .ThenInclude(lp => lp.Product)
+                    .Include(g => g.GoodsIssueNoteDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.WarehouseLocation)
                     .ToListAsync();
 
                 var details = notes.SelectMany(g => g.GoodsIssueNoteDetails)
@@ -761,6 +788,8 @@ namespace PMS.Application.Services.GoodsIssueNote
                         d.LotProduct.LotID,
                         d.LotProduct.Product.ProductID,
                         d.LotProduct.Product.ProductName,
+                        d.LotProduct.ExpiredDate,
+                        d.LotProduct.WarehouseLocation.LocationName,
                     })
                     .Select(p => new
                     {
@@ -768,6 +797,8 @@ namespace PMS.Application.Services.GoodsIssueNote
                         productID = p.Key.ProductID,
                         productName = p.Key.ProductName,
                         quatity = p.Sum(x => x.Quantity),
+                        expiredDate = p.Key.ExpiredDate,
+                        warehouseLocation = p.Key.LocationName,
                         percentage = totalQuantity == 0
                             ? 0
                             : Math.Round((double)p.Sum(x => x.Quantity) / totalQuantity * 100, 2)

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.SalesOrder;
 using PMS.Application.Services.SalesOrder;
+using PMS.Application.Services.StockExportOrder;
 using PMS.Application.Services.VNpay;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
@@ -17,10 +18,12 @@ namespace PMS.API.Controllers
     public class SalesOrderController : ControllerBase
     {
         private readonly ISalesOrderService _service;
+        private readonly IStockExportOderService _stockExportOderService;
 
-        public SalesOrderController(ISalesOrderService service)
+        public SalesOrderController(ISalesOrderService service, IStockExportOderService stockExportOderService)
         {
             _service = service;
+            _stockExportOderService = stockExportOderService;
         }
 
         private string GetUserId()
@@ -310,6 +313,49 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
+
+        /// <summary>
+        /// PUT: api/SalesOrder/{salesOrderId}/mark-backorder
+        /// Nếu tồn tại StockExportOrder có trạng thái NotEnough thì chuyển SalesOrder sang BackSalesOrder.
+        /// </summary>
+        [HttpPut("{salesOrderId}/mark-backorder")]
+        [Authorize(Roles = UserRoles.SALES_STAFF)]
+        public async Task<IActionResult> MarkBackSalesOrder(int salesOrderId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            var result = await _service.MarkBackSalesOrderAsync(salesOrderId, userId);
+
+            await _stockExportOderService.AwaitStockExportOrder(salesOrderId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+        /// <summary>
+        /// PUT: api/SalesOrder/{salesOrderId}/mark-not-complete
+        /// Chuyển SalesOrder sang NotComplete và chuyển trạng thái thanh toán thành Refunded.
+        /// </summary>
+        [HttpPut("{salesOrderId}/mark-not-complete")]
+        [Authorize(Roles = UserRoles.SALES_STAFF)]
+        public async Task<IActionResult> MarkNotComplete(int salesOrderId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
+            var result = await _service.MarkNotCompleteAndRefundAsync(salesOrderId, userId);
+
+            await _stockExportOderService.CancelStockExportOrder(salesOrderId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
 
         #region salesOrderStatistics
 

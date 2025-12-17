@@ -58,7 +58,7 @@ namespace PMS.Core.Domain.Constant
             <html lang=""vi"">
             <head>
                 <meta charset=""UTF-8"">
-                <title>Hóa đơn giá trị gia tăng</title>
+                <title>Phiếu Thu Tiền</title>
                 <style>
                     html, body {{
                         margin: 0;
@@ -71,27 +71,44 @@ namespace PMS.Core.Domain.Constant
                         align-items: center;
                     }}                    
 
-                    .page {{
-                        width: 250mm;
+                    .page{{width: 250mm;
                         height: 350mm;
-                        border: 1px solid #000;  
+                        border: 1px solid #000;
                         box-sizing: border-box;
-                        padding: 5mm;  
+                        padding: 5mm;
                         font-family: Times New Roman, Times, serif;
                         font-size: 15px;
+
+                        position: relative;
+                        overflow: hidden;
+                        background-color: #fff;
                     }}
 
-                    @page {{
+                    @page{{
                         size: A4 portrait;
-                        margin: 0; 
+                        margin: 0;
                     }}
 
-                    .wrapper {{
+                    .bg-watermark{{position: absolute;
+                        inset: 0;
+                        position: absolute;
+                        width: 100%;
+                        height: 100%;
+
+                        object-fit: contain;  
+                        opacity: 0.6;
+                        z-index: 0;
+                        transform: scale(0.85);
+                    }}
+
+                    .wrapper{{
                         height: 100%;
                         box-sizing: border-box;
                         display: flex;
                         flex-direction: column;
                         justify-content: space-between;
+                        position: relative;
+                        z-index: 1;
                     }}
 
                     h1 {{
@@ -180,93 +197,93 @@ namespace PMS.Core.Domain.Constant
             </head>
             <body>
             <div class=""page"">
-              <div class=""wrapper"">
-                <!-- phần trên + nội dung chính -->
-                <div class=""content-area"">
-                    <div style=""text-align:center;"">
-                        <h1>HÓA ĐƠN GIÁ TRỊ GIA TĂNG</h1>
-                        <h2>(VAT INVOICE)</h2>
-                    </div>
+                <img class=""bg-watermark"" src=""https://api.bbpharmacy.site/assets/CTTNHHBBPHARMACY.png"" alt=""bg"" />
+                  <div class=""wrapper"">
+                    <!-- phần trên + nội dung chính -->
+                    <div class=""content-area"">
+                        <div style=""text-align:center;"">
+                            <h1>Phiếu Thu Tiền</h1>
+                        </div>
 
-                    <div class=""top-row"">
+                        <div class=""top-row"">
                         
-                        <div>Ngày: {invoice.IssuedAt:dd-MM-yyyy}</div>
-                    </div>
+                            <div>Ngày: {invoice.IssuedAt:dd-MM-yyyy}</div>
+                        </div>
 
-                    <div class=""box"">
-                        <div><strong>Nhà thuốc:</strong> {HttpUtility.HtmlEncode(pharmacyName)}</div>
-                        <div><strong>Địa chỉ:</strong> {HttpUtility.HtmlEncode(pharmacyAddress)}</div>
-                        <div><strong>Mã số thuế:</strong> {HttpUtility.HtmlEncode(pharmacyTaxCode)}</div>
-                        <div><strong>Đồng tiền thanh toán:</strong> VND</div>
-                        <br />
-                        <div><strong>Mã hóa đơn:</strong> {HttpUtility.HtmlEncode(invoice.InvoiceCode)}</div>
-                        <div><strong>Mã đơn hàng:</strong> {HttpUtility.HtmlEncode(order.SalesOrderCode)}</div>
-                    </div>
+                        <div class=""box"">
+                            <div><strong>Nhà thuốc:</strong> {HttpUtility.HtmlEncode(pharmacyName)}</div>
+                            <div><strong>Địa chỉ:</strong> {HttpUtility.HtmlEncode(pharmacyAddress)}</div>
+                            <div><strong>Mã số thuế:</strong> {HttpUtility.HtmlEncode(pharmacyTaxCode)}</div>
+                            <div><strong>Đồng tiền thanh toán:</strong> VND</div>
+                            <br />
+                            <div><strong>Mã hóa đơn:</strong> {HttpUtility.HtmlEncode(invoice.InvoiceCode)}</div>
+                            <div><strong>Mã đơn hàng:</strong> {HttpUtility.HtmlEncode(order.SalesOrderCode)}</div>
+                        </div>
 
-                    <div class=""box"">
-                        <div><strong>Khách hàng:</strong> {customerName}</div>
-                        <div><strong>Số điện thoại:</strong> {customerPhone}</div>
-                        <div><strong>Địa chỉ:</strong> {customerAddress}</div>
-                        <div><strong>Hình thức thanh toán:</strong> TM/CK</div>
-                    </div>
+                        <div class=""box"">
+                            <div><strong>Khách hàng:</strong> {customerName}</div>
+                            <div><strong>Số điện thoại:</strong> {customerPhone}</div>
+                            <div><strong>Địa chỉ:</strong> {customerAddress}</div>
+                            <div><strong>Hình thức thanh toán:</strong> TM/CK</div>
+                        </div>
 
-                    <table>
-                        <thead>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Mã phiếu xuất</th>
+                                    <th>Ngày xuất</th>
+                                    <th>Giá trị xuất</th>
+                                    <th>Phần cọc phân bổ</th>
+                                    <th>Tiền còn lại đã trả</th>
+                                    <th>Tổng đã thanh toán</th>
+                                    <th>Còn thiếu</th>
+                                    <th>Lần xuất hàng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sb}
+                            </tbody>
+                        </table>
+
+                        <table class=""summary-table"">
                             <tr>
-                                <th>#</th>
-                                <th>Mã phiếu xuất</th>
-                                <th>Ngày xuất</th>
-                                <th>Giá trị xuất</th>
-                                <th>Phần cọc phân bổ</th>
-                                <th>Tiền còn lại đã trả</th>
-                                <th>Tổng đã thanh toán</th>
-                                <th>Còn thiếu</th>
-                                <th>Lần xuất hàng</th>
+                                <td>Tổng cộng:</td>
+                                <td class=""right"">{invoice.TotalAmount:N0}</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {sb}
-                        </tbody>
-                    </table>
-
-                    <table class=""summary-table"">
-                        <tr>
-                            <td>Tổng cộng:</td>
-                            <td class=""right"">{invoice.TotalAmount:N0}</td>
-                        </tr>
-                        <tr>
-                            <td>Tổng cọc:</td>
-                            <td class=""right"">{invoice.TotalDeposit:N0}</td>
-                        </tr>
-                        <tr>
-                            <td>Tổng đã thanh toán:</td>
-                            <td class=""right"">{invoice.TotalPaid:N0}</td>
-                        </tr>
-                        <tr>
-                            <td>Tổng phần còn lại:</td>
-                            <td class=""right"">{invoice.TotalRemain:N0}</td>
-                        </tr>
+                            <tr>
+                                <td>Tổng cọc:</td>
+                                <td class=""right"">{invoice.TotalDeposit:N0}</td>
+                            </tr>
+                            <tr>
+                                <td>Tổng đã thanh toán:</td>
+                                <td class=""right"">{invoice.TotalPaid:N0}</td>
+                            </tr>
+                            <tr>
+                                <td>Tổng phần còn lại:</td>
+                                <td class=""right"">{invoice.TotalRemain:N0}</td>
+                            </tr>
                         
+                        </table>
+                    </div>
+
+                    <table class=""sign-table"">
+                        <tr>
+                            <td>
+                                <strong>Người mua hàng</strong><br />
+                                (Ký, ghi rõ họ tên)
+                            </td>
+                            <td>
+                                <strong>Người bán hàng</strong><br />
+                                (Ký, ghi rõ họ tên)
+                            </td>
+                        </tr>
                     </table>
+
+                 </div>
                 </div>
-
-                <table class=""sign-table"">
-                    <tr>
-                        <td>
-                            <strong>Người mua hàng</strong><br />
-                            (Ký, ghi rõ họ tên)
-                        </td>
-                        <td>
-                            <strong>Người bán hàng</strong><br />
-                            (Ký, ghi rõ họ tên)
-                        </td>
-                    </tr>
-                </table>
-
-             </div>
-            </div>
-            </body>
-            </html>";
+                </body>
+                </html>";
         }
     }
 }

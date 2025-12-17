@@ -27,7 +27,11 @@ namespace PMS.Application.Services.ExternalService
                     new ObjectSettings
                     {
                         HtmlContent = html,
-                        WebSettings = { DefaultEncoding = "utf-8" }
+                        WebSettings = { 
+                            DefaultEncoding = "utf-8",
+                            LoadImages = true,
+                            PrintMediaType = true
+                        }
                     }
                 }
             };

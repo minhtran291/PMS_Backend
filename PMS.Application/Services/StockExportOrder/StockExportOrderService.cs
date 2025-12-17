@@ -237,7 +237,7 @@ namespace PMS.Application.Services.StockExportOrder
                         NotificationType.Message
                         );
                 }
-                
+
                 await _unitOfWork.CommitTransactionAsync();
 
                 return new ServiceResult<object>
@@ -397,7 +397,7 @@ namespace PMS.Application.Services.StockExportOrder
                 }
                 else
                 {
-                    foreach(var detail in result.Details)
+                    foreach (var detail in result.Details)
                     {
                         var order = stockExportOrder.SalesOrder.SalesOrderDetails
                             .FirstOrDefault(d => d.LotId == detail.LotId);
@@ -457,7 +457,7 @@ namespace PMS.Application.Services.StockExportOrder
 
                 var listOrder = new List<FormDataDTO>();
 
-                foreach(var detail in salesOrder.SalesOrderDetails)
+                foreach (var detail in salesOrder.SalesOrderDetails)
                 {
                     var lotId = detail.LotId;
 
@@ -492,7 +492,7 @@ namespace PMS.Application.Services.StockExportOrder
                     Data = result
                 };
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Loi");
 
@@ -817,7 +817,7 @@ namespace PMS.Application.Services.StockExportOrder
                 if (listAdd.Count != 0)
                     await _unitOfWork.StockExportOrderDetails.AddRangeAsync(listAdd);
 
-                if(dto.Status == 1)
+                if (dto.Status == 1)
                 {
                     stockExportOrder.RequestDate = DateTime.Now;
                     stockExportOrder.Status = StockExportOrderStatus.Sent;
@@ -972,6 +972,151 @@ namespace PMS.Application.Services.StockExportOrder
         {
             var randomPart = Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
             return $"SEO-{randomPart}";
+        }
+
+        public async Task CheckAvailable()
+        {
+            try
+            {
+                var awaits = await _unitOfWork.StockExportOrder.Query()
+                .Include(s => s.StockExportOrderDetails)
+                    .ThenInclude(d => d.LotProduct)
+                .Where(s => s.Status == StockExportOrderStatus.Await)
+                .ToListAsync();
+
+                var lotsAvailable = await _unitOfWork.LotProduct.Query()
+                    .Where(lp => lp.LotQuantity > 0 && lp.ExpiredDate > DateTime.Today)
+                    .GroupBy(lp => new
+                    {
+                        lp.SalePrice,
+                        lp.InputPrice,
+                        lp.ExpiredDate,
+                        lp.SupplierID,
+                        lp.ProductID
+                    })
+                    .Select(g => new LotAvailableDto
+                    {
+                        SalePrice = g.Key.SalePrice,
+                        InputPrice = g.Key.InputPrice,
+                        ExpiredDate = g.Key.ExpiredDate,
+                        SupplierID = g.Key.SupplierID,
+                        ProductID = g.Key.ProductID,
+                        TotalQuantity = g.Sum(x => x.LotQuantity)
+                    })
+                    .ToListAsync();
+
+                var lotDict = lotsAvailable.ToDictionary(
+                    l => (l.SalePrice, l.InputPrice, l.ExpiredDate, l.SupplierID, l.ProductID));
+
+                var readyOrders = new List<Core.Domain.Entities.StockExportOrder>();
+
+                foreach (var order in awaits)
+                {
+                    bool canExport = true;
+
+                    foreach (var detail in order.StockExportOrderDetails)
+                    {
+                        var lot = detail.LotProduct;
+
+                        var key = (
+                            lot.SalePrice,
+                            lot.InputPrice,
+                            lot.ExpiredDate,
+                            lot.SupplierID,
+                            lot.ProductID
+                        );
+
+                        if (!lotDict.TryGetValue(key, out var available) ||
+                            detail.Quantity > available.TotalQuantity)
+                        {
+                            canExport = false;
+                            break;
+                        }
+                    }
+
+                    if (!canExport)
+                        continue;
+
+                    foreach (var detail in order.StockExportOrderDetails)
+                    {
+                        var lot = detail.LotProduct;
+
+                        var key = (
+                            lot.SalePrice,
+                            lot.InputPrice,
+                            lot.ExpiredDate,
+                            lot.SupplierID,
+                            lot.ProductID
+                        );
+
+                        lotDict[key].TotalQuantity -= detail.Quantity;
+                    }
+
+                    order.Status = StockExportOrderStatus.ReadyToExport;
+                    readyOrders.Add(order);
+                }
+
+                if (readyOrders.Any())
+                {
+                    _unitOfWork.StockExportOrder.UpdateRange(readyOrders);
+
+                    await _unitOfWork.CommitAsync();
+                }
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError($"Loi: {ex.StackTrace}, {ex.Message}");
+            }
+        }
+
+        public async Task AwaitStockExportOrder(int soId)
+        {
+            try
+            {
+                var stockExportOrder = await _unitOfWork.StockExportOrder.Query()
+                    .Where(s => s.SalesOrderId == soId && s.Status == StockExportOrderStatus.NotEnough)
+                    .ToListAsync();
+
+                if (!stockExportOrder.Any())
+                    return;
+
+                foreach (var s in stockExportOrder)
+                {
+                    s.Status = StockExportOrderStatus.Await;
+                }
+
+                _unitOfWork.StockExportOrder.UpdateRange(stockExportOrder);
+                await _unitOfWork.CommitAsync();
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError($"Loi: {ex.StackTrace}, {ex.Message}");
+            }
+        }
+
+        public async Task CancelStockExportOrder(int soId)
+        {
+            try
+            {
+                var stockExportOrder = await _unitOfWork.StockExportOrder.Query()
+                    .Where(s => s.SalesOrderId == soId && s.Status == StockExportOrderStatus.NotEnough)
+                    .ToListAsync();
+
+                if (!stockExportOrder.Any())
+                    return;
+
+                foreach (var s in stockExportOrder)
+                {
+                    s.Status = StockExportOrderStatus.Cancel;
+                }
+
+                _unitOfWork.StockExportOrder.UpdateRange(stockExportOrder);
+                await _unitOfWork.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Loi: {ex.StackTrace}, {ex.Message}");
+            }
         }
     }
 }

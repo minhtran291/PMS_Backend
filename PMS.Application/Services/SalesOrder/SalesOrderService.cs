@@ -156,7 +156,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Payload trống.",
+                        Message = "Có trường dữ liệu trống, vui lòng kiểm tra lại!",
                         Data = null
                     };
 
@@ -164,7 +164,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "CreateBy là bắt buộc.",
+                        Message = "Người tạo đơn hàng là bắt buộc.",
                         Data = null
                     };
 
@@ -172,7 +172,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Danh sách Details trống.",
+                        Message = "Danh sách chi tiết trống.",
                         Data = null
 
                     };
@@ -190,7 +190,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy SalesQuotation.",
+                        Message = "Không tìm thấy báo giá.",
                         Data = null
                     };
 
@@ -198,7 +198,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "SalesQuotation đã hết hạn. Không thể tạo đơn nháp.",
+                        Message = "Báo giá đã hết hạn. Không thể tạo đơn nháp.",
                         Data = null
                     };
 
@@ -212,7 +212,7 @@ namespace PMS.Application.Services.SalesOrder
                         return new ServiceResult<object>
                         {
                             StatusCode = 400,
-                            Message = $"Quantity âm ở {it.LotId}.",
+                            Message = "Tồn tại hàng hóa có số lượng không hợp lệ, vui lòng kiểm tra lại!",
                             Data = null
                         };
 
@@ -220,7 +220,7 @@ namespace PMS.Application.Services.SalesOrder
                         return new ServiceResult<object>
                         {
                             StatusCode = 400,
-                            Message = $"Dòng không thuộc báo giá: LotId={it.LotId}.",
+                            Message = "Có sản phẩm không thuộc báo giá hiện tại của bạn, vui lòng kiểm tra lại!",
                             Data = null
                         };
                 }
@@ -302,7 +302,7 @@ namespace PMS.Application.Services.SalesOrder
                 return new ServiceResult<object>
                 {
                     StatusCode = 201,
-                    Message = "Tạo SalesOrder Draft từ SalesQuotation thành công.",
+                    Message = "Tạo bản nháp đơn hàng từ báo giá thành công.",
                     Data = data
                 };
             }
@@ -332,7 +332,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<bool>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy SalesOrder",
+                        Message = "Không tìm thấy đơn hàng",
                         Data = false
                     };
                 }
@@ -342,7 +342,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<bool>
                     {
                         StatusCode = 400,
-                        Message = "Chỉ được xoá đơn ở trạng thái Draft",
+                        Message = "Chỉ được xoá đơn ở trạng thái nháp",
                         Data = false
                     };
                 }
@@ -1058,6 +1058,7 @@ namespace PMS.Application.Services.SalesOrder
                     order.RejectReason,
                     order.RejectedBy,
                     order.RejectedAt,
+                    ExpectedDeliveryDate = order.SalesQuotation.ExpectedDeliveryDate,
                     order.SalesOrderExpiredDate,
                     Details = orderDetailsDto
                 };
@@ -1156,7 +1157,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<bool>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy SalesOrder",
+                        Message = "Không tìm thấy đơn hàng",
                         Data = false
                     };
                 }
@@ -1210,7 +1211,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy SalesOrder",
+                        Message = "Không tìm thấy đơn hàng",
                         Data = null
                     };
                 }
@@ -1220,7 +1221,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Chỉ được gửi đơn ở trạng thái Draft",
+                        Message = "Chỉ được gửi đơn ở trạng thái nháp",
                         Data = null
                     };
                 }
@@ -1340,7 +1341,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Payload trống.",
+                        Message = "Có trường dữ liệu trống, vui lòng kiểm tra lại!",
                         Data = null
                     };
 
@@ -1348,7 +1349,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "SalesOrderId là bắt buộc.",
+                        Message = "Mã định danh của đơn hàng là bắt buộc.",
                         Data = null
                     };
 
@@ -1356,7 +1357,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Danh sách Details trống.",
+                        Message = "Danh sách chi tiết trống.",
                         Data = null
                     };
 
@@ -1367,7 +1368,7 @@ namespace PMS.Application.Services.SalesOrder
                         return new ServiceResult<object>
                         {
                             StatusCode = 400,
-                            Message = $"Quantity âm ở ProductId={it.ProductId}.",
+                            Message = $"Có sản phẩm có số lượng âm, vui lòng kiểm tra lại!",
                             Data = null
                         };
                 }
@@ -1381,15 +1382,26 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy SalesOrder.",
+                        Message = "Không tìm thấy đơn hàng.",
                         Data = null
                     };
+
+                // Chỉ người tạo đơn mới được phép chỉnh sửa
+                if (!string.Equals(order.CreateBy?.Trim(), upd.CreateBy?.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 403,
+                        Message = "Bạn không có quyền chỉnh sửa đơn hàng này.",
+                        Data = null
+                    };
+                }
 
                 if (order.SalesOrderStatus != SalesOrderStatus.Draft)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "Chỉ được phép sửa đơn hàng ở trạng thái Draft.",
+                        Message = "Chỉ được phép sửa đơn hàng ở trạng thái nháp.",
                         Data = null
                     };
 
@@ -1398,7 +1410,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
-                        Message = "SalesOrder Draft đã hết hạn. Không thể cập nhật số lượng.",
+                        Message = "Bản nháp đơn hàng đã hết hạn. Không thể cập nhật số lượng.",
                         Data = null
                     };
 
@@ -1413,7 +1425,7 @@ namespace PMS.Application.Services.SalesOrder
                     //    return new ServiceResult<object>
                     //    {
                     //        StatusCode = 400,
-                    //        Message = $"Dòng không thuộc đơn hàng: ProductId={it.ProductId}, LotId={it.LotId}.",
+                    //        Message = $"Có dòng không thuộc đơn hàng, vui lòng kiểm tra lại",
                     //        Data = null
                     //    };
                     //}
@@ -1481,7 +1493,7 @@ namespace PMS.Application.Services.SalesOrder
                 return new ServiceResult<object>
                 {
                     StatusCode = 200,
-                    Message = "Cập nhật số lượng cho SalesOrder Draft thành công.",
+                    Message = "Cập nhật số lượng cho bản nháp đơn hàng thành công.",
                     Data = response
                 };
             }
@@ -1634,7 +1646,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<bool>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy SalesOrder",
+                        Message = "Không tìm thấy đơn hàng",
                         Data = false
                     };
                 }
@@ -1645,6 +1657,17 @@ namespace PMS.Application.Services.SalesOrder
                     {
                         StatusCode = 400,
                         Message = "Chỉ được chấp nhận hoặc từ chối đơn hàng có trạng thái đã gửi!",
+                        Data = false
+                    };
+                }
+
+                if (so.SalesOrderExpiredDate != default &&
+                    so.SalesOrderExpiredDate.Date < DateTime.Now.Date)
+                {
+                    return new ServiceResult<bool>
+                    {
+                        StatusCode = 400,
+                        Message = "Đơn hàng đã hết hạn, không thể chấp thuận.",
                         Data = false
                     };
                 }
@@ -1701,7 +1724,7 @@ namespace PMS.Application.Services.SalesOrder
                     return new ServiceResult<bool>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy SalesOrder",
+                        Message = "Không tìm thấy đơn hàng",
                         Data = false
                     };
                 }
@@ -1816,7 +1839,7 @@ namespace PMS.Application.Services.SalesOrder
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
-                    Message = "Cập nhật TotalRecieve từ PaidAmount của SalesOrder thành công.",
+                    Message = "Cập nhật tổng thu từ số tiền đã trả của đơn bán hàng thành công.",
                     Data = true
                 };
             }
@@ -1975,6 +1998,126 @@ namespace PMS.Application.Services.SalesOrder
                     Message = "Có lỗi khi cập nhật trạng thái Delivered cho đơn hàng.",
                     Data = false
                 };
+            }
+        }
+
+        public async Task<ServiceResult<bool>> MarkBackSalesOrderAsync(int salesOrderId, string staffId)
+        {
+            try
+            {
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.StockExportOrders)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+
+                if (order == null)
+                    return ServiceResult<bool>.Fail("Không tìm thấy đơn hàng.", 404);
+
+                var hasNotEnough = order.StockExportOrders != null
+                    && order.StockExportOrders.Any(seo => seo.Status == StockExportOrderStatus.NotEnough);
+
+                if (!hasNotEnough)
+                    return ServiceResult<bool>.Fail(
+                        "Không thể chuyển sang trạng thái chờ hàng vì không có phiếu xuất kho ở trạng thái không đủ hàng.", 400);
+
+                if (order.SalesOrderStatus != SalesOrderStatus.Approved &&
+                    order.SalesOrderStatus != SalesOrderStatus.PartiallyDelivered)
+                {
+                    return ServiceResult<bool>.Fail(
+                        "Chỉ được chuyển sang trạng thái chờ hàng khi đơn đang ở trạng thái được chấp thuận hoặc đã giao hàng một phần.", 400);
+                }
+
+                order.SalesOrderStatus = SalesOrderStatus.BackSalesOrder;
+                _unitOfWork.SalesOrder.Update(order);
+
+                await _unitOfWork.CommitAsync();
+
+                try
+                {
+                    await _noti.SendNotificationToCustomerAsync(
+                        senderId: staffId,
+                        receiverId: order.CreateBy,
+                        title: "Đơn hàng tạm chuyển sang chờ hàng",
+                        message: $"Đơn hàng {order.SalesOrderCode} hiện đang thiếu hàng để xuất kho. " +
+                                 $"Hệ thống đã chuyển trạng thái sang Chờ hàng (BackSalesOrder). " +
+                                 $"Nhà thuốc sẽ liên hệ khi hàng sẵn sàng.",
+                        type: NotificationType.Warning
+                    );
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification thất bại khi chuyển BackSalesOrder: orderId={OrderId}, receiver={ReceiverId}",
+                        order.SalesOrderId, order.CreateBy);
+                }
+
+                return ServiceResult<bool>.SuccessResult(true,
+                    "Đã chuyển đơn hàng sang trạng thái chờ hàng.", 200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "MarkBackSalesOrderAsync({SalesOrderId}) error", salesOrderId);
+                return ServiceResult<bool>.Fail("Có lỗi khi cập nhật trạng thái BackSalesOrder.", 500);
+            }
+        }
+
+        public async Task<ServiceResult<bool>> MarkNotCompleteAndRefundAsync(int salesOrderId, string staffId)
+        {
+            try
+            {
+                var order = await _unitOfWork.SalesOrder.Query()
+                    .Include(o => o.CustomerDebts)
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
+
+                if (order == null)
+                    return ServiceResult<bool>.Fail("Không tìm thấy đơn hàng.", 404);
+
+                if (order.SalesOrderStatus == SalesOrderStatus.Complete)
+                    return ServiceResult<bool>.Fail("Đơn hàng đã hoàn thành, không thể chuyển trạng thái không hoàn thành.", 400);
+
+                await _unitOfWork.BeginTransactionAsync();
+
+                order.SalesOrderStatus = SalesOrderStatus.NotComplete;
+                order.PaymentStatus = PaymentStatus.Refunded;
+
+                if (order.CustomerDebts != null)
+                {
+                    order.CustomerDebts.DebtAmount = 0m;
+                    order.CustomerDebts.status = CustomerDebtStatus.Disable;
+                    _unitOfWork.CustomerDebt.Update(order.CustomerDebts);
+                }
+
+                _unitOfWork.SalesOrder.Update(order);
+
+                await _unitOfWork.CommitAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                try
+                {
+                    await _noti.SendNotificationToCustomerAsync(
+                        senderId: staffId,
+                        receiverId: order.CreateBy,
+                        title: "Đơn hàng không hoàn tất và đã cập nhật hoàn tiền",
+                        message: $"Đơn hàng {order.SalesOrderCode} đã được chuyển sang trạng thái Không hoàn thành (NotComplete). " +
+                                 $"Trạng thái thanh toán đã được cập nhật sang Hoàn tiền (Refunded). " +
+                                 $"Vui lòng kiểm tra thông tin nhận tiền/trao đổi với nhà thuốc nếu cần hỗ trợ.",
+                        type: NotificationType.Message
+                    );
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi thông báo thất bại khi chuyển NotComplete/Refunded: orderId={OrderId}, receiver={ReceiverId}",
+                        order.SalesOrderId, order.CreateBy);
+                }
+
+                return ServiceResult<bool>.SuccessResult(true,
+                    "Đã chuyển đơn hàng sang trạng thái không hoàn thành và cập nhật trạng thái thanh toán là đã hoàn tiền.", 200);
+            }
+            catch (Exception ex)
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "MarkNotCompleteAndRefundAsync({SalesOrderId}) error", salesOrderId);
+                return ServiceResult<bool>.Fail("Có lỗi khi chuyển NotComplete và cập nhật Refunded.", 500);
             }
         }
 

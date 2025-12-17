@@ -40,6 +40,9 @@ namespace PMS.Application.Services.SalesOrder
         Task<ServiceResult<bool>> RejectSalesOrderAsync(RejectSalesOrderRequestDTO request, string salesStaffId);
         Task<ServiceResult<bool>> ConfirmPaymentAsync(int salesOrderId, PaymentStatus status); // When Sales Order is approveed and cannot payment auto then manualy
 
+        Task<ServiceResult<bool>> MarkBackSalesOrderAsync(int salesOrderId, string staffId);
+        Task<ServiceResult<bool>> MarkNotCompleteAndRefundAsync(int salesOrderId, string staffId);
+
 
         //Cọc manual
         public Task<ServiceResult<bool>> CreateDepositCheckRequestAsync(CreateSalesOrderDepositCheckRequestDTO dto, string customerId);
