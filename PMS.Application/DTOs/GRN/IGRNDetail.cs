@@ -12,5 +12,6 @@ namespace PMS.Core.DTO.Content
         decimal UnitPrice { get; set; }
         int Quantity { get; set; }
         DateTime ExpiredDate { get; set; }
+        decimal TaxPro { get; set; }
     }
 }

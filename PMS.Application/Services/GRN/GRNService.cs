@@ -95,7 +95,8 @@ namespace PMS.API.Services.GRNService
                         ProductID = product.ProductID,
                         UnitPrice = detail.UnitPrice,
                         Quantity = detail.Quantity,
-                        ExpiredDate = detail.ExpiredDate
+                        ExpiredDate = detail.ExpiredDate,
+                        TaxPro= detail.Tax
                     });
                 }
 
@@ -134,7 +135,7 @@ namespace PMS.API.Services.GRNService
                         lp.SupplierID == supplierId &&
                         lp.ExpiredDate.Date == detail.ExpiredDate.Date &&
                         lp.WarehouselocationID == warehouseLocationID&& 
-                        lp.InputPrice==detail.UnitPrice);
+                        lp.InputPrice== (detail.UnitPrice * detail.TaxPro) + detail.UnitPrice);
 
                     if (existingLot != null)
                     {
@@ -151,7 +152,7 @@ namespace PMS.API.Services.GRNService
                             LotQuantity = detail.Quantity,
                             ProductID = detail.ProductID,
                             SupplierID = supplierId,
-                            InputPrice = detail.UnitPrice,
+                            InputPrice = (detail.UnitPrice * detail.TaxPro) +detail.UnitPrice,
                             WarehouselocationID = warehouseLocationID
                         });
                     }
@@ -620,6 +621,7 @@ namespace PMS.API.Services.GRNService
                 var po = await GetPurchasingOrderAsync(poId);
                 if (po == null)
                     return ServiceResult<object>.Fail($"Không tồn tại đơn mua hàng với ID:{poId}", 404);
+                var poDetails = po.PurchasingOrderDetails.ToList();
 
                 var productCheckResult = await ValidateProductsAsync(po, dto);
                 if (!productCheckResult.Success)
@@ -628,6 +630,24 @@ namespace PMS.API.Services.GRNService
                 var validationResult = await ValidateQuantityAndPriceAsync(po, dto);
                 if (!validationResult.Success)
                     return ServiceResult<object>.Fail(validationResult.Message, validationResult.StatusCode);
+
+
+                foreach (var grnDetail in dto.GRNDManuallyDTOs)
+                {
+                    var poDetail = poDetails.FirstOrDefault(p =>
+                        p.ProductID == grnDetail.ProductID &&
+                        p.UnitPrice == grnDetail.UnitPrice);
+
+                    if (poDetail == null)
+                    {
+                        await _unitOfWork.RollbackTransactionAsync();
+                        return ServiceResult<object>.Fail(
+                            $"Không tìm thấy chi tiết PO cho sản phẩm ID {grnDetail.ProductID} với đơn giá {grnDetail.UnitPrice}",
+                            400);
+                    }
+
+                    grnDetail.TaxPro = poDetail.Tax;
+                }
 
                 // 4. Tạo GRN
                 var newGRN = await CreateGoodReceiptNoteAsync(userId, poId, dto);
