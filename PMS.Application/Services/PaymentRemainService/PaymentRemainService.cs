@@ -22,12 +22,14 @@ namespace PMS.Application.Services.PaymentRemainService
     public class PaymentRemainService (IUnitOfWork unitOfWork,
         IMapper mapper, 
         ILogger<PaymentRemainService> logger,
-        IVnPayService vnPayService) : Service(unitOfWork, mapper), IPaymentRemainService
+        IVnPayService vnPayService,
+        ISalesOrderService salesOrderService) : Service(unitOfWork, mapper), IPaymentRemainService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<PaymentRemainService> _logger = logger;
         private readonly IVnPayService _vnPayService = vnPayService;
+        private readonly ISalesOrderService _salesOrderService = salesOrderService;
 
         public async Task<ServiceResult<PaymentRemainItemDTO>> CreatePaymentRemainForInvoiceAsync(CreatePaymentRemainRequestDTO request)
         {
@@ -508,6 +510,8 @@ namespace PMS.Application.Services.PaymentRemainService
 
                 // Recalculate Invoice + SalesOrder + CustomerDebt
                 await RecalculateInvoiceAndOrderAsync(payment.InvoiceId);
+
+                await _salesOrderService.RecalculateTotalReceiveAsync();
 
                 return new ServiceResult<bool>
                 {

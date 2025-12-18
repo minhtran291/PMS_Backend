@@ -130,6 +130,8 @@ namespace PMS.Application.Services.SalesOrder
 
                 await _unitOfWork.CommitAsync();
 
+                await RecalculateTotalReceiveAsync();
+
                 return new ServiceResult<bool>
                 {
                     StatusCode = 200,
