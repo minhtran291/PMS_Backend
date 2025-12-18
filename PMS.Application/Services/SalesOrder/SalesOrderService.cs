@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Castle.Core.Resource;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Ocsp;
@@ -480,13 +481,28 @@ namespace PMS.Application.Services.SalesOrder
                     RequestedAmount = requestedAmount,
                     PaymentMethod = dto.PaymentMethod,
                     CustomerNote = dto.CustomerNote,
-                    Status = DepositCheckStatus.Draft,
+                    Status = DepositCheckStatus.Pending,
                     RequestedBy = customerId,
                     RequestedAt = DateTime.Now
                 };
 
                 await _unitOfWork.SalesOrderDepositCheck.AddAsync(entity);
                 await _unitOfWork.CommitAsync();
+
+                try
+                {
+                    await _noti.SendNotificationToRolesAsync(
+                        customerId,
+                        new List<string> { "ACCOUNTANT" },
+                        "Yêu cầu kiểm tra cọc",
+                        $"Khách hàng yêu cầu kiểm tra cọc cho đơn hàng có mã {order.SalesOrderCode}. Vui lòng kiểm tra và xác nhận.",
+                        NotificationType.Message
+                    );
+                }
+                catch (Exception notiEx)
+                {
+                    _logger.LogError(notiEx, "Không gửi được noti yêu cầu kiểm tra cọc (SalesOrderCode={SalesOrderCode})", order.SalesOrderCode);
+                }
 
                 return new ServiceResult<bool>
                 {
@@ -2074,11 +2090,48 @@ namespace PMS.Application.Services.SalesOrder
                 if (order.SalesOrderStatus == SalesOrderStatus.Complete)
                     return ServiceResult<bool>.Fail("Đơn hàng đã hoàn thành, không thể chuyển trạng thái không hoàn thành.", 400);
 
+                if (order.SalesQuotation == null)
+                    return ServiceResult<bool>.Fail("Đơn hàng không có thông tin báo giá để tính tiền cọc.", 400);
+
                 await _unitOfWork.BeginTransactionAsync();
 
+                //Tính số tiền đã trả
+                var depositPercent = order.SalesQuotation.DepositPercent;
+                var depositAmount = Math.Round(order.TotalPrice * depositPercent / 100m, 2);
+
+                //Tính tổng giá trị phiếu xuất đã xuất
+                var exportedValue = await (
+                    from gin in _unitOfWork.GoodsIssueNote.Query().AsNoTracking()
+                    where gin.StockExportOrder.SalesOrderId == order.SalesOrderId
+                          && gin.Status == GoodsIssueNoteStatus.Exported
+                    from gd in gin.GoodsIssueNoteDetails
+                    join sod in _unitOfWork.SalesOrderDetails.Query().AsNoTracking()
+                            .Where(x => x.SalesOrderId == order.SalesOrderId)
+                        on gd.LotId equals sod.LotId
+                    select (decimal?)gd.Quantity * sod.UnitPrice
+                ).SumAsync() ?? 0m;
+
+                exportedValue = Math.Round(exportedValue, 2);
+
+                //Cập nhật số tiền đã trả theo công thức PaidAmount = PaidAmount - (DepositAmount - ((ExportedValue/TotalPrice) * DepositAmount))
+                decimal ratio = 0m;
+                if (order.TotalPrice > 0m)
+                {
+                    ratio = exportedValue / order.TotalPrice;
+                    if (ratio < 0m) ratio = 0m;
+                    if (ratio > 1m) ratio = 1m;
+                }
+
+                var subtractAmount = Math.Round(depositAmount - (ratio * depositAmount), 2);
+                if (subtractAmount < 0m) subtractAmount = 0m;
+
+                order.PaidAmount = Math.Max(0m, Math.Round(order.PaidAmount - subtractAmount, 2));
+
+                //Cập nhật trạng thái đơn hàng và trạng thái thanh toán
                 order.SalesOrderStatus = SalesOrderStatus.NotComplete;
                 order.PaymentStatus = PaymentStatus.Refunded;
 
+                //Cập nhật nợ của khách cho đơn hàng này
                 if (order.CustomerDebts != null)
                 {
                     order.CustomerDebts.DebtAmount = 0m;
