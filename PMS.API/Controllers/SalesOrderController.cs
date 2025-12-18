@@ -325,8 +325,6 @@ namespace PMS.API.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
             var result = await _service.MarkBackSalesOrderAsync(salesOrderId, userId);
 
-            await _stockExportOderService.AwaitStockExportOrder(salesOrderId);
-
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,

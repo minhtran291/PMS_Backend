@@ -140,5 +140,34 @@ namespace PMS.API.Controllers
                 Data = result.Data
             });
         }
+
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("await-stock-export-order")]
+        public async Task<IActionResult> AwaitStockExportOrder(int seoId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _stockExportOderService.AwaitStockExportOrder(seoId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message
+            });
+        }
+
+        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Route("check-ready-to-export")]
+        public async Task<IActionResult> CheckReadyToExport (int seoId)
+        {
+            var result = await _stockExportOderService.CheckAvailable(seoId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message
+            });
+        }
     }
 }
