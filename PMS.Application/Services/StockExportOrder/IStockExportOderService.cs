@@ -17,5 +17,8 @@ namespace PMS.Application.Services.StockExportOrder
         Task<ServiceResult<object>> UpdateAsync(UpdateStockExportOrderDTO dto, string userId);
         Task<ServiceResult<object>> DeleteAsync(int seoId, string userId);
         Task<ServiceResult<object>> GenerateForm(int soId);
+        Task <ServiceResult<object>> CheckAvailable(int seoId);
+        Task <ServiceResult<object>>AwaitStockExportOrder(int seoId, string userId);
+        Task CancelStockExportOrder(int soId);
     }
 }

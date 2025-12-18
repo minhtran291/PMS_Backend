@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using PMS.Application.DTOs.SalesOrder;
 using PMS.Application.Services.SalesOrder;
+using PMS.Application.Services.StockExportOrder;
 using PMS.Application.Services.VNpay;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
@@ -17,10 +18,12 @@ namespace PMS.API.Controllers
     public class SalesOrderController : ControllerBase
     {
         private readonly ISalesOrderService _service;
+        private readonly IStockExportOderService _stockExportOderService;
 
-        public SalesOrderController(ISalesOrderService service)
+        public SalesOrderController(ISalesOrderService service, IStockExportOderService stockExportOderService)
         {
             _service = service;
+            _stockExportOderService = stockExportOderService;
         }
 
         private string GetUserId()
@@ -340,6 +343,8 @@ namespace PMS.API.Controllers
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
             var result = await _service.MarkNotCompleteAndRefundAsync(salesOrderId, userId);
+
+            await _stockExportOderService.CancelStockExportOrder(salesOrderId);
 
             return StatusCode(result.StatusCode, new
             {

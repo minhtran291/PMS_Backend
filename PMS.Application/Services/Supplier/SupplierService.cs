@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using PMS.Application.DTOs.Product;
 using PMS.Application.DTOs.Supplier;
 using PMS.Application.Services.Base;
 using PMS.Core.Domain.Constant;
@@ -228,6 +229,37 @@ namespace PMS.Application.Services.Supplier
                     Data = null
                 };
             }
+        }
+
+        public async Task<ServiceResult<List<LotProductDTOBySup>>> ListProductBySupId(string supplierId)
+        {
+            if (!int.TryParse(supplierId, out int supId))
+                return ServiceResult<List<LotProductDTOBySup>>.Fail("SupplierId không hợp lệ");
+
+            var result = await _unitOfWork.LotProduct.Query()
+                .Include(lp => lp.Product)
+                .Where(lp => lp.SupplierID == supId)
+                .Select(lp => new LotProductDTOBySup
+                {
+                    ProductID = lp.ProductID,
+                    ProductName = lp.Product.ProductName,
+                    InputPrice = lp.InputPrice,
+                    ExpiredDate = lp.ExpiredDate.ToString("yyyy-MM-dd"),
+                    LotQuantity = lp.LotQuantity,
+                    WarehouselocationID = lp.WarehouselocationID
+                })
+                .ToListAsync();
+            if(result.Count < 0)
+            {
+                return new ServiceResult<List<LotProductDTOBySup>>
+                {
+                    StatusCode = 404,
+                    Message = "Không tìm thấy bất kỳ sản phẩm nào",
+                    Data = null
+                };
+            }
+
+            return ServiceResult<List<LotProductDTOBySup>>.SuccessResult(result);
         }
 
         public async Task<ServiceResult<SupplierResponseDTO>> UpdateAsync(int id, UpdateSupplierRequestDTO dto)

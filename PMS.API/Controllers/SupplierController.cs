@@ -60,7 +60,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpGet("detail")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.SALES_STAFF)]
         public async Task<IActionResult> GetSupplierByIdAsync([FromQuery] int id)
         {
             var result = await _service.GetByIdAsync(id);
@@ -123,6 +123,24 @@ namespace PMS.API.Controllers
                 message = result.Message,
                 data = result.Data
             });
+        }
+
+
+        /// <summary>
+        /// Lấy danh sách sản phẩm (theo từng lot) của nhà cung cấp
+        /// http://localhost:5137/api/Supplier/BySupplier/{supplierId}
+        /// </summary>
+        /// <param name="supplierId">ID nhà cung cấp</param>
+        /// <returns>Danh sách LotProduct theo Supplier</returns>
+        [HttpGet("BySupplier/{supplierId}")]
+        public async Task<IActionResult> GetProductsBySupplier(string supplierId)
+        {
+            var result = await _service.ListProductBySupId(supplierId);
+
+            if (result.Equals(0))
+                return BadRequest(result);
+
+            return Ok(result);
         }
     }
 }

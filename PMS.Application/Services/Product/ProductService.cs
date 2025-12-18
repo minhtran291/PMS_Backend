@@ -368,118 +368,89 @@ namespace PMS.Application.Services.Product
             }
         }
 
-        public async Task<ServiceResult<bool>> UpdateProductAsync(int id, ProductUpdateDTO productUpdate)
+        public async Task<ServiceResult<bool>> UpdateProductAsync(int id, ProductUpdateDTO2 productUpdate)
         {
             try
             {
-                if (id < 0)
-                {
-                    return new ServiceResult<bool>
-                    {
-                        StatusCode = 200,
-                        Message = "ID không hợp lệ",
-                        Data = false,
-                    };
-                }
+                if (id <= 0)
+                    return ServiceResult<bool>.Fail("ID không hợp lệ");
 
                 if (productUpdate == null)
-                {
-                    return new ServiceResult<bool>
-                    {
-                        StatusCode = 500,
-                        Message = "dữ liệu không được phép để trống",
-                        Data = false,
-                    };
-                }
+                    return ServiceResult<bool>.Fail("Dữ liệu không được để trống");
 
-                var exProduct = await _unitOfWork.Product.Query().FirstOrDefaultAsync(p => p.ProductID == id);
+                var exProduct = await _unitOfWork.Product.Query()
+                    .FirstOrDefaultAsync(p => p.ProductID == id);
 
                 if (exProduct == null)
+                    return ServiceResult<bool>.Fail("Không tìm thấy sản phẩm");
+
+                
+                if (productUpdate.MinQuantity.HasValue && productUpdate.MaxQuantity.HasValue &&
+                    productUpdate.MinQuantity > productUpdate.MaxQuantity)
                 {
-                    return new ServiceResult<bool>
-                    {
-                        StatusCode = 200,
-                        Message = "Không tìm thấy sản phẩm với ID cung cấp",
-                        Data = false,
-                    };
+                    return ServiceResult<bool>.Fail("Số lượng tối thiểu không được lớn hơn số lượng tối đa");
                 }
 
-                if (productUpdate.MinQuantity > productUpdate.MaxQuantity)
+                
+                if (productUpdate.CategoryID.HasValue)
                 {
-                    return new ServiceResult<bool>
-                    {
-                        StatusCode = 200,
-                        Message = "Số lượng tối thiểu không được lớn hơn số lượng tối đa",
-                        Data = false,
-                    };
+                    var categoryExists = await _unitOfWork.Category.Query()
+                        .AnyAsync(c => c.CategoryID == productUpdate.CategoryID.Value);
+
+                    if (!categoryExists)
+                        return ServiceResult<bool>.Fail("Danh mục không tồn tại");
+
+                    exProduct.CategoryID = productUpdate.CategoryID.Value;
                 }
 
+                
+                if (productUpdate.Image != null)
+                    exProduct.Image = await SaveAsync(productUpdate.Image, "images/products/");
 
-                var category = await _unitOfWork.Category.Query().FirstOrDefaultAsync(c => c.CategoryID == productUpdate.CategoryID);
-                if (category == null)
-                {
-                    return new ServiceResult<bool> { StatusCode = 200, Message = "Danh mục không tồn tại", Data = false };
-                }
-                string? imageUrl = productUpdate.Image != null
-            ? await SaveAsync(productUpdate.Image, "images/products/")
-            : null;
-                string? imageUrlA = productUpdate.ImageA != null
-            ? await SaveAsync(productUpdate.ImageA, "images/products/")
-            : null;
-                string? imageUrlB = productUpdate.ImageB != null
-            ? await SaveAsync(productUpdate.ImageB, "images/products/")
-            : null;
-                string? imageUrlC = productUpdate.ImageC != null
-            ? await SaveAsync(productUpdate.ImageC, "images/products/")
-            : null;
-                string? imageUrlD = productUpdate.ImageD != null
-            ? await SaveAsync(productUpdate.ImageD, "images/products/")
-            : null;
-                string? imageUrlE = productUpdate.ImageE != null
-            ? await SaveAsync(productUpdate.ImageE, "images/products/")
-            : null;
+                if (productUpdate.ImageA != null)
+                    exProduct.ImageA = await SaveAsync(productUpdate.ImageA, "images/products/");
 
+                if (productUpdate.ImageB != null)
+                    exProduct.ImageB = await SaveAsync(productUpdate.ImageB, "images/products/");
+
+                if (productUpdate.ImageC != null)
+                    exProduct.ImageC = await SaveAsync(productUpdate.ImageC, "images/products/");
+
+                if (productUpdate.ImageD != null)
+                    exProduct.ImageD = await SaveAsync(productUpdate.ImageD, "images/products/");
+
+                if (productUpdate.ImageE != null)
+                    exProduct.ImageE = await SaveAsync(productUpdate.ImageE, "images/products/");
+
+                
                 exProduct.ProductName = productUpdate.ProductName ?? exProduct.ProductName;
                 exProduct.Unit = productUpdate.Unit ?? exProduct.Unit;
-                exProduct.CategoryID = productUpdate.CategoryID;
-                exProduct.Image = imageUrl;
-                exProduct.ImageA = imageUrlA;
-                exProduct.ImageB = imageUrlB;
-                exProduct.ImageC = imageUrlC;
-                exProduct.ImageD = imageUrlD;
-                exProduct.ImageE = imageUrlE;
+                exProduct.ProductDescription = productUpdate.ProductDescription ?? exProduct.ProductDescription;
+                exProduct.ProductIngredients = productUpdate.ProductIngredients ?? exProduct.ProductIngredients;
+                exProduct.ProductlUses = productUpdate.ProductlUses ?? exProduct.ProductlUses;
+                exProduct.ProductWeight = productUpdate.ProductWeight ?? exProduct.ProductWeight;
 
-                exProduct.ProductIngredients = productUpdate.ProductIngredients;
-                exProduct.ProductlUses = productUpdate.ProductlUses;
-                exProduct.ProductWeight = productUpdate.ProductWeight;
+                
+                if (productUpdate.MinQuantity.HasValue)
+                    exProduct.MinQuantity = productUpdate.MinQuantity.Value;
 
-                exProduct.MinQuantity = productUpdate.MinQuantity;
-                exProduct.MaxQuantity = productUpdate.MaxQuantity;
-                exProduct.Status = productUpdate.Status;
-                exProduct.ProductDescription = productUpdate.ProductDescription;
+                if (productUpdate.MaxQuantity.HasValue)
+                    exProduct.MaxQuantity = productUpdate.MaxQuantity.Value;
 
+                if (productUpdate.Status.HasValue)
+                    exProduct.Status = productUpdate.Status.Value;
 
                 _unitOfWork.Product.Update(exProduct);
                 await _unitOfWork.CommitAsync();
 
-                return new ServiceResult<bool>
-                {
-                    StatusCode = 200,
-                    Message = "Thành công",
-                    Data = true,
-                };
-
-            }
-            catch (ArgumentException ex)
-            {
-                throw new ArgumentException($"Lỗi khi cập nhật sản phẩm: {ex.Message}", ex);
+                return ServiceResult<bool>.SuccessResult(true, "Cập nhật sản phẩm thành công");
             }
             catch (Exception ex)
             {
-                throw new Exception($"Đã xảy ra lỗi khi cập nhật sản phẩm: {ex.Message}", ex);
-
+                throw new Exception($"Lỗi khi cập nhật sản phẩm: {ex.Message}", ex);
             }
         }
+
         public async Task<ServiceResult<List<ProductDTO>>> SearchProductByKeyWordAsync(string keyWord)
         {
             var products = await _unitOfWork.Product
@@ -535,15 +506,17 @@ namespace PMS.Application.Services.Product
         {
             try
             {
-                var products = await _unitOfWork.LotProduct.Query()
+                var lots = await _unitOfWork.LotProduct.Query()
                     .Where(p => p.ProductID == productId)
                     .Include(p => p.Product)
+                    .Include(p => p.WarehouseLocation)
                     .ToListAsync();
 
-                if (!products.Any())
-                    return ServiceResult<List<LotProductDTO2>>.Fail("Không tìm thấy lô hàng nào cho sản phẩm này.");
+                if (!lots.Any())
+                    return ServiceResult<List<LotProductDTO2>>
+                        .Fail("Không tìm thấy lô hàng nào cho sản phẩm này.");
 
-                var result = products.Select(p => new LotProductDTO2
+                var result = lots.Select(p => new LotProductDTO2
                 {
                     LotID = p.LotID,
                     InputDate = p.InputDate.ToString("dd/MM/yyyy"),
@@ -555,14 +528,17 @@ namespace PMS.Application.Services.Product
                     SupplierID = p.SupplierID,
                     ProductID = p.ProductID,
                     WarehouselocationID = p.WarehouselocationID,
+                    warehouseName = p.WarehouseLocation?.LocationName ?? "Unknown",
                     LastCheckedDate = p.LastCheckedDate
                 }).ToList();
 
-                return ServiceResult<List<LotProductDTO2>>.SuccessResult(result, "Lấy danh sách lô hàng thành công.");
+                return ServiceResult<List<LotProductDTO2>>
+                    .SuccessResult(result, "Lấy danh sách lô hàng thành công.");
             }
             catch (Exception ex)
             {
-                return ServiceResult<List<LotProductDTO2>>.Fail($"Lỗi khi lấy lô sản phẩm: {ex.Message}");
+                return ServiceResult<List<LotProductDTO2>>
+                    .Fail($"Lỗi khi lấy lô sản phẩm: {ex.Message}");
             }
         }
 

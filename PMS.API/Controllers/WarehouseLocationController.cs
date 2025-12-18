@@ -69,7 +69,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="warehouseLocationId"></param>
         /// <returns></returns>
-        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.PURCHASES_STAFF)]
         [Route("get-warehouse-location-details/{warehouseLocationId}")]
         public async Task<IActionResult> WarehouseLocationDetails(int warehouseLocationId)
         {
