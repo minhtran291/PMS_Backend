@@ -16,6 +16,9 @@ namespace PMS.Core.Domain.Constant
         {
             var rows = new StringBuilder();
 
+            var logoLocal = "http://localhost:5137/assets/CTTNHHBBPHARMACY.png";
+            var logoServer = "https://api.bbpharmacy.site/assets/CTTNHHBBPHARMACY.png";
+
             var sender = sq.StaffProfile.User.FullName ?? "";
 
             var receiverName = sq.RequestSalesQuotation.CustomerProfile.User.FullName ?? "";
@@ -67,6 +70,7 @@ namespace PMS.Core.Domain.Constant
 
                 if(item.LotProduct != null)
                 {
+                    var supplierName = HttpUtility.HtmlEncode(item.LotProduct.Supplier.Name);
                     var taxText = HttpUtility.HtmlEncode(item.TaxPolicy?.Name);
                     decimal taxRate = item.TaxPolicy.Rate;
                     var expiredDate = item.LotProduct.ExpiredDate.ToString("dd/MM/yyyy");
@@ -83,6 +87,7 @@ namespace PMS.Core.Domain.Constant
                     <tr>
                         <td>{productName}</td>
                         <td>{unit}</td>
+                        <td>{supplierName}</td>
                         <td>{taxText}</td>
                         <td>{expiredDate}</td>
                         <td>{quantity}</td>
@@ -102,6 +107,7 @@ namespace PMS.Core.Domain.Constant
                         <td>-</td>
                         <td>-</td>
                         <td>-</td>
+                        <td>-</td>
                         <td>{note}</td>
                     </tr>");
                 }
@@ -115,6 +121,7 @@ namespace PMS.Core.Domain.Constant
 <html lang=""vi"">
 <head>
     <meta charset=""UTF-8"">
+    <img src=""{logoLocal}"" style=""width:120px; height:auto; top:20px; left:20px;"" />
     <title>Báo giá</title>
     <style>
         body {{ font-family: Arial, sans-serif; background: #fff; padding: 20px; }}
@@ -231,6 +238,7 @@ namespace PMS.Core.Domain.Constant
             <tr>
                 <th>Tên sản phẩm</th>
                 <th>Đơn vị</th>
+                <th>Nhà cung cấp</th>
                 <th>Thuế</th>
                 <th>Ngày hết hạn</th>
                 <th width=""10%"">Số lượng tối thiểu</th>
@@ -244,13 +252,13 @@ namespace PMS.Core.Domain.Constant
         </tbody>
         <tfoot>
             <tr>
-                <td colspan=""8"" class=""total"">Tổng chưa thuế: {subTotal:N0} ₫</td>
+                <td colspan=""9"" class=""total"">Tổng chưa thuế: {subTotal:N0} ₫</td>
             </tr>
             <tr>
-                <td colspan=""8"" class=""total"">Thuế: {taxTotal:N0} ₫</td>
+                <td colspan=""9"" class=""total"">Thuế: {taxTotal:N0} ₫</td>
             </tr>
             <tr>
-                <td colspan=""8"" class=""total"">Tổng cộng (đã bao gồm thuế): {grandTotal:N0} ₫</td>
+                <td colspan=""9"" class=""total"">Tổng cộng (đã bao gồm thuế): {grandTotal:N0} ₫</td>
             </tr>
         </tfoot>
     </table>

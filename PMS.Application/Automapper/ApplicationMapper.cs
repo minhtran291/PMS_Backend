@@ -36,7 +36,8 @@ namespace PMS.Application.Automapper
             CreateMap<TaxPolicy, DTOs.SalesQuotation.TaxPolicyDTO>();
 
             CreateMap<SalesQuotation, SalesQuotationDTO>()
-                .ForMember(dest => dest.RequestCode, opt => opt.MapFrom(src => src.RequestSalesQuotation.RequestCode));
+                .ForMember(dest => dest.RequestCode, opt => opt.MapFrom(src => src.RequestSalesQuotation.RequestCode))
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.RequestSalesQuotation.CustomerProfile.User.FullName));
 
             CreateMap<SalesQuotationNote, SalesQuotationNoteDTO>();
 
@@ -87,7 +88,8 @@ namespace PMS.Application.Automapper
 
             CreateMap<GoodsIssueNote, GoodsIssueNoteWithDetailsDTO>()
                 .IncludeBase<GoodsIssueNote, GoodsIssueNoteListDTO>()
-                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.GoodsIssueNoteDetails));
+                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.GoodsIssueNoteDetails))
+                .ForMember(dest => dest.SalesOrderCode, opt => opt.MapFrom(src => src.StockExportOrder.SalesOrder.SalesOrderCode));
 
             CreateMap<TaxPolicy, DTOs.TaxPolicy.TaxPolicyDTO>();
         }

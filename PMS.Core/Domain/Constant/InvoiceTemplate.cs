@@ -39,7 +39,7 @@ namespace PMS.Core.Domain.Constant
                 sb.Append($@"
                 <tr>
                     <td style=""text-align:center"">{index}</td>
-                    <td>PX{note.Id}</td>
+                    <td>{note.GoodsIssueNoteCode}</td>
                     <td style=""text-align:center"">{note.DeliveryDate:dd-MM-yyyy}</td>
                     <td style=""text-align:right"">{d.GoodsIssueAmount:N0}</td>
                     <td style=""text-align:right"">{d.AllocatedDeposit:N0}</td>

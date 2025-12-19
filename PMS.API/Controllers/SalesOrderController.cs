@@ -228,7 +228,7 @@ namespace PMS.API.Controllers
 
         /// <summary>
         /// PUT: http://localhost:5137/api/SalesOrder/draft/{orderId}/quantities
-        /// Cập nhật số lượng từng sản phẩm trong Draft (chỉ thay đổi Quantity).
+        /// Cập nhật sản phẩm và số lượng từng sản phẩm trong Draft (thay đổi Lot và Quantity).
         /// </summary>
         [HttpPut("draft/{orderId}/quantities")]
         [Authorize(Roles = UserRoles.CUSTOMER)]
@@ -325,8 +325,6 @@ namespace PMS.API.Controllers
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
             var result = await _service.MarkBackSalesOrderAsync(salesOrderId, userId);
 
-            await _stockExportOderService.AwaitStockExportOrder(salesOrderId);
-
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,
@@ -341,10 +339,10 @@ namespace PMS.API.Controllers
         /// </summary>
         [HttpPut("{salesOrderId}/mark-not-complete")]
         [Authorize(Roles = UserRoles.SALES_STAFF)]
-        public async Task<IActionResult> MarkNotComplete(int salesOrderId)
+        public async Task<IActionResult> MarkNotComplete(int salesOrderId, [FromBody] MarkNotCompleteRequest request)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "system";
-            var result = await _service.MarkNotCompleteAndRefundAsync(salesOrderId, userId);
+            var result = await _service.MarkNotCompleteAndRefundAsync(salesOrderId, userId, request?.RejectReason);
 
             await _stockExportOderService.CancelStockExportOrder(salesOrderId);
 

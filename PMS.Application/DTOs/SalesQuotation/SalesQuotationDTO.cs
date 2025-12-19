@@ -15,5 +15,6 @@ namespace PMS.Application.DTOs.SalesQuotation
         public DateTime? QuotationDate { get; set; }
         public DateTime ExpiredDate { get; set; }
         public SalesQuotationStatus Status { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
     }
 }
