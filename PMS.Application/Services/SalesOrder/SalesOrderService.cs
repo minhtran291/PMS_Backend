@@ -241,7 +241,7 @@ namespace PMS.Application.Services.SalesOrder
                     IsDeposited = false,
                     TotalPrice = 0m,
                     PaidAmount = 0m,
-                    SalesOrderExpiredDate = DateTime.Today.AddDays(7)
+                    SalesOrderExpiredDate = DateTime.Now.AddDays(sq.ExpectedDeliveryDate + 3) 
                 };
 
                 await _unitOfWork.SalesOrder.AddAsync(order);
@@ -1351,10 +1351,18 @@ namespace PMS.Application.Services.SalesOrder
         }
 
         //customer update sales order when status is draft
-        public async Task<ServiceResult<object>> UpdateDraftQuantitiesAsync(SalesOrderUpdateDTO upd)
+        public async Task<ServiceResult<object>> UpdateDraftQuantitiesAsync(int orderId, UpdateDraftQuantitiesDTO upd, string? customerId)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(customerId))
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 401,
+                        Message = "Không xác định được người dùng.",
+                        Data = null
+                    };
+
                 // Validate payload
                 if (upd == null)
                     return new ServiceResult<object>
@@ -1364,13 +1372,14 @@ namespace PMS.Application.Services.SalesOrder
                         Data = null
                     };
 
-                if (upd.SalesOrderId <= 0)
+                if (orderId <= 0)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
                         Message = "Mã định danh của đơn hàng là bắt buộc.",
                         Data = null
                     };
+
 
                 if (upd.Details == null || upd.Details.Count == 0)
                     return new ServiceResult<object>
@@ -1392,10 +1401,22 @@ namespace PMS.Application.Services.SalesOrder
                         };
                 }
 
+                var duplicatedLot = upd.Details
+                    .GroupBy(x => x.LotId)
+                    .FirstOrDefault(g => g.Count() > 1);
+
+                if (duplicatedLot != null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = $"LotId {duplicatedLot.Key} bị trùng trong danh sách cập nhật.",
+                        Data = null
+                    };
+
                 // Lấy SalesOrder + Details + Debt
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
-                    .FirstOrDefaultAsync(o => o.SalesOrderId == upd.SalesOrderId);
+                    .FirstOrDefaultAsync(o => o.SalesOrderId == orderId);
 
                 if (order == null)
                     return new ServiceResult<object>
@@ -1406,7 +1427,7 @@ namespace PMS.Application.Services.SalesOrder
                     };
 
                 // Chỉ người tạo đơn mới được phép chỉnh sửa
-                if (!string.Equals(order.CreateBy?.Trim(), upd.CreateBy?.Trim(), StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(order.CreateBy?.Trim(), customerId?.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     return new ServiceResult<object>
                     {
@@ -1433,39 +1454,37 @@ namespace PMS.Application.Services.SalesOrder
                         Data = null
                     };
 
-                var orderDetailByKey = order.SalesOrderDetails;
-                    //.ToDictionary(d => (d.ProductId, d.LotId), d => d);
+                var orderDetailByKey = order.SalesOrderDetails
+                    .ToDictionary(d => d.LotId);
+
 
                 foreach (var it in upd.Details)
                 {
-                    var key = (it.ProductId, it.LotId);
-                    //if (!orderDetailByKey.ContainsKey(key))
-                    //{
-                    //    return new ServiceResult<object>
-                    //    {
-                    //        StatusCode = 400,
-                    //        Message = $"Có dòng không thuộc đơn hàng, vui lòng kiểm tra lại",
-                    //        Data = null
-                    //    };
-                    //}
+                    if (!orderDetailByKey.ContainsKey(it.LotId))
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 400,
+                            Message = $"LotId {it.LotId} không thuộc đơn hàng, vui lòng kiểm tra lại.",
+                            Data = null
+                        };
                 }
 
                 await _unitOfWork.BeginTransactionAsync();
 
                 foreach (var it in upd.Details)
                 {
-                    //var d = orderDetailByKey[(it.ProductId, it.LotId)];
-                    //d.Quantity = it.Quantity;
+                    var d = orderDetailByKey[it.LotId];
 
-                    //var sub = (it.Quantity > 0) ? decimal.Round(d.UnitPrice * it.Quantity, 2) : 0m;
-                    //d.SubTotalPrice = sub;
+                    d.Quantity = it.Quantity;
+                    d.SubTotalPrice = it.Quantity > 0
+                        ? Math.Round(d.UnitPrice * it.Quantity, 2)
+                        : 0m;
 
-                    //_unitOfWork.SalesOrderDetails.Update(d);
+                    _unitOfWork.SalesOrderDetails.Update(d);
                 }
 
                 order.TotalPrice = order.SalesOrderDetails.Sum(x => x.SubTotalPrice);
                 
-
                 _unitOfWork.SalesOrder.Update(order);
 
                 var debt = await _unitOfWork.CustomerDebt.Query()
@@ -1473,9 +1492,10 @@ namespace PMS.Application.Services.SalesOrder
 
                 if (debt != null)
                 {
-                    debt.DebtAmount = order.TotalPrice - order.PaidAmount;
+                    debt.DebtAmount = Math.Max(0m, order.TotalPrice - order.PaidAmount);
                     _unitOfWork.CustomerDebt.Update(debt);
                 }
+
 
                 await _unitOfWork.CommitAsync();
                 await _unitOfWork.CommitTransactionAsync();
@@ -1519,7 +1539,7 @@ namespace PMS.Application.Services.SalesOrder
             catch (Exception ex)
             {
                 await _unitOfWork.RollbackTransactionAsync();
-                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync({SalesOrderId})", upd?.SalesOrderId);
+                _logger.LogError(ex, "Lỗi UpdateDraftQuantitiesAsync({SalesOrderId})", orderId);
 
                 return new ServiceResult<object>
                 {
@@ -2141,7 +2161,7 @@ namespace PMS.Application.Services.SalesOrder
                 if (string.IsNullOrWhiteSpace(rejectReason))
                     return ServiceResult<bool>.Fail("Vui lòng nhập lý do từ chối.", 400);
 
-                rejectReason = rejectReason.Trim();
+                order.RejectReason = rejectReason.Trim();
 
                 order.RejectedAt = DateTime.UtcNow; 
                 order.RejectedBy = staffId;
@@ -2187,6 +2207,51 @@ namespace PMS.Application.Services.SalesOrder
                 _logger.LogError(ex, "MarkNotCompleteAndRefundAsync({SalesOrderId}) error", salesOrderId);
                 return ServiceResult<bool>.Fail("Có lỗi khi chuyển NotComplete và cập nhật Refunded.", 500);
             }
+        }
+
+        public async Task<int> AutoMarkNotCompleteWhenDepositOverdueAsync()
+        {
+            var now = DateTime.Now; 
+
+            // Chỉ check các đơn đang Approved + chưa cọc đồng nào + có quy định cọc
+            var orders = await _unitOfWork.SalesOrder.Query()
+                .Include(o => o.SalesQuotation)
+                .Include(o => o.CustomerDebts)
+                .Where(o => o.SalesOrderStatus == SalesOrderStatus.Approved
+                            && o.PaidAmount == 0
+                            && o.SalesQuotation != null
+                            && o.SalesQuotation.DepositPercent > 0
+                            && o.SalesQuotation.DepositDueDays > 0)
+                .ToListAsync();
+
+            int updated = 0;
+
+            foreach (var o in orders)
+            {
+                var depositDueAt = o.CreateAt.AddDays(o.SalesQuotation.DepositDueDays);
+
+                if (now > depositDueAt)
+                {
+                    o.SalesOrderStatus = SalesOrderStatus.NotComplete;
+                    o.PaymentStatus = PaymentStatus.NotPaymentYet;
+                    o.IsDeposited = false;
+
+                    if (o.CustomerDebts != null)
+                    {
+                        o.CustomerDebts.status = CustomerDebtStatus.Disable;
+                        o.CustomerDebts.DebtAmount = 0m;
+                        _unitOfWork.CustomerDebt.Update(o.CustomerDebts);
+                    }
+
+                    _unitOfWork.SalesOrder.Update(o);
+                    updated++;
+                }
+            }
+
+            if (updated > 0)
+                await _unitOfWork.CommitAsync();
+
+            return updated;
         }
 
 

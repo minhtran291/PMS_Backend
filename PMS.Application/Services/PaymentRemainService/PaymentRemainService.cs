@@ -537,11 +537,12 @@ namespace PMS.Application.Services.PaymentRemainService
 
         private async Task RecalculateInvoiceAndOrderAsync(int invoiceId)
         {
-            // không throw, chỉ log nếu lỗi
             try
             {
                 var invoice = await _unitOfWork.Invoices.Query()
                     .Include(i => i.PaymentRemains)
+                    .Include(i => i.InvoiceDetails)
+                        .ThenInclude(d => d.GoodsIssueNote)
                     .Include(i => i.SalesOrder)
                         .ThenInclude(so => so.PaymentRemains)
                     .Include(i => i.SalesOrder)
@@ -561,7 +562,7 @@ namespace PMS.Application.Services.PaymentRemainService
                 var oldInvoicePaid = invoice.TotalPaid;
 
                 var remainPaid = invoice.PaymentRemains
-                    .Where(p => p.PaidAt != null)
+                    .Where(p => p.PaidAt != null && p.VNPayStatus == VNPayStatus.Success)
                     .Sum(p => p.Amount);
 
                 var totalPaid = invoice.TotalDeposit + remainPaid;
@@ -585,6 +586,28 @@ namespace PMS.Application.Services.PaymentRemainService
                 {
                     invoice.PaymentStatus = PaymentStatus.Paid;
                     invoice.TotalRemain = 0;
+                }
+
+                var latestExportedAt = invoice.InvoiceDetails
+                    .Select(d => d.GoodsIssueNote.DeliveryDate)
+                    .Max();
+
+                var paymentDueAt = latestExportedAt.AddDays(3);
+
+                if (paymentDueAt != null)
+                {
+                    // Thời điểm thanh toán thành công muộn nhất
+                    var latestPaidAt = invoice.PaymentRemains
+                        .Where(p => p.PaidAt != null && p.VNPayStatus == VNPayStatus.Success)
+                        .Max(p => p.PaidAt);
+
+                    // Nếu thanh toán sau hạn → Late 
+                    if (totalPaid > 0 &&
+                        latestPaidAt.HasValue &&
+                        latestPaidAt.Value > paymentDueAt)
+                    {
+                        invoice.PaymentStatus = PaymentStatus.Late;
+                    }
                 }
 
                 // Phần tiền mới tăng thêm cho invoice này

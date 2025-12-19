@@ -329,31 +329,43 @@ namespace PMS.Application.Services.Invoice
                         "Không có hóa đơn nào.", 404);
                 }
 
-                var result = invoices.Select(i => new InvoiceDTO
+                var result = invoices.Select(inv =>
                 {
-                    Id = i.Id,
-                    InvoiceCode = i.InvoiceCode,
-                    SalesOrderId = i.SalesOrderId,
-                    SalesOrderCode = i.SalesOrder.SalesOrderCode,
-                    CreatedAt = i.CreatedAt,
-                    IssuedAt = i.IssuedAt,
-                    Status = i.Status,
-                    TotalAmount = i.TotalAmount,
-                    TotalPaid = i.TotalPaid,
-                    TotalDeposit = i.TotalDeposit,
-                    TotalRemain = i.TotalRemain,
-                    Details = i.InvoiceDetails.Select(d => new InvoiceDetailDTO
-                    {
-                        GoodsIssueNoteId = d.GoodsIssueNoteId,
-                        GoodsIssueDate = d.GoodsIssueNote.DeliveryDate,
-                        GoodsIssueAmount = d.GoodsIssueAmount,
-                        AllocatedDeposit = d.AllocatedDeposit,
-                        PaidRemain = d.PaidRemain,
-                        TotalPaidForNote = d.TotalPaidForNote,
-                        NoteBalance = d.NoteBalance
-                    }).ToList()
-                }).ToList();
 
+                    var latestExportedAt = inv.InvoiceDetails
+                        .Select(d => d.GoodsIssueNote.DeliveryDate)
+                        .Max();
+
+                    var paymentDueAt = latestExportedAt.AddDays(3);
+
+                    return new InvoiceDTO
+                    {
+                        Id = inv.Id,
+                        InvoiceCode = inv.InvoiceCode,
+                        SalesOrderId = inv.SalesOrderId,
+                        SalesOrderCode = inv.SalesOrder.SalesOrderCode,
+                        CreatedAt = inv.CreatedAt,
+                        IssuedAt = inv.IssuedAt,
+                        Status = inv.Status,
+                        TotalAmount = inv.TotalAmount,
+                        TotalPaid = inv.TotalPaid,
+                        TotalDeposit = inv.TotalDeposit,
+                        TotalRemain = inv.TotalRemain,
+                        LatestExportedAt = latestExportedAt,
+                        PaymentDueAt = paymentDueAt,
+                        CustomerName = inv.SalesOrder.Customer.CustomerProfile.User.FullName,
+                        Details = inv.InvoiceDetails.Select(d => new InvoiceDetailDTO
+                        {
+                            GoodsIssueNoteId = d.GoodsIssueNoteId,
+                            GoodsIssueDate = d.GoodsIssueNote.DeliveryDate,
+                            GoodsIssueAmount = d.GoodsIssueAmount,
+                            AllocatedDeposit = d.AllocatedDeposit,
+                            PaidRemain = d.PaidRemain,
+                            TotalPaidForNote = d.TotalPaidForNote,
+                            NoteBalance = d.NoteBalance
+                        }).ToList()
+                    };
+                }).ToList();
                 return ServiceResult<List<InvoiceDTO>>.SuccessResult(
                     result, "Lấy danh sách hóa đơn thành công.", 200);
             }
@@ -870,20 +882,31 @@ namespace PMS.Application.Services.Invoice
                         "Khách hàng này chưa có hóa đơn nào.", 404);
                 }
 
-                var result = invoices.Select(inv => new InvoiceDTO
+                var result = invoices.Select(inv =>
                 {
-                    Id = inv.Id,
-                    InvoiceCode = inv.InvoiceCode,
-                    SalesOrderId = inv.SalesOrderId,
-                    SalesOrderCode = inv.SalesOrder.SalesOrderCode,
-                    CreatedAt = inv.CreatedAt,
-                    IssuedAt = inv.IssuedAt,
-                    Status = inv.Status,
-                    TotalAmount = inv.TotalAmount,
-                    TotalPaid = inv.TotalPaid,
-                    TotalDeposit = inv.TotalDeposit,
-                    TotalRemain = inv.TotalRemain,
-                    Details = inv.InvoiceDetails
+                    var latestExportedAt = inv.InvoiceDetails
+                        .Select(d => d.GoodsIssueNote.DeliveryDate)
+                        .Max();
+
+                    var paymentDueAt = latestExportedAt.AddDays(3);
+
+                    return new InvoiceDTO
+                    {
+                        Id = inv.Id,
+                        InvoiceCode = inv.InvoiceCode,
+                        SalesOrderId = inv.SalesOrderId,
+                        SalesOrderCode = inv.SalesOrder.SalesOrderCode,
+                        CreatedAt = inv.CreatedAt,
+                        IssuedAt = inv.IssuedAt,
+                        Status = inv.Status,
+                        TotalAmount = inv.TotalAmount,
+                        TotalPaid = inv.TotalPaid,
+                        TotalDeposit = inv.TotalDeposit,
+                        TotalRemain = inv.TotalRemain,
+                        LatestExportedAt = latestExportedAt,
+                        PaymentDueAt = paymentDueAt,
+                        CustomerName = inv.SalesOrder.Customer.CustomerProfile.User.FullName,
+                        Details = inv.InvoiceDetails
                         .Select((d, index) => new InvoiceDetailDTO
                         {
                             GoodsIssueNoteId = d.GoodsIssueNoteId,
@@ -895,6 +918,7 @@ namespace PMS.Application.Services.Invoice
                             NoteBalance = d.NoteBalance,
                             ExportIndex = index + 1
                         }).ToList()
+                    };
                 }).ToList();
 
                 return ServiceResult<List<InvoiceDTO>>.SuccessResult(
@@ -1006,6 +1030,83 @@ namespace PMS.Application.Services.Invoice
 
                 return ServiceResult<bool>.Fail(
                     "Có lỗi xảy ra khi xóa hóa đơn.", 500);
+            }
+        }
+
+        public async Task<ServiceResult<bool>> SendLateReminderEmailAsync(int invoiceId, string currentUserId)
+        {
+            try
+            {
+                var invoice = await _unitOfWork.Invoices.Query()
+                    .Include(i => i.SalesOrder)
+                        .ThenInclude(so => so.Customer)
+                    .Include(i => i.InvoiceDetails)
+                        .ThenInclude(d => d.GoodsIssueNote)
+                    .FirstOrDefaultAsync(i => i.Id == invoiceId);
+
+                if (invoice == null)
+                    return ServiceResult<bool>.Fail("Không tìm thấy hóa đơn.", 404);
+
+                if (invoice.PaymentStatus != PaymentStatus.Late)
+                    return ServiceResult<bool>.Fail("Hóa đơn này không ở trạng thái quá hạn.", 400);
+
+                if (invoice.TotalRemain <= 0)
+                    return ServiceResult<bool>.Fail("Hóa đơn này đã được thanh toán đủ, không cần nhắc.", 400);
+
+                var customer = invoice.SalesOrder.Customer;
+                if (customer == null || string.IsNullOrWhiteSpace(customer.Email))
+                    return ServiceResult<bool>.Fail("Không tìm thấy email khách hàng.", 400);
+
+                // Link để nhấn vào invoiceCode (bạn đổi theo frontend thật)
+                var invoiceUrl = $"https://bbpharmacy.site/invoices/{invoice.Id}";
+
+                // body mail (không nhét string trong service)
+                var customerName = customer.FullName ?? customer.Email!;
+                var subject = EmailSubject.InvoiceLateReminder;
+                var body = EmailBody.INVOICE_LATE_REMINDER(customerName, invoice.InvoiceCode, invoiceUrl, invoice.TotalRemain);
+
+                // PDF đính kèm từ template riêng
+                var html = InvoiceTemplate.GenerateLateReminderHtml(invoice);
+                var pdfBytes = _pdfService.GeneratePdfFromHtml(html);
+                var fileName = $"NHAC_THANH_TOAN_{invoice.InvoiceCode}.pdf";
+
+                await _emailService.SendMailWithPDFAsync(
+                    subject,
+                    body,
+                    customer.Email!,
+                    pdfBytes,
+                    fileName);
+
+                // Noti cho khách (tuỳ bạn)
+                try
+                {
+                    var senderId = currentUserId;
+                    if (!string.IsNullOrEmpty(senderId))
+                    {
+                        await _noti.SendNotificationToCustomerAsync(
+                            senderId: senderId,
+                            receiverId: customer.Id,
+                            title: "Nhắc thanh toán hóa đơn quá hạn",
+                            message: $"Hóa đơn {invoice.InvoiceCode} của bạn đã quá hạn. Vui lòng kiểm tra email để thanh toán.",
+                            type: NotificationType.Warning
+                        );
+                    }
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification nhắc thanh toán thất bại: invoiceId={InvoiceId}, receiver={ReceiverId}",
+                        invoice.Id, customer.Id);
+                }
+
+                await _unitOfWork.CommitAsync();
+
+                return ServiceResult<bool>.SuccessResult(true, "Đã gửi email nhắc thanh toán hóa đơn quá hạn.", 200);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "SendLateReminderEmailAsync({InvoiceId}) error", invoiceId);
+                return ServiceResult<bool>.Fail("Có lỗi xảy ra khi gửi email nhắc thanh toán.", 500);
             }
         }
 

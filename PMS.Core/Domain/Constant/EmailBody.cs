@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -131,5 +132,38 @@ namespace PMS.Core.Domain.Constant
             return body;
         }
 
+        public static string INVOICE_LATE_REMINDER(string customerName, string invoiceCode, string invoiceUrl, decimal totalRemain)
+        {
+            var safeName = WebUtility.HtmlEncode(customerName);
+            var safeCode = WebUtility.HtmlEncode(invoiceCode);
+            var safeUrl = WebUtility.HtmlEncode(invoiceUrl);
+
+            var remainText = totalRemain.ToString("N0");
+
+            return $@"
+                <div style=""font-family:Arial,sans-serif;font-size:14px;line-height:1.5;color:#111;"">
+                    <p>Xin chào <b>{safeName}</b>,</p>
+
+                    <p>
+                        Hóa đơn <b><a href=""{safeUrl}"">{safeCode}</a></b> của bạn hiện đã <b>quá hạn thanh toán</b>.
+                    </p>
+
+                    <p>
+                        Số tiền còn phải thanh toán: <b>{remainText} VND</b>.
+                    </p>
+
+                    <p>Vui lòng thanh toán sớm để nhà thuốc tiếp tục xử lý đơn hàng đúng tiến độ.</p>
+
+                    <p style=""margin:18px 0;"">
+                        <a href=""{safeUrl}""
+                           style=""display:inline-block;padding:10px 16px;border-radius:8px;
+                                  background:#6d28d9;color:#fff;text-decoration:none;font-weight:600;"">
+                            Xem hóa đơn
+                        </a>
+                    </p>
+
+                    <p>Trân trọng,<br/>Nhà thuốc</p>
+                </div>";
+        }
     }
 }
