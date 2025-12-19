@@ -19,6 +19,7 @@ using PMS.Data.UnitOfWork;
 using PMS.Tests.TestBase;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -178,7 +179,438 @@ namespace PMS.Tests.Application.Services.SalesQuotationTest
             {
                 RsqId = 1,
                 NoteId = 1,
-                ExpiredDate = new DateTime(2025, 12, 16),
+                ExpiredDate = new DateTime(2025, 11, 10),
+                DepositPercent = 20,
+                DepositDueDays = 1,
+                ExpectedDeliveryDate = 30,
+                Status = 0,
+                Details = detailsList,
+            };
+
+            _staffRepo.Setup(r => r.Query())
+                .Returns(new[] { staffProfile }.AsQueryable().ToMockDbSet().Object);
+
+            _rsqRepo.Setup(r => r.Query())
+                .Returns(new[] { rsq }.AsQueryable().ToMockDbSet().Object);
+
+            _sqNoteRepo.Setup(r => r.Query())
+                .Returns(new[] { note }.AsQueryable().ToMockDbSet().Object);
+
+            _productRepo.Setup(r => r.Query())
+                .Returns(new[] { product }.AsQueryable().ToMockDbSet().Object);
+
+            _lotRepo.Setup(r => r.Query())
+                .Returns(listLot.AsQueryable().ToMockDbSet().Object);
+
+            _taxRepo.Setup(r => r.Query())
+                .Returns(listTax.AsQueryable().ToMockDbSet().Object);
+
+            var result = await _service.CreateSalesQuotationAsync(dto, "1");
+
+            Assert.That(result.StatusCode, Is.EqualTo(400));
+            Assert.That(result.Message, Is.EqualTo("Ngày hết hạn cho báo giá không được nhỏ hơn hôm nay"));
+        }
+
+        [Test]
+        public async Task CreateSalesQuotation_Should_Return_Error_When_Request_Sales_Quotation_Invalid()
+        {
+            var detailsList = new List<SalesQuotationDetailsDTO>()
+            {
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 1,
+                    TaxId = 1,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 2,
+                    TaxId = 2,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 3,
+                    TaxId = 3,
+                    ProductId = 1,
+                    Note = "",
+                },
+            };
+
+            var staffProfile = new StaffProfile
+            {
+                Id = 1,
+            };
+
+            var listRSQDetail = new List<Core.Domain.Entities.RequestSalesQuotationDetails>()
+            {
+                new RequestSalesQuotationDetails() {ProductId = 1}
+            };
+
+            var listLot = new List<LotProduct>()
+            {
+                new LotProduct(){LotID = 1, InputPrice = 22000, ProductID = 1},
+                new LotProduct(){LotID = 2, InputPrice = 24000, ProductID = 1},
+                new LotProduct(){LotID = 3, InputPrice = 26000, ProductID = 1},
+            };
+
+            var rsq = new Core.Domain.Entities.RequestSalesQuotation
+            {
+                Id = 1,
+                Status = Core.Domain.Enums.RequestSalesQuotationStatus.Sent,
+                RequestSalesQuotationDetails = listRSQDetail
+            };
+
+            var note = new Core.Domain.Entities.SalesQuotationNote
+            {
+                Id = 1,
+                IsActive = true,
+            };
+
+            var listTax = new List<TaxPolicy>()
+            {
+                new TaxPolicy(){Id = 1, Status = true},
+                new TaxPolicy(){Id = 2, Status = true},
+                new TaxPolicy(){Id = 3, Status = true},
+            };
+
+            var product = new Core.Domain.Entities.Product
+            {
+                ProductID = 1,
+                ProductName = "A",
+                Unit = "Lọ",
+                MinQuantity = 10,
+                MaxQuantity = 10,
+                TotalCurrentQuantity = 5,
+                Status = true,
+            };
+
+            var dto = new CreateSalesQuotationDTO
+            {
+                RsqId = -1,
+                NoteId = 1,
+                ExpiredDate = new DateTime(2025, 11, 12),
+                DepositPercent = 20,
+                DepositDueDays = 1,
+                ExpectedDeliveryDate = 30,
+                Status = 0,
+                Details = detailsList,
+            };
+
+            _staffRepo.Setup(r => r.Query())
+                .Returns(new[] { staffProfile }.AsQueryable().ToMockDbSet().Object);
+
+            _rsqRepo.Setup(r => r.Query())
+                .Returns(new[] { rsq }.AsQueryable().ToMockDbSet().Object);
+
+            _sqNoteRepo.Setup(r => r.Query())
+                .Returns(new[] { note }.AsQueryable().ToMockDbSet().Object);
+
+            _productRepo.Setup(r => r.Query())
+                .Returns(new[] { product }.AsQueryable().ToMockDbSet().Object);
+
+            _lotRepo.Setup(r => r.Query())
+                .Returns(listLot.AsQueryable().ToMockDbSet().Object);
+
+            _taxRepo.Setup(r => r.Query())
+                .Returns(listTax.AsQueryable().ToMockDbSet().Object);
+
+            var result = await _service.CreateSalesQuotationAsync(dto, "1");
+
+            Assert.That(result.StatusCode, Is.EqualTo(404));
+            Assert.That(result.Message, Is.EqualTo("Không tìm thấy yêu cầu báo giá"));
+        }
+
+        [Test]
+        public async Task CreateSalesQuotation_Should_Return_Error_When_Deposit_Percent_Invalid()
+        {
+            var detailsList = new List<SalesQuotationDetailsDTO>()
+            {
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 1,
+                    TaxId = 1,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 2,
+                    TaxId = 2,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 3,
+                    TaxId = 3,
+                    ProductId = 1,
+                    Note = "",
+                },
+            };
+
+            var staffProfile = new StaffProfile
+            {
+                Id = 1,
+            };
+
+            var listRSQDetail = new List<Core.Domain.Entities.RequestSalesQuotationDetails>()
+            {
+                new RequestSalesQuotationDetails() {ProductId = 1}
+            };
+
+            var listLot = new List<LotProduct>()
+            {
+                new LotProduct(){LotID = 1, InputPrice = 22000, ProductID = 1},
+                new LotProduct(){LotID = 2, InputPrice = 24000, ProductID = 1},
+                new LotProduct(){LotID = 3, InputPrice = 26000, ProductID = 1},
+            };
+
+            var rsq = new Core.Domain.Entities.RequestSalesQuotation
+            {
+                Id = 1,
+                Status = Core.Domain.Enums.RequestSalesQuotationStatus.Sent,
+                RequestSalesQuotationDetails = listRSQDetail
+            };
+
+            var note = new Core.Domain.Entities.SalesQuotationNote
+            {
+                Id = 1,
+                IsActive = true,
+            };
+
+            var listTax = new List<TaxPolicy>()
+            {
+                new TaxPolicy(){Id = 1, Status = true},
+                new TaxPolicy(){Id = 2, Status = true},
+                new TaxPolicy(){Id = 3, Status = true},
+            };
+
+            var product = new Core.Domain.Entities.Product
+            {
+                ProductID = 1,
+                ProductName = "A",
+                Unit = "Lọ",
+                MinQuantity = 10,
+                MaxQuantity = 10,
+                TotalCurrentQuantity = 5,
+                Status = true,
+            };
+
+            var dto = new CreateSalesQuotationDTO
+            {
+                RsqId = 1,
+                NoteId = 1,
+                ExpiredDate = new DateTime(2025, 12, 30),
+                DepositPercent = 100,
+                DepositDueDays = 1,
+                ExpectedDeliveryDate = 30,
+                Status = 0,
+                Details = detailsList,
+            };
+
+            var context = new ValidationContext(dto);
+
+            var results = new List<ValidationResult>();
+
+            var isValid = Validator.TryValidateObject(dto, context, results, true);
+
+            _staffRepo.Setup(r => r.Query())
+                .Returns(new[] { staffProfile }.AsQueryable().ToMockDbSet().Object);
+
+            _rsqRepo.Setup(r => r.Query())
+                .Returns(new[] { rsq }.AsQueryable().ToMockDbSet().Object);
+
+            _sqNoteRepo.Setup(r => r.Query())
+                .Returns(new[] { note }.AsQueryable().ToMockDbSet().Object);
+
+            _productRepo.Setup(r => r.Query())
+                .Returns(new[] { product }.AsQueryable().ToMockDbSet().Object);
+
+            _lotRepo.Setup(r => r.Query())
+                .Returns(listLot.AsQueryable().ToMockDbSet().Object);
+
+            _taxRepo.Setup(r => r.Query())
+                .Returns(listTax.AsQueryable().ToMockDbSet().Object);
+
+            var result = await _service.CreateSalesQuotationAsync(dto, "1");
+
+            Assert.False(isValid);
+            Assert.That(results.First().ErrorMessage, Is.EqualTo("Cọc trong khoảng từ 0% đến 70%"));
+        }
+
+        [Test]
+        public async Task CreateSalesQuotation_Should_Return_Error_When_Deposit_Due_Days_Invalid()
+        {
+            var detailsList = new List<SalesQuotationDetailsDTO>()
+            {
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 1,
+                    TaxId = 1,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 2,
+                    TaxId = 2,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 3,
+                    TaxId = 3,
+                    ProductId = 1,
+                    Note = "",
+                },
+            };
+
+            var staffProfile = new StaffProfile
+            {
+                Id = 1,
+            };
+
+            var listRSQDetail = new List<Core.Domain.Entities.RequestSalesQuotationDetails>()
+            {
+                new RequestSalesQuotationDetails() {ProductId = 1}
+            };
+
+            var listLot = new List<LotProduct>()
+            {
+                new LotProduct(){LotID = 1, InputPrice = 22000, ProductID = 1},
+                new LotProduct(){LotID = 2, InputPrice = 24000, ProductID = 1},
+                new LotProduct(){LotID = 3, InputPrice = 26000, ProductID = 1},
+            };
+
+            var rsq = new Core.Domain.Entities.RequestSalesQuotation
+            {
+                Id = 1,
+                Status = Core.Domain.Enums.RequestSalesQuotationStatus.Sent,
+                RequestSalesQuotationDetails = listRSQDetail
+            };
+
+            var note = new Core.Domain.Entities.SalesQuotationNote
+            {
+                Id = 1,
+                IsActive = true,
+            };
+
+            var listTax = new List<TaxPolicy>()
+            {
+                new TaxPolicy(){Id = 1, Status = true},
+                new TaxPolicy(){Id = 2, Status = true},
+                new TaxPolicy(){Id = 3, Status = true},
+            };
+
+            var product = new Core.Domain.Entities.Product
+            {
+                ProductID = 1,
+                ProductName = "A",
+                Unit = "Lọ",
+                MinQuantity = 10,
+                MaxQuantity = 10,
+                TotalCurrentQuantity = 5,
+                Status = true,
+            };
+
+            var dto = new CreateSalesQuotationDTO
+            {
+                RsqId = 1,
+                NoteId = 1,
+                ExpiredDate = new DateTime(2025, 12, 30),
+                DepositPercent = 20,
+                DepositDueDays = 40,
+                ExpectedDeliveryDate = 30,
+                Status = 0,
+                Details = detailsList,
+            };
+
+            _staffRepo.Setup(r => r.Query())
+                .Returns(new[] { staffProfile }.AsQueryable().ToMockDbSet().Object);
+
+            _rsqRepo.Setup(r => r.Query())
+                .Returns(new[] { rsq }.AsQueryable().ToMockDbSet().Object);
+
+            _sqNoteRepo.Setup(r => r.Query())
+                .Returns(new[] { note }.AsQueryable().ToMockDbSet().Object);
+
+            _productRepo.Setup(r => r.Query())
+                .Returns(new[] { product }.AsQueryable().ToMockDbSet().Object);
+
+            _lotRepo.Setup(r => r.Query())
+                .Returns(listLot.AsQueryable().ToMockDbSet().Object);
+
+            _taxRepo.Setup(r => r.Query())
+                .Returns(listTax.AsQueryable().ToMockDbSet().Object);
+
+            var result = await _service.CreateSalesQuotationAsync(dto, "1");
+
+            Assert.That(result.StatusCode, Is.EqualTo(400));
+            Assert.That(result.Message, Is.EqualTo("Thời hạn thanh toán cọc không được bằng hoặc vượt quá ngày giao hàng dự kiến"));
+        }
+
+        [Test]
+        public async Task CreateSalesQuotation_Should_Return_Error_When_Details_Empty_Invalid()
+        {
+            var detailsList = new List<SalesQuotationDetailsDTO>();
+
+            var staffProfile = new StaffProfile
+            {
+                Id = 1,
+            };
+
+            var listRSQDetail = new List<Core.Domain.Entities.RequestSalesQuotationDetails>()
+            {
+                new RequestSalesQuotationDetails() {ProductId = 1}
+            };
+
+            var listLot = new List<LotProduct>()
+            {
+                new LotProduct(){LotID = 1, InputPrice = 22000, ProductID = 1},
+                new LotProduct(){LotID = 2, InputPrice = 24000, ProductID = 1},
+                new LotProduct(){LotID = 3, InputPrice = 26000, ProductID = 1},
+            };
+
+            var rsq = new Core.Domain.Entities.RequestSalesQuotation
+            {
+                Id = 1,
+                Status = Core.Domain.Enums.RequestSalesQuotationStatus.Sent,
+                RequestSalesQuotationDetails = listRSQDetail
+            };
+
+            var note = new Core.Domain.Entities.SalesQuotationNote
+            {
+                Id = 1,
+                IsActive = true,
+            };
+
+            var listTax = new List<TaxPolicy>()
+            {
+                new TaxPolicy(){Id = 1, Status = true},
+                new TaxPolicy(){Id = 2, Status = true},
+                new TaxPolicy(){Id = 3, Status = true},
+            };
+
+            var product = new Core.Domain.Entities.Product
+            {
+                ProductID = 1,
+                ProductName = "A",
+                Unit = "Lọ",
+                MinQuantity = 10,
+                MaxQuantity = 10,
+                TotalCurrentQuantity = 5,
+                Status = true,
+            };
+
+            var dto = new CreateSalesQuotationDTO
+            {
+                RsqId = 1,
+                NoteId = 1,
+                ExpiredDate = new DateTime(2025, 12, 30),
                 DepositPercent = 20,
                 DepositDueDays = 3,
                 ExpectedDeliveryDate = 30,
@@ -207,7 +639,239 @@ namespace PMS.Tests.Application.Services.SalesQuotationTest
             var result = await _service.CreateSalesQuotationAsync(dto, "1");
 
             Assert.That(result.StatusCode, Is.EqualTo(400));
-            Assert.That(result.Message, Is.EqualTo("Ngày hết hạn cho báo giá không được nhỏ hơn hôm nay"));
+            Assert.That(result.Message, Is.EqualTo("Danh sách chi tiết báo giá không được để trống"));
+        }
+
+
+        [Test]
+        public async Task CreateSalesQuotation_Should_Return_Success()
+        {
+            var detailsList = new List<SalesQuotationDetailsDTO>()
+            {
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 1,
+                    TaxId = 1,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 2,
+                    TaxId = 2,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 3,
+                    TaxId = 3,
+                    ProductId = 1,
+                    Note = "",
+                },
+            };
+
+            var staffProfile = new StaffProfile
+            {
+                Id = 1,
+            };
+
+            var listRSQDetail = new List<Core.Domain.Entities.RequestSalesQuotationDetails>()
+            {
+                new RequestSalesQuotationDetails() {ProductId = 1}
+            };
+
+            var listLot = new List<LotProduct>()
+            {
+                new LotProduct(){LotID = 1, InputPrice = 22000, ProductID = 1},
+                new LotProduct(){LotID = 2, InputPrice = 24000, ProductID = 1},
+                new LotProduct(){LotID = 3, InputPrice = 26000, ProductID = 1},
+            };
+
+            var rsq = new Core.Domain.Entities.RequestSalesQuotation
+            {
+                Id = 1,
+                Status = Core.Domain.Enums.RequestSalesQuotationStatus.Sent,
+                RequestSalesQuotationDetails = listRSQDetail
+            };
+
+            var note = new Core.Domain.Entities.SalesQuotationNote
+            {
+                Id = 1,
+                IsActive = true,
+            };
+
+            var listTax = new List<TaxPolicy>()
+            {
+                new TaxPolicy(){Id = 1, Status = true},
+                new TaxPolicy(){Id = 2, Status = true},
+                new TaxPolicy(){Id = 3, Status = true},
+            };
+
+            var product = new Core.Domain.Entities.Product
+            {
+                ProductID = 1,
+                ProductName = "A",
+                Unit = "Lọ",
+                MinQuantity = 10,
+                MaxQuantity = 10,
+                TotalCurrentQuantity = 5,
+                Status = true,
+            };
+
+            var dto = new CreateSalesQuotationDTO
+            {
+                RsqId = 1,
+                NoteId = 1,
+                ExpiredDate = new DateTime(2025, 12, 30),
+                DepositPercent = 20,
+                DepositDueDays = 3,
+                ExpectedDeliveryDate = 30,
+                Status = 0,
+                Details = detailsList,
+            };
+
+            _staffRepo.Setup(r => r.Query())
+                .Returns(new[] { staffProfile }.AsQueryable().ToMockDbSet().Object);
+
+            _rsqRepo.Setup(r => r.Query())
+                .Returns(new[] { rsq }.AsQueryable().ToMockDbSet().Object);
+
+            _sqNoteRepo.Setup(r => r.Query())
+                .Returns(new[] { note }.AsQueryable().ToMockDbSet().Object);
+
+            _productRepo.Setup(r => r.Query())
+                .Returns(new[] { product }.AsQueryable().ToMockDbSet().Object);
+
+            _lotRepo.Setup(r => r.Query())
+                .Returns(listLot.AsQueryable().ToMockDbSet().Object);
+
+            _taxRepo.Setup(r => r.Query())
+                .Returns(listTax.AsQueryable().ToMockDbSet().Object);
+
+            var result = await _service.CreateSalesQuotationAsync(dto, "1");
+
+            Assert.That(result.StatusCode, Is.EqualTo(201));
+            Assert.That(result.Message, Is.EqualTo("Tạo thành công"));
+        }
+
+        [Test]
+        public async Task CreateSalesQuotation_Should_Return_Success2()
+        {
+            var detailsList = new List<SalesQuotationDetailsDTO>()
+            {
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 1,
+                    TaxId = 1,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 2,
+                    TaxId = 2,
+                    ProductId = 1,
+                    Note = "",
+                },
+                new SalesQuotationDetailsDTO
+                {
+                    LotId = 3,
+                    TaxId = 3,
+                    ProductId = 1,
+                    Note = "",
+                },
+            };
+
+            var staffProfile = new StaffProfile
+            {
+                Id = 1,
+            };
+
+            var listRSQDetail = new List<Core.Domain.Entities.RequestSalesQuotationDetails>()
+            {
+                new RequestSalesQuotationDetails() {ProductId = 1}
+            };
+
+            var listLot = new List<LotProduct>()
+            {
+                new LotProduct(){LotID = 1, InputPrice = 22000, ProductID = 1},
+                new LotProduct(){LotID = 2, InputPrice = 24000, ProductID = 1},
+                new LotProduct(){LotID = 3, InputPrice = 26000, ProductID = 1},
+            };
+
+            var rsq = new Core.Domain.Entities.RequestSalesQuotation
+            {
+                Id = 1,
+                Status = Core.Domain.Enums.RequestSalesQuotationStatus.Sent,
+                RequestSalesQuotationDetails = listRSQDetail
+            };
+
+            var note = new Core.Domain.Entities.SalesQuotationNote
+            {
+                Id = 1,
+                IsActive = true,
+            };
+
+            var listTax = new List<TaxPolicy>()
+            {
+                new TaxPolicy(){Id = 1, Status = true},
+                new TaxPolicy(){Id = 2, Status = true},
+                new TaxPolicy(){Id = 3, Status = true},
+            };
+
+            var product = new Core.Domain.Entities.Product
+            {
+                ProductID = 1,
+                ProductName = "A",
+                Unit = "Lọ",
+                MinQuantity = 10,
+                MaxQuantity = 10,
+                TotalCurrentQuantity = 5,
+                Status = true,
+            };
+
+            var dto = new CreateSalesQuotationDTO
+            {
+                RsqId = 1,
+                NoteId = 1,
+                ExpiredDate = new DateTime(2025, 12, 30),
+                DepositPercent = 0,
+                DepositDueDays = 1,
+                ExpectedDeliveryDate = 30,
+                Status = 0,
+                Details = detailsList,
+            };
+
+            var context = new ValidationContext(dto);
+
+            var results = new List<ValidationResult>();
+
+            var isValid = Validator.TryValidateObject(dto, context, results, true);
+
+            _staffRepo.Setup(r => r.Query())
+                .Returns(new[] { staffProfile }.AsQueryable().ToMockDbSet().Object);
+
+            _rsqRepo.Setup(r => r.Query())
+                .Returns(new[] { rsq }.AsQueryable().ToMockDbSet().Object);
+
+            _sqNoteRepo.Setup(r => r.Query())
+                .Returns(new[] { note }.AsQueryable().ToMockDbSet().Object);
+
+            _productRepo.Setup(r => r.Query())
+                .Returns(new[] { product }.AsQueryable().ToMockDbSet().Object);
+
+            _lotRepo.Setup(r => r.Query())
+                .Returns(listLot.AsQueryable().ToMockDbSet().Object);
+
+            _taxRepo.Setup(r => r.Query())
+                .Returns(listTax.AsQueryable().ToMockDbSet().Object);
+
+            var result = await _service.CreateSalesQuotationAsync(dto, "1");
+
+            Assert.True(isValid);
+            Assert.That(result.StatusCode, Is.EqualTo(201));
+            Assert.That(result.Message, Is.EqualTo("Tạo thành công"));
         }
     }
 }
