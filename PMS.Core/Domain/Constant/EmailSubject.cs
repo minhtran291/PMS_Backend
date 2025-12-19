@@ -11,6 +11,7 @@ namespace PMS.Core.Domain.Constant
         public const string CONFIRM_EMAIL = "Xác nhận tài khoản";
         public const string RESET_PASSWORD = "Đặt lại mật khẩu";
         public const string SALES_QUOTATION = "Báo giá";
-        public const string Invoice = "Hóa đơn giá trị gia tăng";
+        public const string Invoice = "Phiếu Thu Tiền";
+        public const string InvoiceLateReminder = "Nhắc nhở thanh toán hóa đơn quá hạn";
     }
 }

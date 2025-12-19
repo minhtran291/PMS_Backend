@@ -22,6 +22,11 @@ namespace PMS.Application.DTOs.Invoice
         public decimal TotalDeposit { get; set; }
         public decimal TotalRemain { get; set; }
 
+        public string CustomerName { get; set; }
+        public DateTime? LatestExportedAt { get; set; }
+        public DateTime? PaymentDueAt { get; set; }  
+
+
         public List<InvoiceDetailDTO> Details { get; set; } = new();
     }
 }

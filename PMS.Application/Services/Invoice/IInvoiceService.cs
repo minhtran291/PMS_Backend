@@ -30,6 +30,6 @@ namespace PMS.Application.Services.Invoice
             int invoiceId,
             SmartCASignInvoiceRequestDTO request);
         Task<ServiceResult<bool>> DeleteDraftInvoiceAsync(int invoiceId);
-
+        public Task<ServiceResult<bool>> SendLateReminderEmailAsync(int invoiceId, string currentUserId);
     }
 }

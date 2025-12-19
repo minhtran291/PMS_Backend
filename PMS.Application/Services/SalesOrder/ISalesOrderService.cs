@@ -18,8 +18,7 @@ namespace PMS.Application.Services.SalesOrder
         Task<ServiceResult<SalesQuotationResponseDTO>> GetQuotationInfo(int salesQuotationId);
         Task<ServiceResult<object>> CreateDraftFromSalesQuotationAsync
            (SalesOrderRequestDTO req);
-        Task<ServiceResult<object>> UpdateDraftQuantitiesAsync
-            (SalesOrderUpdateDTO upd);
+        Task<ServiceResult<object>> UpdateDraftQuantitiesAsync(int orderId, UpdateDraftQuantitiesDTO upd, string? customerId);
         Task<ServiceResult<bool>> DeleteDraftAsync(int orderId);
 
         //Send Order and check current product quantity
@@ -55,6 +54,8 @@ namespace PMS.Application.Services.SalesOrder
         public Task<ServiceResult<IEnumerable<SalesOrderDepositCheckItemDTO>>> ListDepositChecksAsync(DepositCheckStatus? status = null);
         //
         Task<ServiceResult<bool>> CheckAndUpdateDeliveredStatusAsync();
+
+        public Task<int> AutoMarkNotCompleteWhenDepositOverdueAsync();
 
         //Lấy ra toàn bộ SalesOrder chưa lấy hết hàng
         Task<ServiceResult<IEnumerable<SalesOrderItemDTO>>> ListSaleOrderNotDeliveredAsync();
