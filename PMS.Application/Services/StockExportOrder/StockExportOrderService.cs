@@ -33,6 +33,7 @@ namespace PMS.Application.Services.StockExportOrder
             {
                 var salesOrder = await _unitOfWork.SalesOrder.Query()
                     .Include(so => so.SalesOrderDetails)
+                    .Include(so => so.SalesQuotation)
                     .FirstOrDefaultAsync(so => so.SalesOrderId == dto.SalesOrderId);
 
                 if (salesOrder == null)
@@ -42,7 +43,7 @@ namespace PMS.Application.Services.StockExportOrder
                         Message = "Không tìm thấy đơn hàng mua"
                     };
 
-                if (salesOrder.IsDeposited == false)
+                if (salesOrder.IsDeposited == false && salesOrder.SalesQuotation.DepositPercent > 0)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
