@@ -1068,6 +1068,7 @@ namespace PMS.API.Services.POService
                     poid = po.POID,
                     toatlPo = po.Total,
                     Status=po.Status,
+                    debt=po.Debt,
                 }).ToList();
 
                 var result = new DebtReportDTO
