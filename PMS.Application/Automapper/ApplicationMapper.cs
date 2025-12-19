@@ -36,7 +36,8 @@ namespace PMS.Application.Automapper
             CreateMap<TaxPolicy, DTOs.SalesQuotation.TaxPolicyDTO>();
 
             CreateMap<SalesQuotation, SalesQuotationDTO>()
-                .ForMember(dest => dest.RequestCode, opt => opt.MapFrom(src => src.RequestSalesQuotation.RequestCode));
+                .ForMember(dest => dest.RequestCode, opt => opt.MapFrom(src => src.RequestSalesQuotation.RequestCode))
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.RequestSalesQuotation.CustomerProfile.User.FullName));
 
             CreateMap<SalesQuotationNote, SalesQuotationNoteDTO>();
 
@@ -78,7 +79,8 @@ namespace PMS.Application.Automapper
             CreateMap<GoodsIssueNote, GoodsIssueNoteListDTO>()
                 .ForMember(dest => dest.WarehouseName, opt => opt.MapFrom(src => src.Warehouse.Name))
                 .ForMember(dest => dest.CreateBy, opt => opt.MapFrom(src => src.WarehouseStaff.FullName))
-                .ForMember(dest => dest.StockExportOrderCode, opt => opt.MapFrom(src => src.StockExportOrder.StockExportOrderCode));
+                .ForMember(dest => dest.StockExportOrderCode, opt => opt.MapFrom(src => src.StockExportOrder.StockExportOrderCode))
+                .ForMember(dest => dest.SalesOrderCode, opt => opt.MapFrom(src => src.StockExportOrder.SalesOrder.SalesOrderCode));
 
             CreateMap<GoodsIssueNoteDetails, GoodsIssueNoteDetailsDTO>()
                 .ForMember(dest => dest.WarehouseLocationName, opt => opt.MapFrom(src => src.LotProduct.WarehouseLocation.LocationName))

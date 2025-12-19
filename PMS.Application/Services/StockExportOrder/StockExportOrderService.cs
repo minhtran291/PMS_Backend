@@ -33,6 +33,7 @@ namespace PMS.Application.Services.StockExportOrder
             {
                 var salesOrder = await _unitOfWork.SalesOrder.Query()
                     .Include(so => so.SalesOrderDetails)
+                    .Include(so => so.SalesQuotation)
                     .FirstOrDefaultAsync(so => so.SalesOrderId == dto.SalesOrderId);
 
                 if (salesOrder == null)
@@ -42,7 +43,7 @@ namespace PMS.Application.Services.StockExportOrder
                         Message = "Không tìm thấy đơn hàng mua"
                     };
 
-                if (salesOrder.IsDeposited == false)
+                if (salesOrder.IsDeposited == false && salesOrder.SalesQuotation.DepositPercent > 0)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
@@ -374,7 +375,7 @@ namespace PMS.Application.Services.StockExportOrder
                 var previousExports = await _unitOfWork.StockExportOrder.Query()
                     .AsNoTracking()
                     .Include(seo => seo.StockExportOrderDetails)
-                    .Where(seo => seo.SalesOrderId == stockExportOrder.SalesOrderId && seo.Id != stockExportOrder.Id)
+                    .Where(seo => seo.SalesOrderId == stockExportOrder.SalesOrderId && seo.Id != stockExportOrder.Id && seo.Status != StockExportOrderStatus.Cancel)
                     .ToListAsync();
 
                 if (previousExports.Any())
@@ -447,7 +448,7 @@ namespace PMS.Application.Services.StockExportOrder
                     };
 
                 var stockExportOrder = await _unitOfWork.StockExportOrder.Query()
-                    .Where(s => s.SalesOrderId == soId)
+                    .Where(s => s.SalesOrderId == soId && s.Status != StockExportOrderStatus.Cancel)
                     .ToListAsync();
 
                 var exportedQuantities = stockExportOrder
@@ -897,7 +898,7 @@ namespace PMS.Application.Services.StockExportOrder
 
             var query = _unitOfWork.StockExportOrder.Query()
                 .Include(seo => seo.StockExportOrderDetails)
-                .Where(seo => seo.SalesOrderId == salesOrder.SalesOrderId);
+                .Where(seo => seo.SalesOrderId == salesOrder.SalesOrderId && seo.Status != StockExportOrderStatus.Cancel);
 
             if (seoId != default)
                 query = query.Where(seo => seo.Id != seoId);
@@ -1124,7 +1125,7 @@ namespace PMS.Application.Services.StockExportOrder
                 return new ServiceResult<object>
                 {
                     StatusCode = 500,
-                    Message = "Lỗi hệ thống"
+                    Message = "Lỗi"
                 };
             }
         }
@@ -1134,6 +1135,12 @@ namespace PMS.Application.Services.StockExportOrder
             try
             {
                 var stockExportOrder = await _unitOfWork.StockExportOrder.Query()
+                    .Include(s => s.StockExportOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.Product)
+                    .Include(s => s.StockExportOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.Supplier)
                     .FirstOrDefaultAsync(s => s.Id == seoId);
 
                 if (stockExportOrder == null)
@@ -1150,6 +1157,110 @@ namespace PMS.Application.Services.StockExportOrder
                         Message = "Trạng thái hiện tại của yêu cầu phải là không đủ hàng thì mới có thể chuyển sang chờ xuất."
                     };
 
+                // ton kho ban dau
+                var stockDict = await _unitOfWork.LotProduct.Query()
+                    .Where(lp => lp.LotQuantity > 0 && lp.ExpiredDate > DateTime.Today)
+                    .GroupBy(lp => new
+                    {
+                        lp.ProductID,
+                        lp.SalePrice,
+                        lp.InputPrice,
+                        lp.ExpiredDate,
+                        lp.SupplierID
+                    })
+                    .Select(g => new
+                    {
+                        g.Key,
+                        Quantity = g.Sum(x => x.LotQuantity)
+                    })
+                    .ToDictionaryAsync(x => x.Key, x => x.Quantity);
+
+                // lay stock export order
+                var seo = await _unitOfWork.StockExportOrder.Query()
+                    .Include(d => d.StockExportOrderDetails)
+                        .ThenInclude(d => d.LotProduct)
+                    .Where(d =>
+                        d.Status == StockExportOrderStatus.ReadyToExport &&
+                        d.Id != seoId)
+                    .ToListAsync();
+
+                // lay goods issue note
+                var gin = await _unitOfWork.GoodsIssueNote.Query()
+                    .Include(g => g.GoodsIssueNoteDetails)
+                    .Where(g => g.Status == GoodsIssueNoteStatus.Sent)
+                    .ToListAsync();
+
+                // nhom stock export order
+                var reservedBySEO = seo.SelectMany(s => s.StockExportOrderDetails)
+                    .GroupBy(d => new
+                    {
+                        d.LotProduct.ProductID,
+                        d.LotProduct.SalePrice,
+                        d.LotProduct.InputPrice,
+                        d.LotProduct.ExpiredDate,
+                        d.LotProduct.SupplierID,
+                    })
+                    .Select(g => new
+                    {
+                        g.Key,
+                        Quantity = g.Sum(x => x.Quantity)
+                    })
+                    .ToList();
+
+                // mhom goods issue note
+                var reservedByGIN = gin.SelectMany(g => g.GoodsIssueNoteDetails)
+                    .GroupBy(g => new
+                    {
+                        g.LotProduct.ProductID,
+                        g.LotProduct.SalePrice,
+                        g.LotProduct.InputPrice,
+                        g.LotProduct.ExpiredDate,
+                        g.LotProduct.SupplierID,
+                    })
+                    .Select(g => new
+                    {
+                        g.Key,
+                        Quantity = g.Sum(x => x.Quantity)
+                    })
+                    .ToList();
+
+                foreach (var r in reservedBySEO)
+                {
+                    if (stockDict.ContainsKey(r.Key))
+                        stockDict[r.Key] = Math.Max(0, stockDict[r.Key] - r.Quantity);
+                }
+
+                foreach (var r in reservedByGIN)
+                {
+                    if (stockDict.ContainsKey(r.Key))
+                        stockDict[r.Key] = Math.Max(0, stockDict[r.Key] - r.Quantity);
+                }
+
+                var errors = new List<string>();
+
+                foreach (var detail in stockExportOrder.StockExportOrderDetails)
+                {
+                    var lp = detail.LotProduct;
+
+                    var key = new
+                    {
+                        lp.ProductID,
+                        lp.SalePrice,
+                        lp.InputPrice,
+                        lp.ExpiredDate,
+                        lp.SupplierID
+                    };
+
+                    stockDict.TryGetValue(key, out var available);
+
+                    if (detail.Quantity > available)
+                    {
+                        errors.Add($"{lp.Product.ProductName} ({lp.ExpiredDate:dd/MM/yyyy}) ({lp.Supplier.Name}) thiếu {detail.Quantity - available}");
+                    }
+                }
+
+                var message = "Yêu cầu bổ sung:\n" + string.Join("\n", errors);
+
                 stockExportOrder.Status = StockExportOrderStatus.Await;
 
                 _unitOfWork.StockExportOrder.Update(stockExportOrder);
@@ -1160,6 +1271,13 @@ namespace PMS.Application.Services.StockExportOrder
                     [UserRoles.WAREHOUSE_STAFF],
                     "Bạn nhận được 1 thông báo mới",
                     $"Đã chuyển trạng thái thành chờ xuất cho yêu cầu: {stockExportOrder.StockExportOrderCode}",
+                    NotificationType.Message);
+
+                await _notificationService.SendNotificationToRolesAsync(
+                    userId,
+                    [UserRoles.PURCHASES_STAFF],
+                    "Bạn nhận được 1 thông báo mới",
+                    $"{message}",
                     NotificationType.Message);
 
                 return new ServiceResult<object>
@@ -1202,6 +1320,58 @@ namespace PMS.Application.Services.StockExportOrder
             catch (Exception ex)
             {
                 _logger.LogError($"Loi: {ex.StackTrace}, {ex.Message}");
+            }
+        }
+
+        public async Task<ServiceResult<object>> CancelSEOWithReturn(int seoId, string userId)
+        {
+            try
+            {
+                var stockExportOrder = await _unitOfWork.StockExportOrder.Query()
+                    .FirstOrDefaultAsync(s => s.Id == seoId);
+
+                if (stockExportOrder == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy yêu cầu xuất"
+                    };
+
+                if (stockExportOrder.Status != StockExportOrderStatus.NotEnough)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 400,
+                        Message = "Trạng thái hiện tại của yêu cầu phải là không đủ hàng thì mới có thể chuyển sang hủy yêu cầu."
+                    };
+
+                stockExportOrder.Status = StockExportOrderStatus.Cancel;
+
+                _unitOfWork.StockExportOrder.Update(stockExportOrder);
+
+                await _unitOfWork.CommitAsync();
+
+                await _notificationService.SendNotificationToRolesAsync(
+                    userId,
+                    [UserRoles.WAREHOUSE_STAFF],
+                    "Bạn nhận được 1 thông báo mới",
+                    $"Đã chuyển trạng thái thành hủy cho yêu cầu: {stockExportOrder.StockExportOrderCode}",
+                    NotificationType.Message);
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Chuyển trạng thái thành công"
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError($"Loi: {ex.StackTrace}, {ex.Message}");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
             }
         }
     }

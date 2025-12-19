@@ -200,39 +200,39 @@ namespace PMS.Application.Services.SalesQuotation
                         Message = "Thời hạn giao hàng dự kiến không được quá 1 năm"
                     };
 
-                var lotIdsInDto = dto.Details
-                    .Where(d => d.LotId != null)
-                    .Select(d => d.LotId!.Value)
-                    .ToList();
+                //var lotIdsInDto = dto.Details
+                //    .Where(d => d.LotId != null)
+                //    .Select(d => d.LotId!.Value)
+                //    .ToList();
 
-                if (lotIdsInDto.Any())
-                {
-                    var lotEntities = await _unitOfWork.LotProduct.Query()
-                        .Where(l => lotIdsInDto.Contains(l.LotID))
-                        .ToListAsync();
+                //if (lotIdsInDto.Any())
+                //{
+                //    var lotEntities = await _unitOfWork.LotProduct.Query()
+                //        .Where(l => lotIdsInDto.Contains(l.LotID))
+                //        .ToListAsync();
 
-                    var groupedLots = lotEntities
-                        .GroupBy(l => new
-                        {
-                            l.SalePrice,
-                            l.InputPrice,
-                            l.ExpiredDate,
-                            l.SupplierID,
-                            l.ProductID
-                        });
+                //    var groupedLots = lotEntities
+                //        .GroupBy(l => new
+                //        {
+                //            l.SalePrice,
+                //            l.InputPrice,
+                //            l.ExpiredDate,
+                //            l.SupplierID,
+                //            l.ProductID
+                //        });
 
-                    var selectedLots = new List<LotProduct>();
+                //    var selectedLots = new List<LotProduct>();
 
-                    foreach(var group in groupedLots)
-                    {
-                        var selected = group.OrderBy(l => l.WarehouselocationID).First();
-                        selectedLots.Add(selected);
-                    }
+                //    foreach(var group in groupedLots)
+                //    {
+                //        var selected = group.OrderBy(l => l.WarehouselocationID).First();
+                //        selectedLots.Add(selected);
+                //    }
 
-                    dto.Details = dto.Details
-                        .Where(d => selectedLots.Any(sl => sl.LotID == d.LotId))
-                        .ToList();
-                }
+                //    dto.Details = dto.Details
+                //        .Where(d => selectedLots.Any(sl => sl.LotID == d.LotId))
+                //        .ToList();
+                //}
 
                 await _unitOfWork.BeginTransactionAsync();
 
@@ -272,6 +272,7 @@ namespace PMS.Application.Services.SalesQuotation
                     .Include(sq => sq.SalesQuotationNote)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.LotProduct)
+                            .ThenInclude(lp => lp.Supplier)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.Product)
                     .Include(sq => sq.StaffProfile)
@@ -437,20 +438,6 @@ namespace PMS.Application.Services.SalesQuotation
                     Message = "Có lô hàng không tồn tại trong hệ thống"
                 };
 
-            //var invalidLots = lots
-            //    .Where(l => l.ExpiredDate.Date <= DateTime.Today || l.LotQuantity <= 0)
-            //    .ToList();
-
-            //if (invalidLots.Any())
-            //{
-            //    var names = string.Join(", ", invalidLots.Select(l => l.Product.ProductName));
-            //    return new ServiceResult<object>
-            //    {
-            //        StatusCode = 400,
-            //        Message = $"Các lô hàng không hợp lệ (hết hạn hoặc hết hàng): {names}"
-            //    };
-            //}
-
             var outOfScopeLots = lots
                 .Where(l => !validProductIds.Contains(l.ProductID))
                 .ToList();
@@ -516,20 +503,24 @@ namespace PMS.Application.Services.SalesQuotation
                         Message = "Có sản phẩm không chọn lô bị trùng lặp trong danh sách chi tiết"
                     };
                 }
+            }
 
-                //var inStockProducts = await _unitOfWork.Product.Query()
-                //    .Where(p => productsWithoutLot.Contains(p.ProductID))
-                //    .Where(p => p.LotProducts.Any(lp => lp.LotQuantity > 0 && lp.ExpiredDate > DateTime.Today))
-                //    .ToListAsync();
+            var invalidLotMixByProduct = dto.Details
+                .GroupBy(d => d.ProductId)
+                .Where(g =>
+                    g.Any(x => x.LotId == null) &&
+                    g.Any(x => x.LotId != null)
+                )
+                .Select(g => g.Key)
+                .ToList();
 
-                //if (inStockProducts.Any())
-                //{
-                //    return new ServiceResult<object>
-                //    {
-                //        StatusCode = 400,
-                //        Message = "Các sản phẩm chưa chọn lô nhưng vẫn còn hàng"
-                //    };
-                //}
+            if (invalidLotMixByProduct.Any())
+            {
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = "Đã chọn hết hàng cho sản phẩm rồi thì không thể chọn báo giá cho cùng 1 sản phẩm"
+                };
             }
 
             return null;
@@ -624,39 +615,39 @@ namespace PMS.Application.Services.SalesQuotation
                         Message = "Thời hạn giao hàng dự kiến không được quá 1 năm"
                     };
 
-                var lotIdsInDto = dto.Details
-                    .Where(d => d.LotId != null)
-                    .Select(d => d.LotId!.Value)
-                    .ToList();
+                //var lotIdsInDto = dto.Details
+                //    .Where(d => d.LotId != null)
+                //    .Select(d => d.LotId!.Value)
+                //    .ToList();
 
-                if (lotIdsInDto.Any())
-                {
-                    var lotEntities = await _unitOfWork.LotProduct.Query()
-                        .Where(l => lotIdsInDto.Contains(l.LotID))
-                        .ToListAsync();
+                //if (lotIdsInDto.Any())
+                //{
+                //    var lotEntities = await _unitOfWork.LotProduct.Query()
+                //        .Where(l => lotIdsInDto.Contains(l.LotID))
+                //        .ToListAsync();
 
-                    var groupedLots = lotEntities
-                        .GroupBy(l => new
-                        {
-                            l.SalePrice,
-                            l.InputPrice,
-                            l.ExpiredDate,
-                            l.SupplierID,
-                            l.ProductID
-                        });
+                //    var groupedLots = lotEntities
+                //        .GroupBy(l => new
+                //        {
+                //            l.SalePrice,
+                //            l.InputPrice,
+                //            l.ExpiredDate,
+                //            l.SupplierID,
+                //            l.ProductID
+                //        });
 
-                    var selectedLots = new List<LotProduct>();
+                //    var selectedLots = new List<LotProduct>();
 
-                    foreach (var group in groupedLots)
-                    {
-                        var selected = group.OrderBy(l => l.WarehouselocationID).First();
-                        selectedLots.Add(selected);
-                    }
+                //    foreach (var group in groupedLots)
+                //    {
+                //        var selected = group.OrderBy(l => l.WarehouselocationID).First();
+                //        selectedLots.Add(selected);
+                //    }
 
-                    dto.Details = dto.Details
-                        .Where(d => selectedLots.Any(sl => sl.LotID == d.LotId))
-                        .ToList();
-                }
+                //    dto.Details = dto.Details
+                //        .Where(d => selectedLots.Any(sl => sl.LotID == d.LotId))
+                //        .ToList();
+                //}
 
                 await _unitOfWork.BeginTransactionAsync();
 
@@ -728,6 +719,7 @@ namespace PMS.Application.Services.SalesQuotation
                     .Include(sq => sq.SalesQuotationNote)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.LotProduct)
+                            .ThenInclude(lp => lp.Supplier)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.Product)
                     .Include(sq => sq.StaffProfile)
@@ -889,6 +881,8 @@ namespace PMS.Application.Services.SalesQuotation
                 var query = _unitOfWork.SalesQuotation.Query()
                     .AsNoTracking()
                     .Include(sq => sq.RequestSalesQuotation)
+                        .ThenInclude(r => r.CustomerProfile)
+                            .ThenInclude(c => c.User)
                     .AsQueryable();
 
                 if (role.Equals("CUSTOMER"))
@@ -972,6 +966,7 @@ namespace PMS.Application.Services.SalesQuotation
                     .Include(sq => sq.SalesQuotationNote)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.LotProduct)
+                            .ThenInclude(lp => lp.Supplier)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.Product)
                     .Include(sq => sq.StaffProfile)
@@ -1211,6 +1206,7 @@ namespace PMS.Application.Services.SalesQuotation
                             .ThenInclude(c => c.User)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(sqd => sqd.LotProduct)
+                            .ThenInclude(lp => lp.Supplier)
                     .Include(sq => sq.SalesQuotaionDetails)
                         .ThenInclude(d => d.TaxPolicy)
                     .Include(sq => sq.SalesQuotaionDetails)
@@ -1301,7 +1297,8 @@ namespace PMS.Application.Services.SalesQuotation
                             minQuantity = 1,
                             SalesPrice = salePrice,
                             ItemTotal = itemTotal,
-                            Note = item.Note
+                            Note = item.Note,
+                            SupplierName = item.LotProduct.Supplier.Name,
                         };
 
                         details.Add(detail);
@@ -1377,6 +1374,7 @@ namespace PMS.Application.Services.SalesQuotation
 Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế.
 Tạm ứng {salesQuotation.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {salesQuotation.DepositDueDays} ngày kể từ khi ký hợp đồng.
 Hàng hóa dự kiến giao trong thời gian {salesQuotation.ExpectedDeliveryDate} ngày kể từ ngày ký kết hợp đồng và cọc.
+Thanh toán hàng hóa trong vòng 3 ngày kể từ khi nhận được hàng.
 Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN QUANG TRUNG - 4619300024210402 - Ngân hàng Timo."
                 };
 
@@ -1589,7 +1587,163 @@ Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN
                     };
                 }
             }
+
+            var invalidLotMixByProduct = dto.Details
+                .GroupBy(d => d.ProductId)
+                .Where(g =>
+                    g.Any(x => x.LotId == null) &&
+                    g.Any(x => x.LotId != null)
+                )
+                .Select(g => g.Key)
+                .ToList();
+
+            if (invalidLotMixByProduct.Any())
+            {
+                return new ServiceResult<object>
+                {
+                    StatusCode = 400,
+                    Message = "Đã chọn hết hàng cho sản phẩm rồi thì không thể chọn báo giá cho cùng 1 sản phẩm"
+                };
+            }
+
             return null;
+        }
+
+        public async Task<ServiceResult<object>> GenerateFormNewAsync(int rsqId)
+        {
+            try
+            {
+                var rsq = await _unitOfWork.RequestSalesQuotation.Query()
+                    .Include(r => r.RequestSalesQuotationDetails)
+                        .ThenInclude(d => d.Product)
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(r => r.Id == rsqId);
+
+                var rsqValidation = ValidateRequestSalesQuotation(rsq);
+                if (rsqValidation != null)
+                    return rsqValidation;
+
+                var productIds = rsq.RequestSalesQuotationDetails
+                    .Select(r => r.ProductId)
+                    .ToList();
+
+                var listLot = await _unitOfWork.LotProduct.Query()
+                    .Include(lp => lp.Product)
+                    .Include(lp => lp.Supplier)
+                    .AsNoTracking()
+                    .Where(lp => productIds.Contains(lp.ProductID)
+                                && lp.ExpiredDate > DateTime.Now
+                                && lp.LotQuantity > 0
+                                && lp.SalePrice > 0)
+                    .ToListAsync();
+
+                var listTax = await _unitOfWork.TaxPolicy.Query()
+                    .AsNoTracking()
+                    .Where(tp => tp.Status == true)
+                    .ToListAsync();
+
+                var listNote = await _unitOfWork.SalesQuotationNote.Query()
+                    .AsNoTracking()
+                    .Where(sqn => sqn.IsActive == true)
+                    .ToListAsync();
+
+                var productGroups = new List<ProductGroupDTO>();
+
+                foreach (var detail in rsq.RequestSalesQuotationDetails)
+                {
+                    var productGroup = new ProductGroupDTO
+                    {
+                        ProductId = detail.ProductId,
+                        ProductName = detail.Product.ProductName,
+                        ProductUnit = detail.Product.Unit
+                    };
+
+                    var productLots = listLot
+                        .Where(l => l.ProductID == detail.ProductId)
+                        .GroupBy(l => l.SupplierID);
+
+                    if (!productLots.Any())
+                    {
+                        productGroup.SupplierLots.Add(new SupplierLotGroupDTO
+                        {
+                            SupplierID = 0,
+                            SupplierName = "",
+                            Lots = new List<LotDTO>
+                            {
+                                new LotDTO
+                                {
+                                    ProductID = detail.ProductId,
+                                    ProductName = detail.Product.ProductName,
+                                    Unit = detail.Product.Unit,
+                                    Note = "Không tìm thấy lô nào còn hàng hợp lệ"
+                                }
+                            }
+                        });
+
+                        productGroups.Add(productGroup);
+
+                        continue;
+                    }
+
+                    foreach (var supplierGroup in productLots)
+                    {
+                        var supplierLots = supplierGroup.ToList();
+                        var supplier = supplierLots.First().Supplier;
+
+                        var groupedLots = supplierLots.GroupBy(l => new
+                        {
+                            l.SalePrice,
+                            l.InputPrice,
+                            l.ExpiredDate,
+                            l.SupplierID,
+                            l.ProductID,
+                        });
+
+                        var selectedLots = groupedLots
+                            .Select(g => g
+                                .OrderBy(l => l.WarehouselocationID)
+                                .First())
+                            .ToList();
+
+                        var lotDtos = _mapper.Map<List<LotDTO>>(selectedLots);
+
+                        productGroup.SupplierLots.Add(new SupplierLotGroupDTO
+                        {
+                            SupplierID = supplier.Id,
+                            SupplierName = supplier.Name,
+                            Lots = lotDtos
+                        });
+                    }
+                    productGroups.Add(productGroup);
+                }
+
+                var taxDtos = _mapper.Map<List<TaxPolicyDTO>>(listTax);
+                var noteDtos = _mapper.Map<List<SalesQuotationNoteDTO>>(listNote);
+
+                var form = new FormSalesQuotationDTO
+                {
+                    RsqId = rsq.Id,
+                    RequestCode = rsq.RequestCode,
+                    Taxes = taxDtos,
+                    Notes = noteDtos,
+                    ProductList = productGroups
+                };
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Data = form
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Loi");
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Tạo form thất bại",
+                };
+            }
         }
     }
 }

@@ -298,6 +298,8 @@ namespace PMS.Application.Services.GoodsIssueNote
                     .Include(g => g.GoodsIssueNoteDetails)
                         .ThenInclude(d => d.LotProduct)
                             .ThenInclude(lp => lp.Product)
+                    .Include(g => g.StockExportOrder)
+                        .ThenInclude(s => s.SalesOrder)
                     .FirstOrDefaultAsync(g => g.Id == ginId);
 
                 if (goodsIssueNote == null)
@@ -358,6 +360,9 @@ namespace PMS.Application.Services.GoodsIssueNote
                 var query = _unitOfWork.GoodsIssueNote.Query()
                     .AsNoTracking()
                     .Include(g => g.WarehouseStaff)
+                    .Include(g => g.Warehouse)
+                    .Include(g => g.StockExportOrder)
+                        .ThenInclude(s => s.SalesOrder)
                     .AsQueryable();
 
                 if (isWarehouseStaff)
@@ -548,6 +553,7 @@ namespace PMS.Application.Services.GoodsIssueNote
             try
             {
                 var stockExportOrder = await _unitOfWork.StockExportOrder.Query()
+                    .Include(s => s.SalesOrder)
                     .FirstOrDefaultAsync(s => s.Id == stockExportOrderId);
 
                 if(stockExportOrder == null)
@@ -581,7 +587,7 @@ namespace PMS.Application.Services.GoodsIssueNote
                     userId,
                     [UserRoles.SALES_STAFF],
                     "Bạn nhận được 1 thông báo mới",
-                    $"Không đủ hàng để xuất cho mã yêu cầu {stockExportOrder.StockExportOrderCode}",
+                    $"Không đủ hàng để xuất cho mã yêu cầu {stockExportOrder.StockExportOrderCode} của đơn hàng {stockExportOrder.SalesOrder.SalesOrderCode}",
                     Core.Domain.Enums.NotificationType.Message);
 
                 return new ServiceResult<object>

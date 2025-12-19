@@ -11,6 +11,7 @@ namespace PMS.Application.DTOs.PO
     {
         public int poid { get; set; }
         public decimal toatlPo { get; set; }
+        public decimal debt { get; set; }
         public PurchasingOrderStatus Status { get; set; }
     }
 }
