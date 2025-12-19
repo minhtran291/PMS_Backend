@@ -186,5 +186,17 @@ namespace PMS.API.Controllers
                 message = result.Message
             });
         }
+
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("check-so-have-seo-not-enough")]
+        public async Task<IActionResult> CheckSoWithSeoNotEnough(int soId)
+        {
+            var result = await _stockExportOderService.CheckSOWithSEONotEnough(soId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message
+            });
+        }
     }
 }
