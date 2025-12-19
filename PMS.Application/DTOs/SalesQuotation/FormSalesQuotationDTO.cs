@@ -12,6 +12,7 @@ namespace PMS.Application.DTOs.SalesQuotation
         public string RequestCode { get; set; } = string.Empty;
         public List<TaxPolicyDTO> Taxes { get; set; } = [];
         public List<SalesQuotationNoteDTO> Notes { get; set; } = [];
+        public List<ProductGroupDTO> ProductList { get; set; } = [];
         public List<LotDTO> LotProducts { get; set; } = [];
     }
 }
