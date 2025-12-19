@@ -90,7 +90,6 @@ namespace PMS.Core.Domain.Constant
                         <td>{supplierName}</td>
                         <td>{taxText}</td>
                         <td>{expiredDate}</td>
-                        <td>{quantity}</td>
                         <td>{salePrice:N0} ₫</td>
                         <td>{itemTotal:N0} ₫</td>
                         <td>{note}</td>
@@ -102,7 +101,6 @@ namespace PMS.Core.Domain.Constant
                     <tr>
                         <td>{productName}</td>
                         <td>{unit}</td>
-                        <td>-</td>
                         <td>-</td>
                         <td>-</td>
                         <td>-</td>
@@ -121,7 +119,7 @@ namespace PMS.Core.Domain.Constant
 <html lang=""vi"">
 <head>
     <meta charset=""UTF-8"">
-    <img src=""{logoLocal}"" style=""width:120px; height:auto; top:20px; left:20px;"" />
+    <img src=""{logoServer}"" style=""width:120px; height:auto; top:20px; left:20px;"" />
     <title>Báo giá</title>
     <style>
         body {{ font-family: Arial, sans-serif; background: #fff; padding: 20px; }}
@@ -238,10 +236,9 @@ namespace PMS.Core.Domain.Constant
             <tr>
                 <th>Tên sản phẩm</th>
                 <th>Đơn vị</th>
-                <th>Nhà cung cấp</th>
+                <th width=""20%"">Nhà cung cấp</th>
                 <th>Thuế</th>
                 <th>Ngày hết hạn</th>
-                <th width=""10%"">Số lượng tối thiểu</th>
                 <th>Đơn giá</th>
                 <th>Thành tiền</th>
                 <th>Ghi chú</th>
@@ -252,13 +249,13 @@ namespace PMS.Core.Domain.Constant
         </tbody>
         <tfoot>
             <tr>
-                <td colspan=""9"" class=""total"">Tổng chưa thuế: {subTotal:N0} ₫</td>
+                <td colspan=""8"" class=""total"">Tổng chưa thuế: {subTotal:N0} ₫</td>
             </tr>
             <tr>
-                <td colspan=""9"" class=""total"">Thuế: {taxTotal:N0} ₫</td>
+                <td colspan=""8"" class=""total"">Thuế: {taxTotal:N0} ₫</td>
             </tr>
             <tr>
-                <td colspan=""9"" class=""total"">Tổng cộng (đã bao gồm thuế): {grandTotal:N0} ₫</td>
+                <td colspan=""8"" class=""total"">Tổng cộng (đã bao gồm thuế): {grandTotal:N0} ₫</td>
             </tr>
         </tfoot>
     </table>

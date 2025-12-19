@@ -1374,5 +1374,48 @@ namespace PMS.Application.Services.StockExportOrder
                 };
             }
         }
+
+        public async Task<ServiceResult<object>> CheckSOWithSEONotEnough(int soId)
+        {
+            try
+            {
+                var so = await _unitOfWork.SalesOrder.Query()
+                .Include(so => so.StockExportOrders)
+                .FirstOrDefaultAsync(so => so.SalesOrderId == soId);
+
+                if (so == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy đơn hàng"
+                    };
+
+                foreach (var item in so.StockExportOrders)
+                {
+                    if (item.Status == StockExportOrderStatus.NotEnough)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 200,
+                            Message = "Có"
+                        };
+                }
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Không"
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError($"Loi: {ex.StackTrace}, {ex.Message}");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
     }
 }
