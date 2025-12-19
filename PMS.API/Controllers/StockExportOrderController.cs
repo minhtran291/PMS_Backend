@@ -188,10 +188,10 @@ namespace PMS.API.Controllers
         }
 
         [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
-        [Route("check-so-have-seo-not-enough")]
-        public async Task<IActionResult> CheckSoWithSeoNotEnough(int soId)
+        [Route("check-so-have-seo-cancel")]
+        public async Task<IActionResult> CheckSoWithSeoCancel(int soId)
         {
-            var result = await _stockExportOderService.CheckSOWithSEONotEnough(soId);
+            var result = await _stockExportOderService.CheckSOWithSEOCancel(soId);
 
             return StatusCode(result.StatusCode, new
             {
