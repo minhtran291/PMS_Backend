@@ -767,18 +767,12 @@ namespace PMS.Application.Services.Invoice
             {
                 var codes = await _unitOfWork.GoodsIssueNote.Query()
                     .Where(g => g.StockExportOrder.SalesOrder != null && !string.IsNullOrEmpty(g.StockExportOrder.SalesOrder.SalesOrderCode))
+                    .Where(g => g.Status == GoodsIssueNoteStatus.Exported)
+                    .Where(g => !g.InvoiceDetails.Any())
                     .Select(g => g.StockExportOrder.SalesOrder!.SalesOrderCode!)
                     .Distinct()
                     .OrderBy(c => c)
                     .ToListAsync();
-
-                //var codes = await _unitOfWork.SalesOrder.Query()
-                //    .Where(o => !string.IsNullOrEmpty(o.SalesOrderCode))
-                //    .Where(o => o.StockExportOrders.Any())
-                //    .Select(o => o.SalesOrderCode!)
-                //    .Distinct()
-                //    .OrderBy(c => c)
-                //    .ToListAsync();
 
                 if (!codes.Any())
                 {

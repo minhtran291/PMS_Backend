@@ -17,5 +17,6 @@ namespace PMS.Application.DTOs.SalesQuotation
         public decimal? SalesPrice { get; set; }
         public decimal? ItemTotal { get; set; }  // Tổng cộng (bao gồm thuế)
         public string? Note { get; set; }
+        public string SupplierName { get; set; } = string.Empty;
     }
 }

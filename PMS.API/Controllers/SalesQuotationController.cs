@@ -161,5 +161,18 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
+
+        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("generate-form-new")]
+        public async Task<IActionResult> GenerateFormNew(int rsqId)
+        {
+            var result = await _salesQuotationService.GenerateFormNewAsync(rsqId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message,
+                data = result.Data
+            });
+        }
     }
 }
