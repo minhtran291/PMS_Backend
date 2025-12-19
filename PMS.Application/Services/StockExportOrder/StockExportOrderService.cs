@@ -992,7 +992,7 @@ namespace PMS.Application.Services.StockExportOrder
                         Message = "Không tìm thấy yêu cầu xuất"
                     };
 
-                if (stockExportOrder.Status != StockExportOrderStatus.Sent)
+                if (stockExportOrder.Status != StockExportOrderStatus.Sent && stockExportOrder.Status != StockExportOrderStatus.Await)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
@@ -1375,7 +1375,7 @@ namespace PMS.Application.Services.StockExportOrder
             }
         }
 
-        public async Task<ServiceResult<object>> CheckSOWithSEONotEnough(int soId)
+        public async Task<ServiceResult<object>> CheckSOWithSEOCancel(int soId)
         {
             try
             {
@@ -1392,7 +1392,7 @@ namespace PMS.Application.Services.StockExportOrder
 
                 foreach (var item in so.StockExportOrders)
                 {
-                    if (item.Status == StockExportOrderStatus.NotEnough)
+                    if (item.Status == StockExportOrderStatus.Cancel)
                         return new ServiceResult<object>
                         {
                             StatusCode = 200,
