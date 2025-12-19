@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Castle.Core.Resource;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Ocsp;
@@ -128,6 +129,8 @@ namespace PMS.Application.Services.SalesOrder
                 _unitOfWork.CustomerDebt.Update(debt);
 
                 await _unitOfWork.CommitAsync();
+
+                await RecalculateTotalReceiveAsync();
 
                 return new ServiceResult<bool>
                 {
@@ -480,13 +483,28 @@ namespace PMS.Application.Services.SalesOrder
                     RequestedAmount = requestedAmount,
                     PaymentMethod = dto.PaymentMethod,
                     CustomerNote = dto.CustomerNote,
-                    Status = DepositCheckStatus.Draft,
+                    Status = DepositCheckStatus.Pending,
                     RequestedBy = customerId,
                     RequestedAt = DateTime.Now
                 };
 
                 await _unitOfWork.SalesOrderDepositCheck.AddAsync(entity);
                 await _unitOfWork.CommitAsync();
+
+                try
+                {
+                    await _noti.SendNotificationToRolesAsync(
+                        customerId,
+                        new List<string> { "ACCOUNTANT" },
+                        "Yêu cầu kiểm tra cọc",
+                        $"Khách hàng yêu cầu kiểm tra cọc cho đơn hàng có mã {order.SalesOrderCode}. Vui lòng kiểm tra và xác nhận.",
+                        NotificationType.Message
+                    );
+                }
+                catch (Exception notiEx)
+                {
+                    _logger.LogError(notiEx, "Không gửi được noti yêu cầu kiểm tra cọc (SalesOrderCode={SalesOrderCode})", order.SalesOrderCode);
+                }
 
                 return new ServiceResult<bool>
                 {
@@ -1028,6 +1046,7 @@ namespace PMS.Application.Services.SalesOrder
                 {
                     d.SalesOrderId,
                     d.LotId,
+                    ProductId = d.LotProduct.ProductID,
                     ProductName = d.LotProduct.Product.ProductName,
                     d.Quantity,
                     d.UnitPrice,
@@ -1862,7 +1881,10 @@ namespace PMS.Application.Services.SalesOrder
             try
             {
                 var orders = await _unitOfWork.SalesOrder.Query()
-                    .Where(s => s.SalesOrderStatus == SalesOrderStatus.Approved && s.IsDeposited == true)
+                    .Where(s => s.SalesOrderStatus == SalesOrderStatus.Approved && (s.SalesQuotation.DepositPercent == 0 
+                    || (s.SalesQuotation.DepositPercent > 0 && s.IsDeposited == true)) 
+                    || s.SalesOrderStatus == SalesOrderStatus.PartiallyDelivered && (s.SalesQuotation.DepositPercent == 0
+                    || (s.SalesQuotation.DepositPercent > 0 && s.IsDeposited == true)))
                     .AsNoTracking()
                     .OrderByDescending(o => o.CreateAt)
                     .Select(o => new SalesOrderItemDTO
@@ -2060,12 +2082,13 @@ namespace PMS.Application.Services.SalesOrder
             }
         }
 
-        public async Task<ServiceResult<bool>> MarkNotCompleteAndRefundAsync(int salesOrderId, string staffId)
+        public async Task<ServiceResult<bool>> MarkNotCompleteAndRefundAsync(int salesOrderId, string staffId, string rejectReason)
         {
             try
             {
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.CustomerDebts)
+                    .Include(o => o.SalesQuotation)
                     .FirstOrDefaultAsync(o => o.SalesOrderId == salesOrderId);
 
                 if (order == null)
@@ -2074,11 +2097,56 @@ namespace PMS.Application.Services.SalesOrder
                 if (order.SalesOrderStatus == SalesOrderStatus.Complete)
                     return ServiceResult<bool>.Fail("Đơn hàng đã hoàn thành, không thể chuyển trạng thái không hoàn thành.", 400);
 
+                if (order.SalesQuotation == null)
+                    return ServiceResult<bool>.Fail("Đơn hàng không có thông tin báo giá để tính tiền cọc.", 400);
+
                 await _unitOfWork.BeginTransactionAsync();
 
+                //Tính số tiền đã trả
+                var depositPercent = order.SalesQuotation.DepositPercent;
+                var depositAmount = Math.Round(order.TotalPrice * depositPercent / 100m, 2);
+
+                //Tính tổng giá trị phiếu xuất đã xuất
+                var exportedValue = await (
+                    from gin in _unitOfWork.GoodsIssueNote.Query().AsNoTracking()
+                    where gin.StockExportOrder.SalesOrderId == order.SalesOrderId
+                          && gin.Status == GoodsIssueNoteStatus.Exported
+                    from gd in gin.GoodsIssueNoteDetails
+                    join sod in _unitOfWork.SalesOrderDetails.Query().AsNoTracking()
+                            .Where(x => x.SalesOrderId == order.SalesOrderId)
+                        on gd.LotId equals sod.LotId
+                    select (decimal?)gd.Quantity * sod.UnitPrice
+                ).SumAsync() ?? 0m;
+
+                exportedValue = Math.Round(exportedValue, 2);
+
+                //Cập nhật số tiền đã trả theo công thức PaidAmount = PaidAmount - (DepositAmount - ((ExportedValue/TotalPrice) * DepositAmount))
+                decimal ratio = 0m;
+                if (order.TotalPrice > 0m)
+                {
+                    ratio = exportedValue / order.TotalPrice;
+                    if (ratio < 0m) ratio = 0m;
+                    if (ratio > 1m) ratio = 1m;
+                }
+
+                var subtractAmount = Math.Round(depositAmount - (ratio * depositAmount), 2);
+                if (subtractAmount < 0m) subtractAmount = 0m;
+
+                order.PaidAmount = Math.Max(0m, Math.Round(order.PaidAmount - subtractAmount, 2));
+
+                //Cập nhật trạng thái đơn hàng và trạng thái thanh toán
                 order.SalesOrderStatus = SalesOrderStatus.NotComplete;
                 order.PaymentStatus = PaymentStatus.Refunded;
 
+                if (string.IsNullOrWhiteSpace(rejectReason))
+                    return ServiceResult<bool>.Fail("Vui lòng nhập lý do từ chối.", 400);
+
+                rejectReason = rejectReason.Trim();
+
+                order.RejectedAt = DateTime.UtcNow; 
+                order.RejectedBy = staffId;
+
+                //Cập nhật nợ của khách cho đơn hàng này
                 if (order.CustomerDebts != null)
                 {
                     order.CustomerDebts.DebtAmount = 0m;
@@ -2134,7 +2202,8 @@ namespace PMS.Application.Services.SalesOrder
                         o.CreateAt.Year == year &&
                         (o.PaymentStatus == PaymentStatus.Deposited ||
                          o.PaymentStatus == PaymentStatus.PartiallyPaid ||
-                         o.PaymentStatus == PaymentStatus.Paid));
+                         o.PaymentStatus == PaymentStatus.Paid ||
+                         o.PaymentStatus == PaymentStatus.Refunded));
 
                 // Group theo tháng, sum PaidAmount
                 var monthlyData = await query
@@ -2194,23 +2263,26 @@ namespace PMS.Application.Services.SalesOrder
         {
             try
             {
-                var sodQuery = _unitOfWork.SalesOrderDetails.Query().AsNoTracking();
-                var soQuery = _unitOfWork.SalesOrder.Query().AsNoTracking();
+                var ginQuery = _unitOfWork.GoodsIssueNote.Query().AsNoTracking();
+                var gindQuery = _unitOfWork.GoodsIssueNoteDetails.Query().AsNoTracking();
                 var lotQuery = _unitOfWork.LotProduct.Query().AsNoTracking();
                 var prodQuery = _unitOfWork.Product.Query().AsNoTracking();
 
                 var raw = await (
-                    from sod in sodQuery
-                    join so in soQuery on sod.SalesOrderId equals so.SalesOrderId
-                    join lot in lotQuery on sod.LotId equals lot.LotID
+                    from gin in ginQuery
+                    join gind in gindQuery on gin.Id equals gind.GoodsIssueNoteId
+                    join lot in lotQuery on gind.LotId equals lot.LotID
                     join p in prodQuery on lot.ProductID equals p.ProductID
-                    where so.CreateAt.Year == year
-                          && so.SalesOrderStatus == SalesOrderStatus.Approved
+                    where gin.Status == GoodsIssueNoteStatus.Exported
+                          && (
+                                (gin.ExportedAt.HasValue && gin.ExportedAt.Value.Year == year)
+                                || (!gin.ExportedAt.HasValue && gin.CreateAt.Year == year)
+                             )
                     select new
                     {
-                        Month = so.CreateAt.Month,
-                        sod.LotId,
-                        sod.Quantity,
+                        Month = gin.ExportedAt.HasValue ? gin.ExportedAt.Value.Month : gin.CreateAt.Month,
+                        LotId = gind.LotId,
+                        Quantity = gind.Quantity,
 
                         ProductId = p.ProductID,
                         ProductName = p.ProductName,
@@ -2240,7 +2312,6 @@ namespace PMS.Application.Services.SalesOrder
                         Quantity = g.Sum(x => x.Quantity)
                     })
                     .ToList();
-
 
                 var result = new List<MonthlyProductStatisticDTO>();
 
