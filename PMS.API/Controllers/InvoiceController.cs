@@ -272,5 +272,27 @@ namespace PMS.API.Controllers
             });
         }
 
+        /// <summary>
+        /// POST: api/Invoice/{invoiceId}/send-late-reminder
+        /// Dùng cho trường hợp remind invoice bị quá hạn thanh toán
+        /// <param name="invoiceId"></param>
+        /// <returns></returns>
+        [Authorize(Roles = "ACCOUNTANT")]
+        [HttpPost("{invoiceId}/send-late-reminder")]
+        public async Task<IActionResult> SendLateReminder(int invoiceId)
+        {
+            var currentUserId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            var result = await _invoiceService.SendLateReminderEmailAsync(invoiceId, currentUserId!);
+
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
+        }
+
+
     }
 }

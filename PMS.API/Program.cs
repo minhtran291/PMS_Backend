@@ -1,6 +1,4 @@
-﻿using System.Security.Claims;
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -10,8 +8,11 @@ using PMS.API.Helpers.PermisstionStaff;
 using PMS.Application.DIConfig;
 using PMS.Application.Filters;
 using PMS.Application.Services.Notification;
+using PMS.Application.Services.SalesOrder;
 using PMS.Core.Domain.Identity;
 using PMS.Data.DatabaseConfig;
+using System.Security.Claims;
+using System.Text;
 
 namespace PMS.API
 {
@@ -50,6 +51,8 @@ namespace PMS.API
             builder.Services.AddInfrastructure();
             builder.Services.AddExternalServices();
             builder.Services.InitialValueConfig(builder.Configuration);
+            builder.Services.AddHostedService<DepositOverdueBackgroundJob>();
+
 
             // ======== CONTROLLERS ========
             builder.Services.AddControllers().AddNewtonsoftJson(options =>
