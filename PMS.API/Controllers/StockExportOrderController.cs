@@ -169,5 +169,22 @@ namespace PMS.API.Controllers
                 message = result.Message
             });
         }
+
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [Route("cancel-stock-export-order")]
+        public async Task<IActionResult> CancelStockExportOrder(int seoId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Token không chứa thông tin định danh người dùng");
+
+            var result = await _stockExportOderService.CancelSEOWithReturn(seoId, userId);
+
+            return StatusCode(result.StatusCode, new
+            {
+                message = result.Message
+            });
+        }
     }
 }

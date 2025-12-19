@@ -1374,6 +1374,7 @@ namespace PMS.Application.Services.SalesQuotation
 Quá thời hạn trên, giá chào trong bản báo giá này có thể được điều chỉnh theo thực tế.
 Tạm ứng {salesQuotation.DepositPercent.ToString("0.##")}% tiền cọc trong vòng {salesQuotation.DepositDueDays} ngày kể từ khi ký hợp đồng.
 Hàng hóa dự kiến giao trong thời gian {salesQuotation.ExpectedDeliveryDate} ngày kể từ ngày ký kết hợp đồng và cọc.
+Thanh toán hàng hóa trong vòng 3 ngày kể từ khi nhận được hàng.
 Thanh toán bằng tiền mặt hoặc chuyển khoản vào tài khoản NGUYEN QUANG TRUNG - 4619300024210402 - Ngân hàng Timo."
                 };
 

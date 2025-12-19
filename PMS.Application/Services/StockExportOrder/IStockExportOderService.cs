@@ -20,5 +20,6 @@ namespace PMS.Application.Services.StockExportOrder
         Task <ServiceResult<object>> CheckAvailable(int seoId);
         Task <ServiceResult<object>>AwaitStockExportOrder(int seoId, string userId);
         Task CancelStockExportOrder(int soId);
+        Task<ServiceResult<object>> CancelSEOWithReturn(int seoId, string userId);
     }
 }

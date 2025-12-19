@@ -9,6 +9,5 @@ namespace PMS.Application.DTOs.GoodsIssueNote
     public class GoodsIssueNoteWithDetailsDTO : GoodsIssueNoteListDTO
     {
         public List<GoodsIssueNoteDetailsDTO> Details { get; set; } = [];
-        public string SalesOrderCode { get; set; } = string.Empty;
     }
 }
