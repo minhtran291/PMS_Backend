@@ -60,7 +60,7 @@ namespace PMS.API.Controllers
         }
 
         [HttpGet("detail")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.SALES_STAFF)]
+       // [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.SALES_STAFF)]
         public async Task<IActionResult> GetSupplierByIdAsync([FromQuery] int id)
         {
             var result = await _service.GetByIdAsync(id);
