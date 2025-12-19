@@ -384,14 +384,14 @@ namespace PMS.Application.Services.Product
                 if (exProduct == null)
                     return ServiceResult<bool>.Fail("Không tìm thấy sản phẩm");
 
-                
+
                 if (productUpdate.MinQuantity.HasValue && productUpdate.MaxQuantity.HasValue &&
                     productUpdate.MinQuantity > productUpdate.MaxQuantity)
                 {
                     return ServiceResult<bool>.Fail("Số lượng tối thiểu không được lớn hơn số lượng tối đa");
                 }
 
-                
+
                 if (productUpdate.CategoryID.HasValue)
                 {
                     var categoryExists = await _unitOfWork.Category.Query()
@@ -403,7 +403,7 @@ namespace PMS.Application.Services.Product
                     exProduct.CategoryID = productUpdate.CategoryID.Value;
                 }
 
-                
+
                 if (productUpdate.Image != null)
                     exProduct.Image = await SaveAsync(productUpdate.Image, "images/products/");
 
@@ -422,7 +422,7 @@ namespace PMS.Application.Services.Product
                 if (productUpdate.ImageE != null)
                     exProduct.ImageE = await SaveAsync(productUpdate.ImageE, "images/products/");
 
-                
+
                 exProduct.ProductName = productUpdate.ProductName ?? exProduct.ProductName;
                 exProduct.Unit = productUpdate.Unit ?? exProduct.Unit;
                 exProduct.ProductDescription = productUpdate.ProductDescription ?? exProduct.ProductDescription;
@@ -430,7 +430,7 @@ namespace PMS.Application.Services.Product
                 exProduct.ProductlUses = productUpdate.ProductlUses ?? exProduct.ProductlUses;
                 exProduct.ProductWeight = productUpdate.ProductWeight ?? exProduct.ProductWeight;
 
-                
+
                 if (productUpdate.MinQuantity.HasValue)
                     exProduct.MinQuantity = productUpdate.MinQuantity.Value;
 
@@ -509,7 +509,7 @@ namespace PMS.Application.Services.Product
                 var lots = await _unitOfWork.LotProduct.Query()
                     .Where(p => p.ProductID == productId)
                     .Include(p => p.Product)
-                    .Include(p => p.WarehouseLocation)
+                    .Include(p => p.WarehouseLocation).ThenInclude(wl => wl.Warehouse)
                     .ToListAsync();
 
                 if (!lots.Any())
@@ -529,7 +529,8 @@ namespace PMS.Application.Services.Product
                     ProductID = p.ProductID,
                     WarehouselocationID = p.WarehouselocationID,
                     warehouseName = p.WarehouseLocation?.LocationName ?? "Unknown",
-                    LastCheckedDate = p.LastCheckedDate
+                    LastCheckedDate = p.LastCheckedDate,
+                    warehouseName2 = p.WarehouseLocation?.Warehouse?.Name ?? "Unknown",
                 }).ToList();
 
                 return ServiceResult<List<LotProductDTO2>>
