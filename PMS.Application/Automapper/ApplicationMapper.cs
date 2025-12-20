@@ -31,7 +31,8 @@ namespace PMS.Application.Automapper
             CreateMap<LotProduct, LotDTO>()
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product.ProductName))
                 .ForMember(dest => dest.ProductID, opt => opt.MapFrom(src => src.Product.ProductID))
-                .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => src.Product.Unit));
+                .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => src.Product.Unit))
+                .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.Supplier.Name));
 
             CreateMap<TaxPolicy, DTOs.SalesQuotation.TaxPolicyDTO>();
 
