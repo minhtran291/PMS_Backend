@@ -39,9 +39,9 @@ namespace PMS.Application.Services.PaymentRemainService
         public Task<ServiceResult<PaymentRemainItemDTO>> CreateBankTransferCheckRequestForInvoiceAsync(int invoiceId, CreateBankTransferCheckRequestDTO request);
 
         //kế toán chấp nhận là đã nhận được
-        public Task<ServiceResult<bool>> ApproveBankTransferRequestAsync(int paymentRemainId);
+        public Task<ServiceResult<bool>> ApproveBankTransferRequestAsync(int paymentRemainId, string accountantId);
 
         //Kế toán từ chối yêu cầu check kèm lý do
-        public Task<ServiceResult<bool>> RejectBankTransferRequestAsync(int paymentRemainId, string reason);
+        public Task<ServiceResult<bool>> RejectBankTransferRequestAsync(int paymentRemainId, string reason, string accountantId);
     }
 }
