@@ -108,9 +108,9 @@ namespace PMS.Core.Domain.Constant
                         height: 100%;
 
                         object-fit: contain;  
-                        opacity: 0.3;
+                        opacity: 0.15;
                         z-index: 0;
-                        transform: scale(0.85);
+                        transform: scale(1.0);
                     }}
 
                     .wrapper{{
