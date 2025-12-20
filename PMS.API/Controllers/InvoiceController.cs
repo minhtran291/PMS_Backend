@@ -31,7 +31,7 @@ namespace PMS.API.Controllers
         /// }
         /// </remarks>
         [HttpPost("generate-from-goods-issue-note")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GenerateFromPaymentRemains(
             [FromBody] GenerateInvoiceFromGINRequestDTO request)
         {
@@ -51,7 +51,7 @@ namespace PMS.API.Controllers
         /// Tạo PDF hóa đơn để in / tải về.
         /// </summary>
         [HttpGet("{id}/pdf")]
-        [Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetInvoicePdf(int id)
         {
             var result = await _invoiceService.GenerateInvoicePdfAsync(id);
@@ -80,7 +80,7 @@ namespace PMS.API.Controllers
         /// Gửi hóa đơn cho khách hàng qua email (đính kèm PDF) và đổi trạng thái sang Send.
         /// </summary>
         [HttpPost("{id}/send-email")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> SendInvoiceEmail(int id)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -103,7 +103,7 @@ namespace PMS.API.Controllers
         /// Lấy toàn bộ danh sách Invoice
         /// </summary>
         [HttpGet("get-all/invoices")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetAll()
         {
             var result = await _invoiceService.GetAllInvoicesAsync();
@@ -120,7 +120,7 @@ namespace PMS.API.Controllers
         /// Xem chi tiết 1 Invoice
         /// </summary>
         [HttpGet("{id}/invoice/details")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetById(int id)
         {
             var result = await _invoiceService.GetInvoiceByIdAsync(id);
@@ -137,7 +137,7 @@ namespace PMS.API.Controllers
         /// Sửa Invoice (thêm/bớt PaymentRemain) khi Invoice còn Draft
         /// </summary>
         [HttpPut("{id}/update/draft-invoice")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> UpdateInvoiceDraft(
             int id,
             [FromBody] InvoiceUpdateDTO request)
@@ -157,7 +157,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách tất cả SalesOrderCode (distinct, sort tăng dần).
         /// </summary>
         [HttpGet("sales-order-codes")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetAllSalesOrderCodes()
         {
             var result = await _invoiceService.GetAllSalesOrderCodesAsync();
@@ -176,7 +176,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="salesOrderCode">Mã SalesOrder</param>
         [HttpGet("{salesOrderCode}/goods-issue-note-codes")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetGoodsIssueNoteCodesBySalesOrderCode(string salesOrderCode)
         {
             var result = await _invoiceService
@@ -196,7 +196,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách hóa đơn của customer đang đăng nhập.
         /// </summary>
         [HttpGet("my-invoices")]
-        [Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetMyInvoices()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -227,7 +227,7 @@ namespace PMS.API.Controllers
         /// Body: { "userId": "MST/CCCD", "password": "xxxx", "otp": "123456" }
         /// </summary>
         [HttpPost("{id}/sign-smartca")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> SignInvoiceWithSmartCA(
             int id,
             [FromBody] SmartCASignInvoiceRequestDTO request)
@@ -259,7 +259,7 @@ namespace PMS.API.Controllers
         /// Xóa Invoice khi còn ở trạng thái Draft.
         /// </summary>
         [HttpDelete("{id}/delete-draft")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> DeleteDraftInvoice(int id)
         {
             var result = await _invoiceService.DeleteDraftInvoiceAsync(id);
@@ -277,7 +277,7 @@ namespace PMS.API.Controllers
         /// Dùng cho trường hợp remind invoice bị quá hạn thanh toán
         /// <param name="invoiceId"></param>
         /// <returns></returns>
-        [Authorize(Roles = "ACCOUNTANT")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         [HttpPost("{invoiceId}/send-late-reminder")]
         public async Task<IActionResult> SendLateReminder(int invoiceId)
         {
