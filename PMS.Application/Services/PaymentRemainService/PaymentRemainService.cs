@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.PaymentRemain;
 using PMS.Application.DTOs.VnPay;
 using PMS.Application.Services.Base;
+using PMS.Application.Services.Notification;
 using PMS.Application.Services.PaymentRemainService;
 using PMS.Application.Services.SalesOrder;
 using PMS.Application.Services.VNpay;
@@ -23,12 +24,14 @@ namespace PMS.Application.Services.PaymentRemainService
         IMapper mapper, 
         ILogger<PaymentRemainService> logger,
         IVnPayService vnPayService,
+        INotificationService notificationService,
         ISalesOrderService salesOrderService) : Service(unitOfWork, mapper), IPaymentRemainService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
         private readonly IMapper _mapper = mapper;
         private readonly ILogger<PaymentRemainService> _logger = logger;
         private readonly IVnPayService _vnPayService = vnPayService;
+        private readonly INotificationService _noti = notificationService;
         private readonly ISalesOrderService _salesOrderService = salesOrderService;
 
         public async Task<ServiceResult<PaymentRemainItemDTO>> CreatePaymentRemainForInvoiceAsync(CreatePaymentRemainRequestDTO request)
@@ -253,7 +256,7 @@ namespace PMS.Application.Services.PaymentRemainService
                     SalesOrderPaidAmount = so?.PaidAmount ?? 0m,
 
                     CustomerId = so?.CreateBy,
-                    CustomerName = so?.Customer?.FullName,
+                    CustomerName = so?.Customer?.CustomerProfile.User.FullName,
 
                     PaymentStatusText = $"{entity.PaymentMethod} - {entity.VNPayStatus}"
                 };
@@ -388,7 +391,7 @@ namespace PMS.Application.Services.PaymentRemainService
                         SalesOrderTotalPrice = so?.TotalPrice ?? 0m,
                         SalesOrderPaidAmount = so?.PaidAmount ?? 0m,
                         CustomerId = so?.CreateBy,
-                        CustomerName = so?.Customer?.FullName,
+                        CustomerName = so?.Customer?.CustomerProfile.User.FullName,
                         PaymentStatusText = $"{p.PaymentMethod} - {p.VNPayStatus}"
                     };
                 }).ToList();
@@ -588,28 +591,6 @@ namespace PMS.Application.Services.PaymentRemainService
                     invoice.TotalRemain = 0;
                 }
 
-                var latestExportedAt = invoice.InvoiceDetails
-                    .Select(d => d.GoodsIssueNote.DeliveryDate)
-                    .Max();
-
-                var paymentDueAt = latestExportedAt.AddDays(3);
-
-                if (paymentDueAt != null)
-                {
-                    // Thời điểm thanh toán thành công muộn nhất
-                    var latestPaidAt = invoice.PaymentRemains
-                        .Where(p => p.PaidAt != null && p.VNPayStatus == VNPayStatus.Success)
-                        .Max(p => p.PaidAt);
-
-                    // Nếu thanh toán sau hạn → Late 
-                    if (totalPaid > 0 &&
-                        latestPaidAt.HasValue &&
-                        latestPaidAt.Value > paymentDueAt)
-                    {
-                        invoice.PaymentStatus = PaymentStatus.Late;
-                    }
-                }
-
                 // Phần tiền mới tăng thêm cho invoice này
                 var deltaPaid = totalPaid - oldInvoicePaid;
                 if (deltaPaid < 0)
@@ -756,9 +737,12 @@ namespace PMS.Application.Services.PaymentRemainService
             }
         }
 
-        public async Task<ServiceResult<bool>> ApproveBankTransferRequestAsync(int paymentRemainId)
+        public async Task<ServiceResult<bool>> ApproveBankTransferRequestAsync(int paymentRemainId, string accountantId)
         {
             var pr = await _unitOfWork.PaymentRemains.Query()
+                .Include(p => p.Invoice)
+                    .ThenInclude(i => i.SalesOrder)
+                        .ThenInclude(so => so.Customer)
                 .FirstOrDefaultAsync(p => p.Id == paymentRemainId);
 
             if (pr == null)
@@ -788,10 +772,40 @@ namespace PMS.Application.Services.PaymentRemainService
                     Data = false
                 };
 
-            return await MarkPaymentSuccessAsync(paymentRemainId);
+            var result = await MarkPaymentSuccessAsync(paymentRemainId);
+
+            if (result.StatusCode == 200 && result.Data)
+            {
+                try
+                {
+                    var customerId = pr.Invoice?.SalesOrder?.Customer?.Id ?? pr.Invoice?.SalesOrder?.CreateBy;
+
+                    if (!string.IsNullOrWhiteSpace(customerId))
+                    {
+                        var invoiceCode = pr.Invoice?.InvoiceCode ?? "—";
+                        var remainAmount = pr.Amount; 
+
+                        await _noti.SendNotificationToCustomerAsync(
+                            senderId: accountantId,
+                            receiverId: customerId,
+                            title: "Thanh toán chuyển khoản đã được xác nhận",
+                            message: $"Nhà thuốc đã xác nhận thanh toán chuyển khoản cho hóa đơn {invoiceCode}. Số tiền: {remainAmount:N0} VND.",
+                            type: NotificationType.Message
+                        );
+                    }
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification Customer thất bại khi approve BankTransfer PaymentRemainId={PaymentRemainId}",
+                        paymentRemainId);
+                }
+            }
+
+            return result;
         }
 
-        public async Task<ServiceResult<bool>> RejectBankTransferRequestAsync(int paymentRemainId, string reason)
+        public async Task<ServiceResult<bool>> RejectBankTransferRequestAsync(int paymentRemainId, string reason, string accountantId)
         {
             try
             {
@@ -807,6 +821,9 @@ namespace PMS.Application.Services.PaymentRemainService
                 }
 
                 var pr = await _unitOfWork.PaymentRemains.Query()
+                    .Include(p => p.Invoice)
+                        .ThenInclude(i => i.SalesOrder)
+                            .ThenInclude(so => so.Customer)
                     .FirstOrDefaultAsync(p => p.Id == paymentRemainId);
 
                 if (pr == null)
@@ -848,6 +865,30 @@ namespace PMS.Application.Services.PaymentRemainService
 
                 _unitOfWork.PaymentRemains.Update(pr);
                 await _unitOfWork.CommitAsync();
+
+                try
+                {
+                    var customerId = pr.Invoice?.SalesOrder?.Customer?.Id ?? pr.Invoice?.SalesOrder?.CreateBy;
+
+                    if (!string.IsNullOrWhiteSpace(customerId))
+                    {
+                        var invoiceCode = pr.Invoice?.InvoiceCode ?? "—";
+
+                        await _noti.SendNotificationToCustomerAsync(
+                            senderId: accountantId,
+                            receiverId: customerId,
+                            title: "Yêu cầu xác nhận chuyển khoản bị từ chối",
+                            message: $"Yêu cầu xác nhận chuyển khoản cho hóa đơn {invoiceCode} đã bị từ chối. Lý do: {pr.RejectReason}.",
+                            type: NotificationType.Message
+                        );
+                    }
+                }
+                catch (Exception exNotify)
+                {
+                    _logger.LogWarning(exNotify,
+                        "Gửi notification Customer thất bại khi reject BankTransfer PaymentRemainId={PaymentRemainId}",
+                        paymentRemainId);
+                }
 
                 return new ServiceResult<bool>
                 {
