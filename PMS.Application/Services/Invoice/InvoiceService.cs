@@ -9,6 +9,7 @@ using PMS.Application.Services.SmartCA;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
 using PMS.Core.Domain.Enums;
+using PMS.Data.Migrations;
 using PMS.Data.UnitOfWork;
 using System;
 using System.Collections.Generic;
@@ -34,8 +35,7 @@ namespace PMS.Application.Services.Invoice
         private readonly INotificationService _noti = notificationService;
         private readonly ISmartCAService _smartCAService = smartCAService;
 
-        public async Task<ServiceResult<InvoiceDTO>>
-            GenerateInvoiceFromGINAsync(GenerateInvoiceFromGINRequestDTO request)
+        public async Task<ServiceResult<InvoiceDTO>> GenerateInvoiceFromGINAsync(GenerateInvoiceFromGINRequestDTO request)
         {
             try
             {
@@ -47,7 +47,7 @@ namespace PMS.Application.Services.Invoice
                     return new ServiceResult<InvoiceDTO>
                     {
                         StatusCode = 400,
-                        Message = "SalesOrderCode hoặc danh sách GoodsIssueNoteCodes không hợp lệ.",
+                        Message = "Mã đơn hàng hoặc danh sách mã phiếu xuất không hợp lệ.",
                         Data = null
                     };
                 }
@@ -63,7 +63,7 @@ namespace PMS.Application.Services.Invoice
                     return new ServiceResult<InvoiceDTO>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy SalesOrder.",
+                        Message = "Không tìm thấy đơn hàng.",
                         Data = null
                     };
                 }
@@ -73,7 +73,7 @@ namespace PMS.Application.Services.Invoice
                     return new ServiceResult<InvoiceDTO>
                     {
                         StatusCode = 400,
-                        Message = "SalesOrder chưa gắn với SalesQuotation, không xác định được % cọc.",
+                        Message = "đơn hàng chưa gắn với báo giá, không xác định được % cọc.",
                         Data = null
                     };
                 }
@@ -90,7 +90,7 @@ namespace PMS.Application.Services.Invoice
                     return new ServiceResult<InvoiceDTO>
                     {
                         StatusCode = 404,
-                        Message = "Không tìm thấy GoodsIssueNote tương ứng.",
+                        Message = "Không tìm thấy phiếu xuất tương ứng.",
                         Data = null
                     };
                 }
@@ -100,7 +100,7 @@ namespace PMS.Application.Services.Invoice
                     return new ServiceResult<InvoiceDTO>
                     {
                         StatusCode = 400,
-                        Message = "Các GoodsIssueNote không thuộc cùng một SalesOrder.",
+                        Message = "Các phiếu xuất không thuộc cùng một đơn hàng.",
                         Data = null
                     };
                 }
@@ -114,6 +114,67 @@ namespace PMS.Application.Services.Invoice
                     MidpointRounding.AwayFromZero);
 
                 // 4. Tính giá trị từng phiếu xuất
+                //Collect tất cả LotId cần tra cứu(lot trong SO + lot trong GIN)
+                var soLotIds = order.SalesOrderDetails
+                    .Select(x => x.LotId)
+                    .Where(id => id > 0)
+                    .Distinct()
+                    .ToList();
+
+                var ginLotIds = goodsIssueNotes
+                    .SelectMany(n => n.GoodsIssueNoteDetails)
+                    .Select(d => d.LotId)
+                    .Where(id => id > 0)
+                    .Distinct()
+                    .ToList();
+
+                var allLotIds = soLotIds.Concat(ginLotIds).Distinct().ToList();
+
+                var lotInfos = await _unitOfWork.LotProduct.Query()
+                    .Where(lp => allLotIds.Contains(lp.LotID))
+                    .Select(lp => new
+                    {
+                        lp.LotID,
+                        lp.ProductID,
+                        lp.ExpiredDate,   
+                        lp.SupplierID
+                    })
+                    .ToListAsync();
+
+                var lotKeyByLotId = lotInfos
+                .GroupBy(x => x.LotID)
+                .ToDictionary(
+                    g => g.Key,
+                    g =>
+                    (
+                        ProductId: g.First().ProductID,
+                        ExpiredDate: g.First().ExpiredDate.Date,
+                        SupplierID: g.First().SupplierID
+                    )
+                );
+
+                var priceKeyToUnitPrice = new Dictionary<(int ProductId, DateTime ExpiredDate, int SupplierID, decimal UnitPrice), decimal>();
+
+                foreach (var so in order.SalesOrderDetails)
+                {
+                    if (so.LotId <= 0) continue;
+
+                    if (!lotKeyByLotId.TryGetValue(so.LotId, out var soLotKey))
+                    {
+                        return new ServiceResult<InvoiceDTO>
+                        {
+                            StatusCode = 400,
+                            Message = $"Không lấy được thông tin lô hàng từ SalesOrderDetails (LotId={so.LotId}).",
+                            Data = null
+                        };
+                    }
+
+                    var key = (soLotKey.ProductId, soLotKey.ExpiredDate, soLotKey.SupplierID, so.UnitPrice);
+
+                    if (!priceKeyToUnitPrice.ContainsKey(key))
+                        priceKeyToUnitPrice[key] = so.UnitPrice;
+                }
+
                 var noteInfos = new List<(PMS.Core.Domain.Entities.GoodsIssueNote Note, decimal NoteAmount)>();
 
                 foreach (var note in goodsIssueNotes)
@@ -122,20 +183,62 @@ namespace PMS.Application.Services.Invoice
 
                     foreach (var d in note.GoodsIssueNoteDetails)
                     {
-                        var soDetail = order.SalesOrderDetails
-                            .FirstOrDefault(x => x.LotId == d.LotId);
-
-                        if (soDetail == null)
+                        if (d.LotId <= 0)
                         {
                             return new ServiceResult<InvoiceDTO>
                             {
                                 StatusCode = 400,
-                                Message = $"Không tìm thấy SalesOrderDetail cho LotId={d.LotId}.",
+                                Message = $"Phiếu xuất {note.GoodsIssueNoteCode} có dòng xuất thiếu mã định danh lô hàng.",
                                 Data = null
                             };
                         }
 
-                        noteAmount += soDetail.UnitPrice * d.Quantity;
+                        if (!lotKeyByLotId.TryGetValue(d.LotId, out var ginLotKey))
+                        {
+                            return new ServiceResult<InvoiceDTO>
+                            {
+                                StatusCode = 400,
+                                Message = $"Không lấy được thông tin lô hàng từ chi tiết phiếu xuất (LotId={d.LotId}).",
+                                Data = null
+                            };
+                        }
+
+                        var candidates = priceKeyToUnitPrice.Keys
+                            .Where(k =>
+                                k.ProductId == ginLotKey.ProductId &&
+                                k.ExpiredDate == ginLotKey.ExpiredDate &&
+                                k.SupplierID == ginLotKey.SupplierID)
+                            .Select(k => k.UnitPrice)
+                            .Distinct()
+                            .ToList();
+
+                        if (candidates.Count == 0)
+                        {
+                            // Đây chính là trường hợp lot thay thế KHÔNG có dòng đặt tương ứng trong SalesOrderDetails
+                            return new ServiceResult<InvoiceDTO>
+                            {
+                                StatusCode = 400,
+                                Message =
+                                    $"LotId={d.LotId} (ProductId={ginLotKey.ProductId}, HSD={ginLotKey.ExpiredDate:dd-MM-yyyy}, NSX={ginLotKey.SupplierID}) " +
+                                    $"không có dòng tương ứng trong chi tiết đơn hàng để lấy giá bán.",
+                                Data = null
+                            };
+                        }
+
+                        if (candidates.Count > 1)
+                        {
+                            return new ServiceResult<InvoiceDTO>
+                            {
+                                StatusCode = 400,
+                                Message =
+                                    $"Dữ liệu chi tiết đơn hàng có nhiều đơn giá cho cùng ProductId={ginLotKey.ProductId}, " +
+                                    $"HSD={ginLotKey.ExpiredDate:dd-MM-yyyy}, NSX={ginLotKey.SupplierID}. Không xác định được giá để tính hóa đơn.",
+                                Data = null
+                            };
+                        }
+
+                        var unitPrice = candidates[0];
+                        noteAmount += unitPrice * d.Quantity;
                     }
 
                     noteInfos.Add((note, noteAmount));
@@ -391,6 +494,11 @@ namespace PMS.Application.Services.Invoice
                 if (invoice == null)
                     return ServiceResult<InvoiceDTO>.Fail("Không tìm thấy hóa đơn.", 404);
 
+                var latestExportedAt = invoice.InvoiceDetails
+                        .Select(d => d.GoodsIssueNote.DeliveryDate)
+                        .Max();
+
+                var paymentDueAt = latestExportedAt.AddDays(3);
                 var dto = new InvoiceDTO
                 {
                     Id = invoice.Id,
@@ -404,6 +512,9 @@ namespace PMS.Application.Services.Invoice
                     TotalPaid = invoice.TotalPaid,
                     TotalDeposit = invoice.TotalDeposit,
                     TotalRemain = invoice.TotalRemain,
+                    LatestExportedAt = latestExportedAt,
+                    PaymentDueAt = paymentDueAt,
+                    CustomerName = invoice.SalesOrder.Customer.CustomerProfile.User.FullName,
                     Details = invoice.InvoiceDetails.Select((d, index) => new InvoiceDetailDTO
                     {
                         GoodsIssueNoteId = d.GoodsIssueNoteId,
@@ -789,19 +900,19 @@ namespace PMS.Application.Services.Invoice
                 if (!codes.Any())
                 {
                     return ServiceResult<List<string>>.Fail(
-                        "Không tìm thấy SalesOrder nào.", 404);
+                        "Không tìm thấy đơn hàng nào.", 404);
                 }
 
                 return ServiceResult<List<string>>.SuccessResult(
                     codes,
-                    "Lấy danh sách SalesOrderCode thành công.",
+                    "Lấy danh sách mã đơn hàng thành công.",
                     200);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "GetAllSalesOrderCodesAsync error");
                 return ServiceResult<List<string>>.Fail(
-                    "Có lỗi xảy ra khi lấy danh sách SalesOrderCode.", 500);
+                    "Có lỗi xảy ra khi lấy danh sách mã đơn hàng.", 500);
             }
         }
 
@@ -815,7 +926,7 @@ namespace PMS.Application.Services.Invoice
                 if (string.IsNullOrWhiteSpace(salesOrderCode))
                 {
                     return ServiceResult<List<string>>.Fail(
-                        "SalesOrderCode không hợp lệ.", 400);
+                        "Mã đơn hàng không hợp lệ.", 400);
                 }
 
                 // Tìm SalesOrder theo code
@@ -825,7 +936,7 @@ namespace PMS.Application.Services.Invoice
                 if (order == null)
                 {
                     return ServiceResult<List<string>>.Fail(
-                        "Không tìm thấy SalesOrder với mã đã cung cấp.", 404);
+                        "Không tìm thấy đơn hàng với mã đã cung cấp.", 404);
                 }
 
                 var noteCodes = await _unitOfWork.GoodsIssueNote.Query()
@@ -842,19 +953,19 @@ namespace PMS.Application.Services.Invoice
                 if (!noteCodes.Any())
                 {
                     return ServiceResult<List<string>>.Fail(
-                        "Không tìm thấy GoodsIssueNote nào thuộc SalesOrder này.", 404);
+                        "Không tìm thấy phiếu xuất nào thuộc đơn hàng này.", 404);
                 }
 
                 return ServiceResult<List<string>>.SuccessResult(
                     noteCodes,
-                    "Lấy danh sách GoodsIssueNoteCode theo SalesOrderCode thành công.",
+                    "Lấy danh sách mã phiếu xuất theo mã đơn hàng thành công.",
                     200);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "GetGoodsIssueNoteCodesBySalesOrderCodeAsync({SalesOrderCode}) error", salesOrderCode);
                 return ServiceResult<List<string>>.Fail(
-                    "Có lỗi xảy ra khi lấy danh sách GoodsIssueNoteCode.", 500);
+                    "Có lỗi xảy ra khi lấy danh sách mã phiếu xuất.", 500);
             }
         }
 
