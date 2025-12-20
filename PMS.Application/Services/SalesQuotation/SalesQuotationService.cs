@@ -55,6 +55,7 @@ namespace PMS.Application.Services.SalesQuotation
 
                 var listLot = await _unitOfWork.LotProduct.Query()
                     .Include(lp => lp.Product)
+                    .Include(lp => lp.Supplier)
                     .AsNoTracking()
                     .Where(lp => productIds.Contains(lp.ProductID)
                                 && lp.ExpiredDate > DateTime.Now
@@ -110,7 +111,7 @@ namespace PMS.Application.Services.SalesQuotation
                             ProductID = detail.ProductId,
                             ProductName = detail.Product.ProductName,
                             Unit = detail.Product.Unit,
-                            Note = "Không tìm thấy lô nào còn hàng hợp lệ"
+                            Note = "Hết hàng"
                         });
                     }
                 }
