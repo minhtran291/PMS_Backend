@@ -145,7 +145,7 @@ namespace PMS.API.Services.PRFQService
                     Xin chân thành cảm ơn sự hợp tác của Quý Nhà cung cấp.
 
                     Trân trọng kính chào,
-                    [Phòng Mua Hàng / Nhà thuốc HDK dược phẩm số 17]",
+                    [Phòng Mua Hàng / Nhà thuốc HKD dược phẩm số 17]",
                     attachments
                 );
             }
@@ -240,7 +240,19 @@ namespace PMS.API.Services.PRFQService
                 if (currentPrfq.Status == PRFQStatus.Sent)
                 {
 
-                    await _emailService.SendEmailWithManyAttachmentsAsync(currentPrfq.Supplier.Email, "Yêu cầu báo giá và mẫu báo giá", "Kính gửi, đính kèm yêu cầu báo giá và mẫu báo giá.", attachments);
+                    await _emailService.SendEmailWithManyAttachmentsAsync(currentPrfq.Supplier.Email,
+                    "Yêu cầu báo giá và mẫu báo giá",
+
+                    @"Kính gửi Quý Nhà cung cấp,
+
+                    Chúng tôi xin gửi đến Quý Nhà cung cấp Yêu cầu báo giá kèm theo mẫu báo giá để Quý Nhà cung cấp tham khảo và phản hồi.
+
+                    Kính mong Quý Nhà cung cấp xem xét nội dung đính kèm và gửi báo giá theo mẫu trong thời gian sớm nhất.
+
+                    Xin chân thành cảm ơn sự hợp tác của Quý Nhà cung cấp.
+
+                    Trân trọng kính chào,
+                    [Phòng Mua Hàng / Nhà thuốc HKD dược phẩm số 17]", attachments);
                 }
                 return new ServiceResult<int>
                 {
