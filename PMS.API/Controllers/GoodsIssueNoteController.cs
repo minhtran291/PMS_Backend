@@ -24,7 +24,7 @@ namespace PMS.API.Controllers
             _salesOrder = salesOrderService;
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("create-goods-issue-note")]
         public async Task<IActionResult> Create(CreateGoodsIssueNoteDTO dto)
         {
@@ -41,7 +41,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("send-goods-issue-note")]
         public async Task<IActionResult> Send(int ginId)
         {
@@ -58,7 +58,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.ACCOUNTANT)]
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         [Route("goods-issue-note-list")]
         public async Task<IActionResult> List()
         {
@@ -76,7 +76,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.ACCOUNTANT)]
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         [Route("goods-issue-note-details")]
         public async Task<IActionResult> Details(int ginId)
         {
@@ -94,7 +94,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPatch, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpPatch, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("update-goods-issue-note")]
         public async Task<IActionResult> Update(UpdateGoodsIssueNoteDTO dto)
         {
@@ -112,7 +112,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpDelete, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpDelete, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("delete-goods-issue-note")]
         public async Task<IActionResult> Delete(int ginId)
         {
@@ -130,7 +130,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("warnings")]
         public async Task<IActionResult> Warnings()
         {
@@ -143,7 +143,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("response-not-enough")]
         public async Task<IActionResult> NotEnough(int stockExportOrderId)
         {
@@ -160,7 +160,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("exported-lot-product")]
         public async Task<IActionResult> ExportedLotProduct(int goodsIssueNoteId)
         {
@@ -187,7 +187,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("exported-statistic")]
         public async Task<IActionResult> Statistic()
         {
@@ -200,7 +200,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("not-exported-statistic")]
         public async Task<IActionResult> NotExported()
         {

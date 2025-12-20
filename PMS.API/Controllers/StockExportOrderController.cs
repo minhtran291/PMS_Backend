@@ -19,7 +19,7 @@ namespace PMS.API.Controllers
             _stockExportOderService = service;
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("create-stock-export-order")]
         public async Task<IActionResult> Create(StockExportOrderDTO dto)
         {
@@ -36,7 +36,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("send-stock-export-order")]
         public async Task<IActionResult> Send(int seoId)
         {
@@ -53,7 +53,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.WAREHOUSE_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("list-stock-export-order")]
         public async Task<IActionResult> List()
         {
@@ -71,7 +71,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.WAREHOUSE_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("details-stock-export-order")]
         public async Task<IActionResult> Details(int seoId)
         {
@@ -89,7 +89,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPatch, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpPatch, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("update-stock-export-order")]
         public async Task<IActionResult> Update(UpdateStockExportOrderDTO dto)
         {
@@ -106,7 +106,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpDelete, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpDelete, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("delete-stock-export-order")]
         public async Task<IActionResult> Delete(int seoId)
         {
@@ -123,7 +123,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("stock-export-order-form")]
         public async Task<IActionResult> Form(int soId)
         {
@@ -141,7 +141,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("await-stock-export-order")]
         public async Task<IActionResult> AwaitStockExportOrder(int seoId)
         {
@@ -158,7 +158,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         [Route("check-ready-to-export")]
         public async Task<IActionResult> CheckReadyToExport (int seoId)
         {
@@ -170,7 +170,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("cancel-stock-export-order")]
         public async Task<IActionResult> CancelStockExportOrder(int seoId)
         {
@@ -187,7 +187,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("check-so-have-seo-cancel")]
         public async Task<IActionResult> CheckSoWithSeoCancel(int soId)
         {

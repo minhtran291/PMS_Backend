@@ -27,7 +27,7 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         [HttpGet]
         [Route("get-all-warehouse")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> WarehouseList()
         {
             var result = await _warehouseService.GetListWarehouseAsync();
@@ -40,7 +40,7 @@ namespace PMS.API.Controllers
 
         [HttpPost]
         [Route("create-warehouse")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CreateWarehouse([FromBody] CreateWarehouseDTO dto)
         {
             var result = await _warehouseService.CreateWarehouseAsync(dto);
@@ -53,7 +53,7 @@ namespace PMS.API.Controllers
 
         [HttpPut]
         [Route("update-warehouse")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> UpdateWarehouse([FromBody] UpdateWarehouseDTO dto)
         {
             var result = await _warehouseService.UpdateWarehouseAsync(dto);
@@ -70,7 +70,7 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         [HttpGet]
         [Route("get-warehouse-details/{warehouseId}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> WarehouseDetails(int warehouseId)
         {
             var result = await _warehouseService.ViewWarehouseDetailsAysnc(warehouseId);
@@ -84,7 +84,7 @@ namespace PMS.API.Controllers
 
         [HttpDelete]
         [Route("delete-warehouse")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> DeleteWarehouse(int warehouseId)
         {
             var result = await _warehouseService.DeleteWarehouseAsync(warehouseId);
@@ -102,7 +102,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="whlcid">ID vị trí trong kho</param>
         [HttpGet("warehouse-location/{whlcid}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetAllLotByWHLID(int whlcid)
         {
             try
@@ -133,7 +133,7 @@ namespace PMS.API.Controllers
         /// <param name="newSalePrice"></param>
         /// <returns></returns>
         [HttpPut("warehouse-location/{whlcid}/lot/{lotid}/update-saleprice")]
-        [Authorize(Roles = $"{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF},{UserRoles.SALES_STAFF}")]
+        [Authorize(Roles = $"{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF},{UserRoles.SALES_STAFF},{UserRoles.MANAGER}")]
         public async Task<IActionResult> UpdateSalePrice(int whlcid, int lotid, [FromBody] decimal newSalePrice)
         {
             var result = await _warehouseService.UpdateSalePriceAsync(whlcid, lotid, newSalePrice);
@@ -147,7 +147,7 @@ namespace PMS.API.Controllers
         /// 1️⃣ Tạo phiên kiểm kê mới (tạo InventorySession + InventoryHistory cho từng Lot)
         /// </summary>
         [HttpPost("create-session/{whlcid}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CreateInventorySession(int whlcid)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -162,7 +162,7 @@ namespace PMS.API.Controllers
         /// Cập nhật số lượng thực tế của Lot trong phiên kiểm kê
         /// </summary>
         [HttpPut("update-count")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> UpdateInventoryBatch([FromBody] UpdateInventoryBatchDto input)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -177,7 +177,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách so sánh chênh lệch giữa thực tế và hệ thống của phiên kiểm kê
         /// </summary>
         [HttpGet("comparison/{sessionId}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetInventoryComparison(int sessionId)
         {
             var result = await _warehouseService.GetInventoryComparisonAsync(sessionId);
@@ -189,7 +189,7 @@ namespace PMS.API.Controllers
         /// 4️⃣ Hoàn tất phiên kiểm kê (cập nhật tồn kho thực tế)
         /// </summary>
         [HttpPost("complete-session/{sessionId}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CompleteInventorySession(int sessionId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -205,7 +205,7 @@ namespace PMS.API.Controllers
         /// <param name="sessionId"></param>
         /// <returns></returns>
         [HttpGet("session/{sessionId}/histories")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetHistoriesBySessionId(int sessionId)
         {
             var result = await _warehouseService.GetHistoriesBySessionIdAsync(sessionId);
@@ -219,7 +219,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="sessionId">ID phiên kiểm kê</param>
         [HttpGet("session/{sessionId}/export")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> ExportInventorySessionToExcel(int sessionId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -259,7 +259,7 @@ namespace PMS.API.Controllers
         /// <param name="warehouseLocationId"></param>
         /// <returns></returns>
         [HttpGet("sessionbywarehouse/{warehouseLocationId}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetAllSessionsByWarehouse(int warehouseLocationId)
         {
             var result = await _warehouseService.GetAllInventorySessionsByWarehouseLocationAsync(warehouseLocationId);
