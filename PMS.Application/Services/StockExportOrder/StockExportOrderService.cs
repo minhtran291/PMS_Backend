@@ -992,7 +992,7 @@ namespace PMS.Application.Services.StockExportOrder
                         Message = "Không tìm thấy yêu cầu xuất"
                     };
 
-                if (stockExportOrder.Status != StockExportOrderStatus.Sent)
+                if (stockExportOrder.Status != StockExportOrderStatus.Sent && stockExportOrder.Status != StockExportOrderStatus.Await)
                     return new ServiceResult<object>
                     {
                         StatusCode = 400,
@@ -1361,6 +1361,49 @@ namespace PMS.Application.Services.StockExportOrder
                 {
                     StatusCode = 200,
                     Message = "Chuyển trạng thái thành công"
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError($"Loi: {ex.StackTrace}, {ex.Message}");
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi"
+                };
+            }
+        }
+
+        public async Task<ServiceResult<object>> CheckSOWithSEOCancel(int soId)
+        {
+            try
+            {
+                var so = await _unitOfWork.SalesOrder.Query()
+                .Include(so => so.StockExportOrders)
+                .FirstOrDefaultAsync(so => so.SalesOrderId == soId);
+
+                if (so == null)
+                    return new ServiceResult<object>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy đơn hàng"
+                    };
+
+                foreach (var item in so.StockExportOrders)
+                {
+                    if (item.Status == StockExportOrderStatus.Cancel)
+                        return new ServiceResult<object>
+                        {
+                            StatusCode = 200,
+                            Message = "Có"
+                        };
+                }
+
+                return new ServiceResult<object>
+                {
+                    StatusCode = 200,
+                    Message = "Không"
                 };
             }
             catch(Exception ex)

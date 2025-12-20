@@ -26,9 +26,11 @@ namespace PMS.Application.DTOs.Product
 
         public int ProductID { get; set; }
 
+        
 
         public int WarehouselocationID { get; set; }
         public string warehouseName { get; set; }
+        public string warehouseName2 { get; set; }
 
         public DateTime LastCheckedDate { get; set; }
     }
