@@ -27,8 +27,9 @@ namespace PMS.API.Controllers
         /// https://localhost:7213/api/PO/getAllPo
         /// </summary>
         /// <returns></returns>
+        /// 
         [HttpGet("getAllPo")]
-        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF}")]
+        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF},{UserRoles.MANAGER}")]
         public async Task<IActionResult> GetAllPurchaseOrders()
         {
             var result = await _poService.GetAllPOAsync();
