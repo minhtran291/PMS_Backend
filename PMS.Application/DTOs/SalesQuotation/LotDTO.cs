@@ -17,5 +17,6 @@ namespace PMS.Application.DTOs.SalesQuotation
         public DateTime? ExpiredDate { get; set; }
         public int? LotQuantity { get; set; }
         public string? Note {  get; set; }
+        public string SupplierName { get; set; } = string.Empty;
     }
 }

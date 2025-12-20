@@ -360,6 +360,9 @@ namespace PMS.Application.Services.GoodsIssueNote
                 var query = _unitOfWork.GoodsIssueNote.Query()
                     .AsNoTracking()
                     .Include(g => g.WarehouseStaff)
+                    .Include(g => g.Warehouse)
+                    .Include(g => g.StockExportOrder)
+                        .ThenInclude(s => s.SalesOrder)
                     .AsQueryable();
 
                 if (isWarehouseStaff)

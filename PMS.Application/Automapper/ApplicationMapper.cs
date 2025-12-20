@@ -31,7 +31,8 @@ namespace PMS.Application.Automapper
             CreateMap<LotProduct, LotDTO>()
                 .ForMember(dest => dest.ProductName, opt => opt.MapFrom(src => src.Product.ProductName))
                 .ForMember(dest => dest.ProductID, opt => opt.MapFrom(src => src.Product.ProductID))
-                .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => src.Product.Unit));
+                .ForMember(dest => dest.Unit, opt => opt.MapFrom(src => src.Product.Unit))
+                .ForMember(dest => dest.SupplierName, opt => opt.MapFrom(src => src.Supplier.Name));
 
             CreateMap<TaxPolicy, DTOs.SalesQuotation.TaxPolicyDTO>();
 
@@ -79,7 +80,8 @@ namespace PMS.Application.Automapper
             CreateMap<GoodsIssueNote, GoodsIssueNoteListDTO>()
                 .ForMember(dest => dest.WarehouseName, opt => opt.MapFrom(src => src.Warehouse.Name))
                 .ForMember(dest => dest.CreateBy, opt => opt.MapFrom(src => src.WarehouseStaff.FullName))
-                .ForMember(dest => dest.StockExportOrderCode, opt => opt.MapFrom(src => src.StockExportOrder.StockExportOrderCode));
+                .ForMember(dest => dest.StockExportOrderCode, opt => opt.MapFrom(src => src.StockExportOrder.StockExportOrderCode))
+                .ForMember(dest => dest.SalesOrderCode, opt => opt.MapFrom(src => src.StockExportOrder.SalesOrder.SalesOrderCode));
 
             CreateMap<GoodsIssueNoteDetails, GoodsIssueNoteDetailsDTO>()
                 .ForMember(dest => dest.WarehouseLocationName, opt => opt.MapFrom(src => src.LotProduct.WarehouseLocation.LocationName))
@@ -88,8 +90,7 @@ namespace PMS.Application.Automapper
 
             CreateMap<GoodsIssueNote, GoodsIssueNoteWithDetailsDTO>()
                 .IncludeBase<GoodsIssueNote, GoodsIssueNoteListDTO>()
-                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.GoodsIssueNoteDetails))
-                .ForMember(dest => dest.SalesOrderCode, opt => opt.MapFrom(src => src.StockExportOrder.SalesOrder.SalesOrderCode));
+                .ForMember(dest => dest.Details, opt => opt.MapFrom(src => src.GoodsIssueNoteDetails));
 
             CreateMap<TaxPolicy, DTOs.TaxPolicy.TaxPolicyDTO>();
         }

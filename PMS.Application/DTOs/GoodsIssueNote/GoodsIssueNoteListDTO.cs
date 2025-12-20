@@ -19,5 +19,6 @@ namespace PMS.Application.DTOs.GoodsIssueNote
         public DateTime DeliveryDate { get; set; }
         public string? Note { get; set; }
         public GoodsIssueNoteStatus Status { get; set; }
+        public string SalesOrderCode { get; set; } = string.Empty;
     }
 }

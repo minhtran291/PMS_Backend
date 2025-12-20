@@ -232,9 +232,10 @@ namespace PMS.API.Controllers
         /// </summary>
         [HttpPut("draft/{orderId}/quantities")]
         [Authorize(Roles = UserRoles.CUSTOMER)]
-        public async Task<IActionResult> UpdateDraftQuantities([FromBody] SalesOrderUpdateDTO items)
+        public async Task<IActionResult> UpdateDraftQuantities(int orderId, [FromBody] UpdateDraftQuantitiesDTO req)
         {
-            var result = await _service.UpdateDraftQuantitiesAsync(items);
+            var customerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _service.UpdateDraftQuantitiesAsync(orderId, req, customerId);
             return StatusCode(result.StatusCode, new
             {
                 success = result.Success,

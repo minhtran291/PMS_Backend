@@ -44,6 +44,7 @@ namespace PMS.Application.Services.CustomerDebt
                         DebtAmount = cd.DebtAmount,
                         CustomerName = cd.SalesOrder.Customer.CustomerProfile.User.FullName,
                     })
+                    .Where(o => o.Status == CustomerDebtStatus.UnPaid || o.Status == CustomerDebtStatus.Apart)
                     .OrderBy(x => x.DueDate)
                     .ToListAsync();
 
