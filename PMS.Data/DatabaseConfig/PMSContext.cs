@@ -613,7 +613,7 @@ namespace PMS.Data.DatabaseConfig
                 entity.Property(pod => pod.Description)
                     .HasMaxLength(500);
 
-                entity.Property(pod => pod.Tax).HasColumnType("decimal(18,2)");
+                entity.Property(pod => pod.Tax).HasColumnType("decimal(18,4)");
 
                 entity.Property(pod => pod.ExpiredDate)
                 .HasColumnType("date").IsRequired();
@@ -698,7 +698,7 @@ namespace PMS.Data.DatabaseConfig
                     .HasColumnType("date")
                     .IsRequired();
 
-                entity.Property(qd => qd.Tax).HasColumnType("decimal(18,2)");
+                entity.Property(qd => qd.Tax).HasColumnType("decimal(18,4)");
 
                 entity.HasOne(qd => qd.Quotation)
                     .WithMany(q => q.QuotationDetails)
