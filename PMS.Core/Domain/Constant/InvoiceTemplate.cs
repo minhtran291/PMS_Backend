@@ -76,19 +76,20 @@ namespace PMS.Core.Domain.Constant
                         height: 100%;
                     }}
 
-                    body {{display: flex;
+                    body {{
+                        display: flex;
                         justify-content: center;
                         align-items: center;
                     }}                    
 
-                    .page{{width: 250mm;
-                        height: 350mm;
+                    .page{{
+                        width: 210mm;
+                        height: 297mm;
                         border: 1px solid #000;
                         box-sizing: border-box;
                         padding: 5mm;
                         font-family: Times New Roman, Times, serif;
                         font-size: 15px;
-
                         position: relative;
                         overflow: hidden;
                         background-color: #fff;
@@ -99,16 +100,16 @@ namespace PMS.Core.Domain.Constant
                         margin: 0;
                     }}
 
-                    .bg-watermark{{position: absolute;
-                        inset: 0;
+                    .bg-watermark{{
                         position: absolute;
-                        width: 100%;
-                        height: 100%;
-                        object-fit: cover;  
-                        object-position: center;
+                        width: 180mm;   
+                        height: auto;
+                        transform: translate(-50%, -50%);
+                        left:50%;
+                        top:50%;
                         opacity: 0.15;
                         z-index: 0;
-                        transform: scale(1.25);
+                        pointer-events:none;
                     }}
 
                     .wrapper{{
