@@ -1919,22 +1919,111 @@ namespace PMS.API.Services.PRFQService
             }
         }
 
+        //public async Task<ServiceResult<bool>> ImportSupplierQuotationExcelFile(IFormFile file)
+        //{
+        //    try
+        //    {
+        //        if (file == null || file.Length == 0)
+        //            return new ServiceResult<bool>()
+        //            { Message = "File excel không hợp lệ.", StatusCode = 400 };
+
+        //        using var stream = new MemoryStream();
+        //        await file.CopyToAsync(stream);
+        //        using var package = new ExcelPackage(stream);
+
+        //        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+        //        if (worksheet == null)
+        //            return new ServiceResult<bool>()
+        //            { Message = "Không tìm thấy worksheet trong file Excel.", StatusCode = 400 };
+
+
+        //        var excelData = ReadExcelData(worksheet);
+
+
+        //        var supplier = await _unitOfWork.Supplier.Query()
+        //            .FirstOrDefaultAsync(s => s.Name.ToLower() == excelData.SupplierName.ToLower());
+
+        //        if (supplier == null)
+        //            return new ServiceResult<bool>()
+        //            { Message = $"Không tìm thấy nhà cung cấp: {excelData.SupplierName}", StatusCode = 404 };
+
+
+        //        var quotation = await GetOrCreateQuotationAsync(excelData, supplier.Id);
+        //        if (quotation == null)
+        //            return new ServiceResult<bool>()
+        //            { Message = "Báo giá đã hết hạn hoặc không hợp lệ.", StatusCode = 400 };
+
+        //        if (excelData.IsNewQuotation)
+        //        {
+        //            var details = await UploadQuotationDetails(worksheet, quotation.QID);
+
+        //            if (details.Any())
+        //            {
+        //                await _unitOfWork.QuotationDetail.AddRangeAsync(details);
+        //                await _unitOfWork.CommitAsync();
+        //            }
+
+        //            return new ServiceResult<bool>()
+        //            {
+        //                Data = excelData.IsNewQuotation,
+        //                Success = true,
+        //                Message = excelData.IsNewQuotation
+        //                    ? "Tạo mới báo giá và lưu thành công."
+        //                    : "Đã cập nhật báo giá thành công.",
+        //                StatusCode = 200
+        //            };
+        //        }
+        //        return new ServiceResult<bool>()
+        //        {
+        //            Message = $"Bạn upload sai định dạng hoặc báo giá đã tồn tại",
+        //            StatusCode = 400,
+        //            Success = false
+        //        };
+
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ServiceResult<bool>()
+        //        { Message = $"Lỗi khi import báo giá: {ex.Message}", StatusCode = 500 };
+        //    }
+        //}
+
         public async Task<ServiceResult<bool>> ImportSupplierQuotationExcelFile(IFormFile file)
         {
+            if (file == null || file.Length == 0)
+                return new ServiceResult<bool>()
+                { Message = "File excel không hợp lệ.", StatusCode = 400 };
+
+
+            await _unitOfWork.BeginTransactionAsync();
+
             try
             {
-                if (file == null || file.Length == 0)
-                    return new ServiceResult<bool>()
-                    { Message = "File excel không hợp lệ.", StatusCode = 400 };
 
-                using var stream = new MemoryStream();
-                await file.CopyToAsync(stream);
-                using var package = new ExcelPackage(stream);
+                using var originalStream = new MemoryStream();
+                await file.CopyToAsync(originalStream);
+                originalStream.Position = 0;
 
-                var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-                if (worksheet == null)
+                using var originalPackage = new ExcelPackage(originalStream);
+
+                var sourceWorksheet = originalPackage.Workbook.Worksheets.FirstOrDefault();
+                if (sourceWorksheet == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
                     return new ServiceResult<bool>()
                     { Message = "Không tìm thấy worksheet trong file Excel.", StatusCode = 400 };
+                }
+
+
+                using var cleanPackage = new ExcelPackage();
+                cleanPackage.Workbook.Worksheets.Add("Imported", sourceWorksheet);
+
+                var cleanStream = new MemoryStream();
+                cleanPackage.SaveAs(cleanStream);
+                cleanStream.Position = 0;
+
+                using var package = new ExcelPackage(cleanStream);
+                var worksheet = package.Workbook.Worksheets["Imported"];
 
 
                 var excelData = ReadExcelData(worksheet);
@@ -1944,47 +2033,56 @@ namespace PMS.API.Services.PRFQService
                     .FirstOrDefaultAsync(s => s.Name.ToLower() == excelData.SupplierName.ToLower());
 
                 if (supplier == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
                     return new ServiceResult<bool>()
                     { Message = $"Không tìm thấy nhà cung cấp: {excelData.SupplierName}", StatusCode = 404 };
+                }
 
 
                 var quotation = await GetOrCreateQuotationAsync(excelData, supplier.Id);
                 if (quotation == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
                     return new ServiceResult<bool>()
                     { Message = "Báo giá đã hết hạn hoặc không hợp lệ.", StatusCode = 400 };
+                }
+
 
                 if (excelData.IsNewQuotation)
                 {
                     var details = await UploadQuotationDetails(worksheet, quotation.QID);
-
                     if (details.Any())
                     {
-                        await _unitOfWork.QuotationDetail.AddRangeAsync(details);
+                        await _unitOfWork.QuotationDetail.AddRangeAsync(details);                      
                         await _unitOfWork.CommitAsync();
                     }
-
-                    return new ServiceResult<bool>()
-                    {
-                        Data = excelData.IsNewQuotation,
-                        Success = true,
-                        Message = excelData.IsNewQuotation
-                            ? "Tạo mới báo giá và lưu thành công."
-                            : "Đã cập nhật báo giá thành công.",
-                        StatusCode = 200
-                    };
                 }
+
+
+                await _unitOfWork.CommitTransactionAsync();
+
                 return new ServiceResult<bool>()
                 {
-                    Message = $"Bạn upload sai định dạng hoặc báo giá đã tồn tại",
-                    StatusCode = 400,
-                    Success = false
+                    Data = excelData.IsNewQuotation,
+                    Success = true,
+                    Message = excelData.IsNewQuotation
+                        ? "Tạo mới báo giá và lưu thành công."
+                        : "Đã cập nhật báo giá thành công.",
+                    StatusCode = 200
                 };
-
             }
             catch (Exception ex)
             {
+
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Lỗi import báo giá từ Excel");
                 return new ServiceResult<bool>()
-                { Message = $"Lỗi khi import báo giá: {ex.Message}", StatusCode = 500 };
+                {
+                    Message = $"Lỗi khi import báo giá: {ex.Message}",
+                    StatusCode = 500,
+                    Success = false
+                };
             }
         }
 
