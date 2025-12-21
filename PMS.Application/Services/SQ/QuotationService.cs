@@ -140,7 +140,7 @@ namespace PMS.API.Services.QuotationService
                         ProductDescription = d.ProductDescription,
                         ProductUnit = d.ProductUnit,
                         UnitPrice = d.UnitPrice,
-                        ProductDate = d.ProductDate.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+                        ProductDate = d.ProductDate.ToString("dd/MM/yyyy"),
                         tax=d.Tax,
                     }).ToList()
                 };

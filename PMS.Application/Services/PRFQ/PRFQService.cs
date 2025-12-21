@@ -2067,14 +2067,17 @@ namespace PMS.API.Services.PRFQService
                     StatusCode = 200
                 };
             }
-            catch (Exception ex)
+            catch (DbUpdateException ex)
             {
-
                 await _unitOfWork.RollbackTransactionAsync();
+
+                var innerMessage = ex.InnerException?.Message ?? ex.Message;
+
                 _logger.LogError(ex, "Lỗi import báo giá từ Excel");
-                return new ServiceResult<bool>()
+
+                return new ServiceResult<bool>
                 {
-                    Message = $"Lỗi khi import báo giá: {ex.Message}",
+                    Message = $"Lỗi khi import báo giá: {innerMessage}",
                     StatusCode = 500,
                     Success = false
                 };
@@ -2131,65 +2134,100 @@ namespace PMS.API.Services.PRFQService
         //    return details;
         //}
 
-        private async Task<List<QuotationDetail>> UploadQuotationDetails(ExcelWorksheet worksheet, int qId)
+        private async Task<List<QuotationDetail>> UploadQuotationDetails(
+     ExcelWorksheet worksheet,
+     int qId)
         {
             var products = await _unitOfWork.Product.Query()
                 .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
 
-            const int excelStartRow = 11;
+            const int startRow = 11;
             var details = new List<QuotationDetail>();
-            int row = excelStartRow;
+            int row = startRow;
 
             while (true)
             {
+
                 var productIdText = worksheet.Cells[row, 2].Text?.Trim();
                 if (string.IsNullOrEmpty(productIdText))
                     break;
 
                 if (!int.TryParse(productIdText, out int productId))
-                    throw new Exception($"Không thể đọc ProductID tại dòng {row}.");
+                    throw new Exception($"Dòng {row}: ProductID không hợp lệ.");
 
-                var description = worksheet.Cells[row, 4].Text?.Trim();
-                var dvt = worksheet.Cells[row, 5].Text?.Trim();
-                var priceText = worksheet.Cells[row, 6].Text?.Trim();
-                var taxText = worksheet.Cells[row, 7].Text?.Trim();
-                var productExpiredText = worksheet.Cells[row, 8].Text?.Trim();
+                if (!products.ContainsKey(productId))
+                    throw new Exception($"Dòng {row}: Không tồn tại ProductID = {productId}.");
 
-                decimal.TryParse(priceText, out decimal price);
-                decimal tax = ParseTax(taxText);
 
-                DateTime productExpired = DateTime.MinValue;
-                try
+                var description = worksheet.Cells[row, 4].Text?.Trim() ?? "";
+                var unit = worksheet.Cells[row, 5].Text?.Trim() ?? "";
+
+                if (unit.Length > 100)
+                    unit = unit.Substring(0, 100);
+
+
+                if (!decimal.TryParse(
+                        worksheet.Cells[row, 6].Text?.Trim(),
+                        NumberStyles.Any,
+                        CultureInfo.InvariantCulture,
+                        out decimal price))
                 {
-                    productExpired = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(productExpiredText, row);
+                    throw new Exception($"Dòng {row}: Đơn giá không hợp lệ.");
                 }
-                catch {  }
 
-                var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
+
+                decimal tax = ParseTax(worksheet.Cells[row, 7].Text?.Trim());
+
+                var dateCell = worksheet.Cells[row, 8];
+                DateTime productExpired;
+
+                if (dateCell.Value is DateTime dt)
+                {
+                    productExpired = dt;
+                }
+                else if (dateCell.Value is double oaDate)
+                {
+                    productExpired = DateTime.FromOADate(oaDate);
+                }
+                else if (!string.IsNullOrWhiteSpace(dateCell.Text))
+                {
+
+                    productExpired = DateTime.ParseExact(
+                        dateCell.Text.Trim(),
+                        new[] { "d/M/yyyy", "dd/MM/yyyy" },
+                        new CultureInfo("vi-VN"),
+                        DateTimeStyles.None
+                    );
+                }
+                else
+                {
+                    throw new Exception($"Dòng {row}: Ngày hết hạn trống.");
+                }
+
 
                 details.Add(new QuotationDetail
                 {
                     QID = qId,
                     ProductID = productId,
-                    ProductName = productName,
-                    ProductDescription = description ?? "",
-                    ProductUnit = (dvt ?? "").Length > 100 ? dvt.Substring(0, 100) : dvt,
+                    ProductName = products[productId],
+                    ProductDescription = description,
+                    ProductUnit = unit,
                     UnitPrice = price,
                     ProductDate = productExpired,
-                    Tax = tax,
+                    Tax = tax
                 });
 
                 row++;
             }
 
-          
-            if (details.Any())
-            {
-                await _unitOfWork.QuotationDetail.AddRangeAsync(details);
-                await _unitOfWork.CommitAsync();  
-            }
+            if (!details.Any())
+                throw new Exception("File Excel không có dữ liệu chi tiết hợp lệ.");
+
+            await _unitOfWork.QuotationDetail.AddRangeAsync(details);
+            await _unitOfWork.CommitAsync();
 
             return details;
         }
+
     }
 }
