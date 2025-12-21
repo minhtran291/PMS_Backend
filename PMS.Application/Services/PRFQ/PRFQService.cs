@@ -2051,12 +2051,7 @@ namespace PMS.API.Services.PRFQService
 
                 if (excelData.IsNewQuotation)
                 {
-                    var details = await UploadQuotationDetails(worksheet, quotation.QID);
-                    if (details.Any())
-                    {
-                        await _unitOfWork.QuotationDetail.AddRangeAsync(details);                      
-                       // await _unitOfWork.CommitAsync();
-                    }
+                    var details = await UploadQuotationDetails(worksheet, quotation.QID);                    
                 }
 
 
@@ -2086,6 +2081,56 @@ namespace PMS.API.Services.PRFQService
             }
         }
 
+        //private async Task<List<QuotationDetail>> UploadQuotationDetails(ExcelWorksheet worksheet, int qId)
+        //{
+        //    var products = await _unitOfWork.Product.Query()
+        //        .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
+
+        //    const int excelStartRow = 11;
+        //    var details = new List<QuotationDetail>();
+        //    int row = excelStartRow;
+
+        //    while (true)
+        //    {
+        //        var productIdText = worksheet.Cells[row, 2].Text?.Trim();
+        //        if (string.IsNullOrEmpty(productIdText))
+        //            break;
+
+        //        if (!int.TryParse(productIdText, out int productId))
+        //            throw new Exception($"Không thể đọc ProductID tại dòng {row}.");
+
+        //        var description = worksheet.Cells[row, 4].Text?.Trim();
+        //        var dvt = worksheet.Cells[row, 5].Text?.Trim();
+        //        var priceText = worksheet.Cells[row, 6].Text?.Trim();
+        //        var taxText = worksheet.Cells[row, 7].Text?.Trim();
+        //        var productExpiredText = worksheet.Cells[row, 8].Text?.Trim();
+
+        //        decimal.TryParse(priceText, out decimal price);
+        //        decimal tax = ParseTax(taxText);
+
+        //        DateTime productExpired = DateTime.MinValue;
+        //        try { productExpired = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(productExpiredText, row); } catch { }
+
+        //        var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
+
+        //        details.Add(new QuotationDetail
+        //        {
+        //            QID = qId,
+        //            ProductID = productId,
+        //            ProductName = productName,
+        //            ProductDescription = description ?? "",
+        //            ProductUnit = (dvt ?? "").Length > 100 ? dvt.Substring(0, 100) : dvt,
+        //            UnitPrice = price,
+        //            ProductDate = productExpired,
+        //            Tax = tax,
+        //        });
+
+        //        row++;
+        //    }
+
+        //    return details;
+        //}
+
         private async Task<List<QuotationDetail>> UploadQuotationDetails(ExcelWorksheet worksheet, int qId)
         {
             var products = await _unitOfWork.Product.Query()
@@ -2114,7 +2159,11 @@ namespace PMS.API.Services.PRFQService
                 decimal tax = ParseTax(taxText);
 
                 DateTime productExpired = DateTime.MinValue;
-                try { productExpired = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(productExpiredText, row); } catch { }
+                try
+                {
+                    productExpired = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(productExpiredText, row);
+                }
+                catch {  }
 
                 var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
 
@@ -2133,8 +2182,14 @@ namespace PMS.API.Services.PRFQService
                 row++;
             }
 
+          
+            if (details.Any())
+            {
+                await _unitOfWork.QuotationDetail.AddRangeAsync(details);
+                await _unitOfWork.CommitAsync();  
+            }
+
             return details;
         }
-
     }
 }
