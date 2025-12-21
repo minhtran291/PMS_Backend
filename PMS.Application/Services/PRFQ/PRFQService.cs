@@ -705,8 +705,8 @@ namespace PMS.API.Services.PRFQService
 
             ws.Cells[row, 1].Value = "Bên Nhận";
             ws.Cells[row, 2].Value = "NHÀ THUỐC DƯỢC PHẨM SỐ 17";
-            ws.Cells[row, 3].Value = "Mã số quotation:";
-            ws.Cells[row, 4].Value = "???";
+            ws.Cells[row, 3].Value = "Mã số báo giá:";
+            ws.Cells[row, 4].Value = prfq.PRFQID;
 
             ws.Cells[row, 5].Value = "Tên NCC:";
             ws.Cells[row, 6, row, 8].Merge = true;
@@ -1919,22 +1919,111 @@ namespace PMS.API.Services.PRFQService
             }
         }
 
+        //public async Task<ServiceResult<bool>> ImportSupplierQuotationExcelFile(IFormFile file)
+        //{
+        //    try
+        //    {
+        //        if (file == null || file.Length == 0)
+        //            return new ServiceResult<bool>()
+        //            { Message = "File excel không hợp lệ.", StatusCode = 400 };
+
+        //        using var stream = new MemoryStream();
+        //        await file.CopyToAsync(stream);
+        //        using var package = new ExcelPackage(stream);
+
+        //        var worksheet = package.Workbook.Worksheets.FirstOrDefault();
+        //        if (worksheet == null)
+        //            return new ServiceResult<bool>()
+        //            { Message = "Không tìm thấy worksheet trong file Excel.", StatusCode = 400 };
+
+
+        //        var excelData = ReadExcelData(worksheet);
+
+
+        //        var supplier = await _unitOfWork.Supplier.Query()
+        //            .FirstOrDefaultAsync(s => s.Name.ToLower() == excelData.SupplierName.ToLower());
+
+        //        if (supplier == null)
+        //            return new ServiceResult<bool>()
+        //            { Message = $"Không tìm thấy nhà cung cấp: {excelData.SupplierName}", StatusCode = 404 };
+
+
+        //        var quotation = await GetOrCreateQuotationAsync(excelData, supplier.Id);
+        //        if (quotation == null)
+        //            return new ServiceResult<bool>()
+        //            { Message = "Báo giá đã hết hạn hoặc không hợp lệ.", StatusCode = 400 };
+
+        //        if (excelData.IsNewQuotation)
+        //        {
+        //            var details = await UploadQuotationDetails(worksheet, quotation.QID);
+
+        //            if (details.Any())
+        //            {
+        //                await _unitOfWork.QuotationDetail.AddRangeAsync(details);
+        //                await _unitOfWork.CommitAsync();
+        //            }
+
+        //            return new ServiceResult<bool>()
+        //            {
+        //                Data = excelData.IsNewQuotation,
+        //                Success = true,
+        //                Message = excelData.IsNewQuotation
+        //                    ? "Tạo mới báo giá và lưu thành công."
+        //                    : "Đã cập nhật báo giá thành công.",
+        //                StatusCode = 200
+        //            };
+        //        }
+        //        return new ServiceResult<bool>()
+        //        {
+        //            Message = $"Bạn upload sai định dạng hoặc báo giá đã tồn tại",
+        //            StatusCode = 400,
+        //            Success = false
+        //        };
+
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return new ServiceResult<bool>()
+        //        { Message = $"Lỗi khi import báo giá: {ex.Message}", StatusCode = 500 };
+        //    }
+        //}
+
         public async Task<ServiceResult<bool>> ImportSupplierQuotationExcelFile(IFormFile file)
         {
+            if (file == null || file.Length == 0)
+                return new ServiceResult<bool>()
+                { Message = "File excel không hợp lệ.", StatusCode = 400 };
+
+
+            await _unitOfWork.BeginTransactionAsync();
+
             try
             {
-                if (file == null || file.Length == 0)
-                    return new ServiceResult<bool>()
-                    { Message = "File excel không hợp lệ.", StatusCode = 400 };
 
-                using var stream = new MemoryStream();
-                await file.CopyToAsync(stream);
-                using var package = new ExcelPackage(stream);
+                using var originalStream = new MemoryStream();
+                await file.CopyToAsync(originalStream);
+                originalStream.Position = 0;
 
-                var worksheet = package.Workbook.Worksheets.FirstOrDefault();
-                if (worksheet == null)
+                using var originalPackage = new ExcelPackage(originalStream);
+
+                var sourceWorksheet = originalPackage.Workbook.Worksheets.FirstOrDefault();
+                if (sourceWorksheet == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
                     return new ServiceResult<bool>()
                     { Message = "Không tìm thấy worksheet trong file Excel.", StatusCode = 400 };
+                }
+
+
+                using var cleanPackage = new ExcelPackage();
+                cleanPackage.Workbook.Worksheets.Add("Imported", sourceWorksheet);
+
+                var cleanStream = new MemoryStream();
+                cleanPackage.SaveAs(cleanStream);
+                cleanStream.Position = 0;
+
+                using var package = new ExcelPackage(cleanStream);
+                var worksheet = package.Workbook.Worksheets["Imported"];
 
 
                 var excelData = ReadExcelData(worksheet);
@@ -1944,49 +2033,103 @@ namespace PMS.API.Services.PRFQService
                     .FirstOrDefaultAsync(s => s.Name.ToLower() == excelData.SupplierName.ToLower());
 
                 if (supplier == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
                     return new ServiceResult<bool>()
                     { Message = $"Không tìm thấy nhà cung cấp: {excelData.SupplierName}", StatusCode = 404 };
+                }
 
 
                 var quotation = await GetOrCreateQuotationAsync(excelData, supplier.Id);
                 if (quotation == null)
+                {
+                    await _unitOfWork.RollbackTransactionAsync();
                     return new ServiceResult<bool>()
                     { Message = "Báo giá đã hết hạn hoặc không hợp lệ.", StatusCode = 400 };
+                }
+
 
                 if (excelData.IsNewQuotation)
                 {
-                    var details = await UploadQuotationDetails(worksheet, quotation.QID);
-
-                    if (details.Any())
-                    {
-                        await _unitOfWork.QuotationDetail.AddRangeAsync(details);
-                        await _unitOfWork.CommitAsync();
-                    }
-
-                    return new ServiceResult<bool>()
-                    {
-                        Data = excelData.IsNewQuotation,
-                        Success = true,
-                        Message = excelData.IsNewQuotation
-                            ? "Tạo mới báo giá và lưu thành công."
-                            : "Đã cập nhật báo giá thành công.",
-                        StatusCode = 200
-                    };
+                    var details = await UploadQuotationDetails(worksheet, quotation.QID);                    
                 }
+
+
+                await _unitOfWork.CommitTransactionAsync();
+
                 return new ServiceResult<bool>()
                 {
-                    Message = $"Bạn upload sai định dạng hoặc báo giá đã tồn tại",
-                    StatusCode = 400,
-                    Success = false
+                    Data = excelData.IsNewQuotation,
+                    Success = true,
+                    Message = excelData.IsNewQuotation
+                        ? "Tạo mới báo giá và lưu thành công."
+                        : "Đã cập nhật báo giá thành công.",
+                    StatusCode = 200
                 };
-
             }
             catch (Exception ex)
             {
+
+                await _unitOfWork.RollbackTransactionAsync();
+                _logger.LogError(ex, "Lỗi import báo giá từ Excel");
                 return new ServiceResult<bool>()
-                { Message = $"Lỗi khi import báo giá: {ex.Message}", StatusCode = 500 };
+                {
+                    Message = $"Lỗi khi import báo giá: {ex.Message}",
+                    StatusCode = 500,
+                    Success = false
+                };
             }
         }
+
+        //private async Task<List<QuotationDetail>> UploadQuotationDetails(ExcelWorksheet worksheet, int qId)
+        //{
+        //    var products = await _unitOfWork.Product.Query()
+        //        .ToDictionaryAsync(p => p.ProductID, p => p.ProductName);
+
+        //    const int excelStartRow = 11;
+        //    var details = new List<QuotationDetail>();
+        //    int row = excelStartRow;
+
+        //    while (true)
+        //    {
+        //        var productIdText = worksheet.Cells[row, 2].Text?.Trim();
+        //        if (string.IsNullOrEmpty(productIdText))
+        //            break;
+
+        //        if (!int.TryParse(productIdText, out int productId))
+        //            throw new Exception($"Không thể đọc ProductID tại dòng {row}.");
+
+        //        var description = worksheet.Cells[row, 4].Text?.Trim();
+        //        var dvt = worksheet.Cells[row, 5].Text?.Trim();
+        //        var priceText = worksheet.Cells[row, 6].Text?.Trim();
+        //        var taxText = worksheet.Cells[row, 7].Text?.Trim();
+        //        var productExpiredText = worksheet.Cells[row, 8].Text?.Trim();
+
+        //        decimal.TryParse(priceText, out decimal price);
+        //        decimal tax = ParseTax(taxText);
+
+        //        DateTime productExpired = DateTime.MinValue;
+        //        try { productExpired = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(productExpiredText, row); } catch { }
+
+        //        var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
+
+        //        details.Add(new QuotationDetail
+        //        {
+        //            QID = qId,
+        //            ProductID = productId,
+        //            ProductName = productName,
+        //            ProductDescription = description ?? "",
+        //            ProductUnit = (dvt ?? "").Length > 100 ? dvt.Substring(0, 100) : dvt,
+        //            UnitPrice = price,
+        //            ProductDate = productExpired,
+        //            Tax = tax,
+        //        });
+
+        //        row++;
+        //    }
+
+        //    return details;
+        //}
 
         private async Task<List<QuotationDetail>> UploadQuotationDetails(ExcelWorksheet worksheet, int qId)
         {
@@ -2016,7 +2159,11 @@ namespace PMS.API.Services.PRFQService
                 decimal tax = ParseTax(taxText);
 
                 DateTime productExpired = DateTime.MinValue;
-                try { productExpired = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(productExpiredText, row); } catch { }
+                try
+                {
+                    productExpired = PMS.Core.Domain.Helper.ExcelDateHelper.ParseDateFromString(productExpiredText, row);
+                }
+                catch {  }
 
                 var productName = products.ContainsKey(productId) ? products[productId] : "Unknown";
 
@@ -2035,8 +2182,14 @@ namespace PMS.API.Services.PRFQService
                 row++;
             }
 
+          
+            if (details.Any())
+            {
+                await _unitOfWork.QuotationDetail.AddRangeAsync(details);
+                await _unitOfWork.CommitAsync();  
+            }
+
             return details;
         }
-
     }
 }
