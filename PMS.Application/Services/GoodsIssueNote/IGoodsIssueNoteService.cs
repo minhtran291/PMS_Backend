@@ -22,5 +22,6 @@ namespace PMS.Application.Services.GoodsIssueNote
         Task<ServiceResult<object>> StatisticAsync();
         Task<ServiceResult<object>> NotExportedAsync();
         Task CheckQuantity(string userId);
+        Task<ServiceResult<byte[]>> DownloadGIN(int ginId);
     }
 }
