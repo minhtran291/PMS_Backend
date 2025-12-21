@@ -30,7 +30,7 @@ namespace PMS.API.Controllers
         /// <returns></returns>
         /// 
         [HttpPost("quotationforsupplier")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CreatePRFQ([FromBody] CreatePRFQDTO dto)
         {
             if (!ModelState.IsValid)
@@ -62,7 +62,7 @@ namespace PMS.API.Controllers
         /// <returns>POID và thông báo kết quả</returns>
         [HttpPost("convertToPo")]
         [Consumes("application/json")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> ConvertToPurchaseOrder([FromBody] PurchaseOrderInputDto input )
         {
             if (!ModelState.IsValid)
@@ -107,7 +107,7 @@ namespace PMS.API.Controllers
         /// <returns>Danh sách sản phẩm gồm ProductID, Mô tả, ĐVT, Giá báo...</returns>
         [HttpPost("previewSupplierQuotaionExcel")]
         [Consumes("multipart/form-data")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> PreviewSupplierQuotationExcel([FromForm] IFormFile excelFile)
         {
             if (excelFile == null || excelFile.Length == 0)
@@ -133,7 +133,7 @@ namespace PMS.API.Controllers
         /// <param name="prfqId"></param>
         /// <returns></returns>
         [HttpDelete("deletePRFQ/{prfqId:int}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> DeletePRFQ(int prfqId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -152,7 +152,7 @@ namespace PMS.API.Controllers
         /// <param name="prfqId"></param>
         /// <returns></returns>
         [HttpGet("detail/{prfqId:int}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetPRFQDetail(int prfqId)
         {
             var result = await _iPRFQService.GetPRFQDetailAsync(prfqId);
@@ -166,7 +166,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet("getAll")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetAllPRFQ()
         {
             var result = await _iPRFQService.GetAllPRFQAsync();
@@ -180,7 +180,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="prfqId">ID của PRFQ</param>
         [HttpGet("preview/{prfqId}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> PreviewExcel(int prfqId)
         {
             var result = await _iPRFQService.PreviewPRFQAsync(prfqId);
@@ -194,7 +194,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <param name="prfqId">ID của PRFQ</param>
         [HttpGet("download/{prfqId}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> DownloadExcel(int prfqId)
         {
             var result = await _iPRFQService.GenerateExcelAsync(prfqId);
@@ -214,7 +214,7 @@ namespace PMS.API.Controllers
         /// <param name="newStatus"></param>
         /// <returns></returns>
         [HttpPut("{prfqId}/status")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> UpdatePRFQStatus(int prfqId, [FromBody] PRFQStatus newStatus)
         {
             try
@@ -233,7 +233,7 @@ namespace PMS.API.Controllers
         /// Tiếp tục chỉnh sửa PRFQ đang ở trạng thái Draft
         /// </summary>
         [HttpPut("{prfqId}/continue")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> ContinueEditPRFQ([FromRoute] int prfqId, [FromBody] ContinuePRFQDTO input)
         {
             if (!ModelState.IsValid)
@@ -258,7 +258,7 @@ namespace PMS.API.Controllers
         /// <param name="input">Dữ liệu đầu vào: QID, danh sách sản phẩm và số lượng</param>
         /// <returns>Trả về POID và thông tin trạng thái</returns>
         [HttpPost("create-from-quotation")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CreatePurchaseOrderByQuotation([FromBody] PurchaseOrderByQuotaionInputDto input)
         {
             if (!ModelState.IsValid)

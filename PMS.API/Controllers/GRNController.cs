@@ -31,7 +31,7 @@ namespace PMS.API.Controllers
         /// <param name="poid"></param>
         /// <returns></returns>
         [HttpPost("createGRNFromPo/{poId:int}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CreateGoodReceiptNoteFromPO(int poId, CreateGrnFromPoDto dto)
         {
             if (!ModelState.IsValid)
@@ -65,7 +65,7 @@ namespace PMS.API.Controllers
         /// <param name="poId">ID của đơn mua hàng</param>
         /// <param name="dto">Thông tin phiếu nhập kho</param>
         [HttpPost("CreateGRNManually/{poId}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CreateGRNByManually(int poId, [FromBody] GRNManuallyDTO dto)
         {
             if (!ModelState.IsValid)
@@ -98,7 +98,7 @@ namespace PMS.API.Controllers
         /// Lấy toàn bộ danh sách phiếu nhập kho (Good Receipt Note)
         /// </summary>
         [HttpGet("getAll")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetAllGRN()
         {
             var result = await _IGRNService.GetAllGRN();
@@ -112,7 +112,7 @@ namespace PMS.API.Controllers
         /// <param name="id"></param>
         /// <returns></returns>
         [HttpGet("detail/{id}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetDetail(int id)
         {
             var result = await _IGRNService.GetGRNDetailAsync(id);
@@ -127,7 +127,7 @@ namespace PMS.API.Controllers
         /// <param name="grnId">Mã phiếu nhập kho</param>
         /// <returns>File PDF phiếu nhập kho</returns>
         [HttpGet("exportPdf/{grnId}")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> ExportGRNToPdf(int grnId)
         {
             var pdfBytes = await _IGRNService.GeneratePDFGRNAsync(grnId);

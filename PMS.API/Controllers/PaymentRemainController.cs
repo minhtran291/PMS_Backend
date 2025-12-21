@@ -34,7 +34,7 @@ namespace PMS.API.Controllers
 
 
         [HttpPost("pay-remain-request")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CreatePaymentRemain([FromBody] CreatePaymentRemainRequestDTO request)
         {
             var result = await _paymentRemainService.CreatePaymentRemainForInvoiceAsync(request);
@@ -53,7 +53,7 @@ namespace PMS.API.Controllers
         /// <param name="request"></param>
         /// <returns></returns>
         [HttpGet("list-payment-remain")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetList([FromQuery] PaymentRemainListRequestDTO request)
         {
             var result = await _paymentRemainService.GetPaymentRemainsAsync(request);
@@ -72,7 +72,7 @@ namespace PMS.API.Controllers
         /// <param name="id"></param>
         /// <returns></returns>
         [HttpGet("payment-remain-detail/{id}")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetDetail(int id)
         {
             var result = await _paymentRemainService.GetPaymentRemainDetailAsync(id);
@@ -90,7 +90,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách PaymentRemainId (Success, Remain/Full) theo SalesOrderId.
         /// </summary>
         [HttpGet("ids-by-sales-order/{salesOrderId}")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetIdsBySalesOrder(int salesOrderId)
         {
             var result = await _paymentRemainService
@@ -112,7 +112,7 @@ namespace PMS.API.Controllers
         /// <param name="body"></param>
         /// <returns></returns>
         [HttpPost("{id}/success")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> MarkSuccess(int id, [FromBody] MarkPaymentSuccessRequestDTO body)
         {
             var result = await _paymentRemainService
@@ -121,15 +121,18 @@ namespace PMS.API.Controllers
             {
                 await _salesOrder.RecalculateTotalReceiveAsync();
             }
-            return StatusCode(result.StatusCode, result);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
 
         [HttpPost("invoices/{invoiceId}/vnpay/init")]
-        //[Authorize] 
-        public async Task<IActionResult> InitVnPayForInvoice(
-        int invoiceId,
-        [FromBody] InitInvoiceVnPayRequest request)
+        //[Authorize(Roles = UserRoles.CUSTOMER)] 
+        public async Task<IActionResult> InitVnPayForInvoice(int invoiceId,[FromBody] InitInvoiceVnPayRequest request)
         {
             var clientIp = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
             var locale = string.IsNullOrWhiteSpace(request.Locale) ? "vn" : request.Locale;
@@ -140,7 +143,12 @@ namespace PMS.API.Controllers
                 clientIp,
                 locale);
 
-            return StatusCode(result.StatusCode, result);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         /// <summary>
@@ -150,15 +158,18 @@ namespace PMS.API.Controllers
         /// <param name="request"></param>
         /// <returns></returns>
         [HttpPost("invoices/{invoiceId}/bank-transfer/check-request")]
-        // [Authorize(Roles = "Customer")]
-        public async Task<IActionResult> CreateBankTransferCheckRequest(
-            int invoiceId,
-            [FromBody] CreateBankTransferCheckRequestDTO request)
+        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
+        public async Task<IActionResult> CreateBankTransferCheckRequest(int invoiceId,[FromBody] CreateBankTransferCheckRequestDTO request)
         {
             var result = await _paymentRemainService
                 .CreateBankTransferCheckRequestForInvoiceAsync(invoiceId, request);
 
-            return StatusCode(result.StatusCode, result);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         /// <summary>
@@ -167,16 +178,21 @@ namespace PMS.API.Controllers
         /// <param name="paymentRemainId"></param>
         /// <returns></returns>
         [HttpPost("bank-transfer/{paymentRemainId}/approve-check-request")]
-        // [Authorize(Roles = "Accountant")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> ApproveBankTransfer(int paymentRemainId)
         {
-            var result = await _paymentRemainService
-                .ApproveBankTransferRequestAsync(paymentRemainId);
+            var accountantId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var result = await _paymentRemainService.ApproveBankTransferRequestAsync(paymentRemainId, accountantId);
             if (result.Success)
             {
                 await _salesOrder.RecalculateTotalReceiveAsync();
             }
-            return StatusCode(result.StatusCode, result);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
 
         /// <summary>
@@ -186,15 +202,18 @@ namespace PMS.API.Controllers
         /// <param name="request"></param>
         /// <returns></returns>
         [HttpPost("bank-transfer/{paymentRemainId}/reject")]
-        // [Authorize(Roles = "Accountant")]
-        public async Task<IActionResult> RejectBankTransfer(
-            int paymentRemainId,
-            [FromBody] RejectBankTransferRequestDTO request)
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
+        public async Task<IActionResult> RejectBankTransfer(int paymentRemainId,[FromBody] RejectBankTransferRequestDTO request)
         {
-            var result = await _paymentRemainService
-                .RejectBankTransferRequestAsync(paymentRemainId, request.Reason);
+            var accountantId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var result = await _paymentRemainService.RejectBankTransferRequestAsync(paymentRemainId, request.Reason, accountantId);
 
-            return StatusCode(result.StatusCode, result);
+            return StatusCode(result.StatusCode, new
+            {
+                success = result.Success,
+                message = result.Message,
+                data = result.Data
+            });
         }
     }
 }
