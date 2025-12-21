@@ -158,7 +158,7 @@ namespace PMS.API.Controllers
         /// <param name="request"></param>
         /// <returns></returns>
         [HttpPost("invoices/{invoiceId}/bank-transfer/check-request")]
-        [Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CreateBankTransferCheckRequest(int invoiceId,[FromBody] CreateBankTransferCheckRequestDTO request)
         {
             var result = await _paymentRemainService
@@ -178,7 +178,7 @@ namespace PMS.API.Controllers
         /// <param name="paymentRemainId"></param>
         /// <returns></returns>
         [HttpPost("bank-transfer/{paymentRemainId}/approve-check-request")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> ApproveBankTransfer(int paymentRemainId)
         {
             var accountantId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -202,7 +202,7 @@ namespace PMS.API.Controllers
         /// <param name="request"></param>
         /// <returns></returns>
         [HttpPost("bank-transfer/{paymentRemainId}/reject")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> RejectBankTransfer(int paymentRemainId,[FromBody] RejectBankTransferRequestDTO request)
         {
             var accountantId = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;

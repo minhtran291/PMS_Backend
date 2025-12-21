@@ -51,7 +51,7 @@ namespace PMS.API.Controllers
         /// Tạo PDF hóa đơn để in / tải về.
         /// </summary>
         [HttpGet("{id}/pdf")]
-        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
+        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER + "," + UserRoles.ACCOUNTANT)]
         public async Task<IActionResult> GetInvoicePdf(int id)
         {
             var result = await _invoiceService.GenerateInvoicePdfAsync(id);

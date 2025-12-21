@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using PMS.Application.Services.CustomerDebt;
+using PMS.Core.Domain.Constant;
 
 namespace PMS.API.Controllers
 {
@@ -20,6 +22,7 @@ namespace PMS.API.Controllers
         /// Lấy toàn bộ danh sách CustomerDebt (dùng cho màn list)
         /// </summary>
         [HttpGet("customer-debt-list")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER + "," + UserRoles.SALES_STAFF)]
         public async Task<IActionResult> GetAll()
         {
             var result = await _customerDebtService.GetAllCustomerDebtAsync();
@@ -36,6 +39,7 @@ namespace PMS.API.Controllers
         /// GET: http://localhost:5137/api/CustomerDebt/by-month?year=2025
         /// </summary>
         [HttpGet("by-month")]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER + "," + UserRoles.SALES_STAFF)]
         public async Task<IActionResult> GetByMonth([FromQuery] int year)
         {
             var result = await _customerDebtService.GetCustomerDebtByMonthAsync(year);

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using PMS.Application.DTOs.GoodsIssueNote;
 using PMS.Application.Services.Base;
+using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Constant;
 using PMS.Core.Domain.Entities;
@@ -18,10 +19,12 @@ namespace PMS.Application.Services.GoodsIssueNote
     public class GoodsIssueNoteService(IUnitOfWork unitOfWork,
         IMapper mapper,
         ILogger<GoodsIssueNoteService> logger,
-        INotificationService notificationService) : Service(unitOfWork, mapper), IGoodsIssueNoteService
+        INotificationService notificationService,
+        IPdfService pdfService) : Service(unitOfWork, mapper), IGoodsIssueNoteService
     {
         private readonly ILogger<GoodsIssueNoteService> _logger = logger;
         private readonly INotificationService _notificationService = notificationService;
+        private readonly IPdfService _pdfService = pdfService;
 
         public async Task<ServiceResult<object>> CreateAsync(CreateGoodsIssueNoteDTO dto, string userId)
         {
@@ -873,6 +876,53 @@ namespace PMS.Application.Services.GoodsIssueNote
             catch(Exception ex)
             {
                 _logger.LogError(ex, "Loi");
+            }
+        }
+
+        public async Task<ServiceResult<byte[]>> DownloadGIN(int ginId)
+        {
+            try
+            {
+                var goodsIssueNote = await _unitOfWork.GoodsIssueNote.Query()
+                    .AsNoTracking()
+                    .Include(g => g.WarehouseStaff)
+                    .Include(g => g.GoodsIssueNoteDetails)
+                        .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(lp => lp.Product)
+                    .Include(g => g.StockExportOrder)
+                        .ThenInclude(s => s.SalesOrder)
+                    .FirstOrDefaultAsync(g => g.Id == ginId);
+
+                if (goodsIssueNote == null)
+                    return new ServiceResult<byte[]>
+                    {
+                        StatusCode = 404,
+                        Message = "Không tìm thấy phiếu xuất kho",
+                        Success = false,
+                    };
+
+                var html = GoodsIssueNotePDF.GenerateGoodsIssueNotePDF(goodsIssueNote);
+
+                var pdfByte = _pdfService.GeneratePdfFromHtml(html);
+
+                return new ServiceResult<byte[]>
+                {
+                    StatusCode = 200,
+                    Message = "Thành công",
+                    Data = pdfByte,
+                    Success = true,
+                };
+            }
+            catch(Exception ex)
+            {
+                _logger.LogError($"Loi: {ex.StackTrace}, {ex.Message}");
+
+                return new ServiceResult<byte[]>
+                {
+                    StatusCode = 500,
+                    Message = "Lỗi",
+                    Success = false
+                };
             }
         }
     }
