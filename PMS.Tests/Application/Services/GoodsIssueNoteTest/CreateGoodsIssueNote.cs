@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using PMS.Application.DTOs.GoodsIssueNote;
+using PMS.Application.Services.ExternalService;
 using PMS.Application.Services.GoodsIssueNote;
 using PMS.Application.Services.Notification;
 using PMS.Core.Domain.Entities;
@@ -25,6 +26,7 @@ namespace PMS.Tests.Application.Services.GoodsIssueNoteTest
         private Mock<IMapper> _mapperMock;
         private Mock<ILogger<GoodsIssueNoteService>> _loggerMock;
         private Mock<INotificationService> _notifyMock;
+        private Mock<IPdfService> _pdfMock;
 
         private Mock<IGoodsIssueNoteRepository> _ginRepo;
         private Mock<IStockExportOrderRepository> _seoRepo;
@@ -41,6 +43,7 @@ namespace PMS.Tests.Application.Services.GoodsIssueNoteTest
             _mapperMock = new Mock<IMapper>();
             _loggerMock = new Mock<ILogger<GoodsIssueNoteService>>();
             _notifyMock = new Mock<INotificationService>();
+            _pdfMock = new Mock<IPdfService>();
 
             _ginRepo = new Mock<IGoodsIssueNoteRepository>();
             _seoRepo = new Mock<IStockExportOrderRepository>();
@@ -59,7 +62,8 @@ namespace PMS.Tests.Application.Services.GoodsIssueNoteTest
                 _uowMock.Object,
                 _mapperMock.Object,
                 _loggerMock.Object,
-                _notifyMock.Object
+                _notifyMock.Object,
+                _pdfMock.Object
                 );
         }
 
