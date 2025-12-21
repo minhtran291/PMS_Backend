@@ -21,7 +21,7 @@ namespace PMS.API.Controllers
             _salesQuotationService = salesQuotationService;
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("generate-form")]
         public async Task<IActionResult> GenerateForm(int rsqId)
         {
@@ -34,7 +34,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("create-sales-quotation")]
         public async Task<IActionResult> CreateSalesQuotation([FromBody] CreateSalesQuotationDTO dto)
         {
@@ -52,7 +52,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPatch, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpPatch, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("update-sales-quotation")]
         public async Task<IActionResult> UpdateSalesQuotation([FromBody] UpdateSalesQuotationDTO dto)
         {
@@ -70,7 +70,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpDelete, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpDelete, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("delete-sales-quotation")]
         public async Task<IActionResult> DeleteSalesQuotation(int sqId)
         {
@@ -88,7 +88,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.CUSTOMER)]
+        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         [Route("view-list")]
         public async Task<IActionResult> SalesQuotationList()
         {
@@ -110,7 +110,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("send-sales-quotation")]
         public async Task<IActionResult> SendSalesQuotation(int sqId)
         {
@@ -127,7 +127,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
+        [HttpPost, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("add-sales-quotation-comment")]
         public async Task<IActionResult> AddComment(AddSalesQuotationCommentDTO dto)
         {
@@ -162,7 +162,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("generate-form-new")]
         public async Task<IActionResult> GenerateFormNew(int rsqId)
         {

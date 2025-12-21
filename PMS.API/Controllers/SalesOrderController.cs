@@ -49,7 +49,7 @@ namespace PMS.API.Controllers
         /// tới PURCHASES_STAFF nếu thiếu/sắp hết.
         /// </summary>
         [HttpPost("send/{salesOrderId}")]
-        [Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> SendOrder(int salesOrderId)
         {
             var result = await _service.SendOrderAsync(salesOrderId);
@@ -407,7 +407,7 @@ namespace PMS.API.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPost("{salesOrderId}/deposit-checks/manual")]
-        [Authorize(Roles = UserRoles.CUSTOMER)] 
+        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)] 
         public async Task<IActionResult> CreateManualDepositCheck(int salesOrderId,[FromBody] CreateSalesOrderDepositCheckRequestDTO dto)
         {
             dto.SalesOrderId = salesOrderId;
@@ -558,7 +558,7 @@ namespace PMS.API.Controllers
         /// <param name="status"></param>
         /// <returns></returns>
         [HttpGet("all-deposit-checks/manual")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetManualDepositChecks([FromQuery] DepositCheckStatus? status)
         {
             var result = await _service.ListDepositChecksAsync(status);

@@ -23,7 +23,7 @@ namespace PMS.API.Controllers
         /// Tạo thể loại mới
         /// </summary>
         [HttpPost("create")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> CreateCategory([FromBody] CategoryDTO category)
         {
             var result = await _categoryService.AddAsync(category);
@@ -58,7 +58,7 @@ namespace PMS.API.Controllers
         /// Lấy thể loại theo ID
         /// </summary>
         [HttpGet("getbyid/{id}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetCategory(int id)
         {
             var result = await _categoryService.GetByIdAsync(id);
@@ -75,7 +75,7 @@ namespace PMS.API.Controllers
         /// Cập nhật thông tin danh mục sản phẩm
         /// </summary>
         [HttpPut("updatecategory")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> UpdateCategoryAsync([FromBody] CategoryDTO category)
         {
             if (!ModelState.IsValid)
@@ -112,7 +112,7 @@ namespace PMS.API.Controllers
         /// <param name="cateId"></param>
         /// <returns></returns>
         [HttpPut("toggleStatus/{cateId}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> ToggleCategoryStatus(int cateId)
         {
             try
@@ -145,7 +145,7 @@ namespace PMS.API.Controllers
         /// <param name="cateId">ID của danh mục cần xóa</param>
         /// <returns>Kết quả xóa danh mục</returns>
         [HttpDelete("Delete/{cateId}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> DeleteCategory(int cateId)
         {
             var result = await _categoryService.DeleteCategoriesWithNoReference(cateId);

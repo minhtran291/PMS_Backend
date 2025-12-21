@@ -20,7 +20,7 @@ namespace PMS.API.Controllers
             _taxPolicySerivce = taxPolicySerivce;
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [HttpPost, Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         [Route("create-tax-policy")]
         public async Task<IActionResult> Create(CreateTaxPolicyDTO dto)
         {
@@ -32,7 +32,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [HttpPost, Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         [Route("update-tax-policy")]
         public async Task<IActionResult> Update(UpdateTaxPolicyDTO dto)
         {
@@ -44,7 +44,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [HttpPost, Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         [Route("disable-enable-tax-policy")]
         public async Task<IActionResult> DisableEnable(int taxId)
         {
@@ -56,7 +56,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpDelete, Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [HttpDelete, Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         [Route("delete-tax-policy")]
         public async Task<IActionResult> Delete(int taxId)
         {
@@ -68,7 +68,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [HttpGet, Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         [Route("tax-policy-list")]
         public async Task<IActionResult> List()
         {
@@ -81,7 +81,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [HttpGet, Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         [Route("tax-policy-details")]
         public async Task<IActionResult> Details(int taxId)
         {

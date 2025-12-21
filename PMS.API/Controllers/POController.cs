@@ -27,8 +27,9 @@ namespace PMS.API.Controllers
         /// https://localhost:7213/api/PO/getAllPo
         /// </summary>
         /// <returns></returns>
+        /// 
         [HttpGet("getAllPo")]
-        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF}")]
+        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF},{UserRoles.MANAGER}")]
         public async Task<IActionResult> GetAllPurchaseOrders()
         {
             var result = await _poService.GetAllPOAsync();
@@ -43,7 +44,7 @@ namespace PMS.API.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPut("DepositedPurchaseOrder/{poid}")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> DepositedPurchaseOrder(int poid, [FromBody] POUpdateDTO dto)
         {
             if (!ModelState.IsValid)
@@ -66,7 +67,7 @@ namespace PMS.API.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPut("DebtAccountantPurchaseOrder/{poid}")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> DebtAccountantPurchaseOrder(int poid, [FromBody] POUpdateDTO dto)
         {
             if (!ModelState.IsValid)
@@ -85,7 +86,7 @@ namespace PMS.API.Controllers
         /// https://localhost:7213/api/PO/GetPoDetailByPoId/poid
         /// </summary>
         [HttpGet("GetPoDetailByPoId/{poid}")]
-        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF}")]
+        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF},{UserRoles.MANAGER}")]
         public async Task<IActionResult> GetPurchaseOrderDetail(int poid)
         {
             var result = await _poService.ViewDetailPObyID(poid);
@@ -98,7 +99,7 @@ namespace PMS.API.Controllers
         /// https://localhost:7213/api/PO/GetPoDetailByPoId2/poid
         /// </summary>
         [HttpGet("GetPoDetailByPoId2/{poid}")]
-        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF}")]
+        [Authorize(Roles = $"{UserRoles.ACCOUNTANT},{UserRoles.PURCHASES_STAFF},{UserRoles.WAREHOUSE_STAFF},{UserRoles.MANAGER}")]
         public async Task<IActionResult> GetPurchaseOrderDetail2(int poid)
         {
             var result = await _poService.ViewDetailPObyID2(poid);
@@ -113,7 +114,7 @@ namespace PMS.API.Controllers
         /// <param name="newStatus"></param>
         /// <returns></returns>
         [HttpPut("{poid}/status")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> ChangeStatus(int poid, [FromQuery] PurchasingOrderStatus newStatus)
         {
             if (!ModelState.IsValid)
@@ -134,7 +135,7 @@ namespace PMS.API.Controllers
         /// <param name="poid">Mã PO cần xuất</param>
         /// <returns>File PDF</returns>
         [HttpGet("exportPaymentPdf/{poid}")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> ExportPOPaymentPdf(int poid)
         {
             var pdfBytes = await _poService.GeneratePOPaymentPdfAsync(poid);
@@ -159,7 +160,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách PO đã nhập đủ hàng
         /// </summary>
         [HttpGet("fully-received")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetFullyReceivedAsync()
         {
             var result = await _poService.GetPOByReceivingStatusAsync();
@@ -171,7 +172,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách PO mới nhập một phần hàng
         /// </summary>
         [HttpGet("partially-received")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetPartiallyReceivedAsync()
         {
             var result = await _poService.GetPOByReceivingStatusAsync();
@@ -185,7 +186,7 @@ namespace PMS.API.Controllers
         /// Lấy danh sách PO chưa nhập hàng nào
         /// </summary>
         [HttpGet("not-received")]
-        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Authorize(Roles = UserRoles.WAREHOUSE_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetNotReceivedAsync()
         {
             var result = await _poService.GetPOByReceivingStatusAsync();
@@ -214,7 +215,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet("GetPharmacySecretInfor")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetPharmacySecretInfor()
         {
             var result= await _poService.PharmacySecretInfor();
@@ -228,7 +229,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <returns></returns>
         [HttpGet("GetAllDebtReport")]
-        [Authorize(Roles = UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetAllDebtReport()
         {
             var result = await _poService.GetAllDebtReport();

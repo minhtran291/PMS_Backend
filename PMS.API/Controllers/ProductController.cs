@@ -27,7 +27,7 @@ namespace PMS.API.Controllers
         /// <param name="status">Trạng thái mới (true: kích hoạt, false: vô hiệu hóa)</param>
         /// <returns>Thông báo thành công hoặc lỗi</returns>
         [HttpPut("{productId}/status")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> SetProductStatus(int productId, [FromBody] bool status)
         {
             var result = await _productService.SetProductStatusAsync(productId, status);
@@ -99,7 +99,7 @@ namespace PMS.API.Controllers
         /// <param name="product"></param>
         /// <returns><Product></returns>
         [HttpPost("create")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> AddProduct([FromForm] ProductDTOView product)
         {
 
@@ -121,7 +121,7 @@ namespace PMS.API.Controllers
         /// <param name="productUpdate"></param>
         /// <returns>void</returns>
         [HttpPut("update/{productId}")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.SALES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> UpdateProduct(int productId, [FromForm] ProductUpdateDTO2 productUpdate)
         {
             var result = await _productService.UpdateProductAsync(productId, productUpdate);

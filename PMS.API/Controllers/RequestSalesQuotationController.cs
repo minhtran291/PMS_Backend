@@ -19,7 +19,7 @@ namespace PMS.API.Controllers
             _requestSalesQuotationService = requestSalesQuotationService;
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.CUSTOMER)]
+        [HttpPost, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         [Route("create-request")]
         public async Task<IActionResult> CreateRequest([FromBody] CreateRsqDTO dto)
         {
@@ -33,7 +33,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("view-list")]
         public async Task<IActionResult> ViewRequestList()
         {
@@ -53,7 +53,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF)]
+        [HttpGet, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.SALES_STAFF + "," + UserRoles.MANAGER)]
         [Route("view-details")]
         public async Task<IActionResult> ViewRequestDetails(int rsqId)
         {
@@ -73,7 +73,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPut, Authorize(Roles = UserRoles.CUSTOMER)]
+        [HttpPut, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         [Route("update-request")]
         public async Task<IActionResult> UpdateRequest([FromBody]UpdateRsqDTO dto)
         {
@@ -87,7 +87,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpPost, Authorize(Roles = UserRoles.CUSTOMER)]
+        [HttpPost, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         [Route("send-request")]
         public async Task<IActionResult> SendRequest(int rsqId)
         {
@@ -101,7 +101,7 @@ namespace PMS.API.Controllers
             });
         }
 
-        [HttpDelete, Authorize(Roles = UserRoles.CUSTOMER)]
+        [HttpDelete, Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         [Route("delete-request")]
         public async Task<IActionResult> DeleteRequest(int rsqId)
         {

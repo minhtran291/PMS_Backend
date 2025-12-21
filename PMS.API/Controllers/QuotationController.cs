@@ -22,7 +22,7 @@ namespace PMS.API.Controllers
         /// </summary>
         /// <returns>Danh sách QuotationDTO</returns>
         [HttpGet("getAllSupplierResponseQuotation")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetAllQuotationAsync()
         {
             var result = await _quotationService.GetAllQuotationAsync();
@@ -35,7 +35,7 @@ namespace PMS.API.Controllers
         /// Lấy tất cả báo giá kèm trạng thái (InDate / OutOfDate) realtime
         /// </summary>
         [HttpGet("getAllWithStatus")]
-        [Authorize(Roles = UserRoles.PURCHASES_STAFF)]
+        [Authorize(Roles = UserRoles.PURCHASES_STAFF + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetAllQuotationsWithActiveDateAsync()
         {
             var result = await _quotationService.GetAllQuotationsWithActiveDateAsync();
