@@ -705,8 +705,8 @@ namespace PMS.API.Services.PRFQService
 
             ws.Cells[row, 1].Value = "Bên Nhận";
             ws.Cells[row, 2].Value = "NHÀ THUỐC DƯỢC PHẨM SỐ 17";
-            ws.Cells[row, 3].Value = "Mã số quotation:";
-            ws.Cells[row, 4].Value = "???";
+            ws.Cells[row, 3].Value = "Mã số báo giá:";
+            ws.Cells[row, 4].Value = prfq.PRFQID;
 
             ws.Cells[row, 5].Value = "Tên NCC:";
             ws.Cells[row, 6, row, 8].Merge = true;
@@ -2055,7 +2055,7 @@ namespace PMS.API.Services.PRFQService
                     if (details.Any())
                     {
                         await _unitOfWork.QuotationDetail.AddRangeAsync(details);                      
-                        await _unitOfWork.CommitAsync();
+                       // await _unitOfWork.CommitAsync();
                     }
                 }
 
