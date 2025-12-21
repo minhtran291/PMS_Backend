@@ -35,7 +35,7 @@ namespace PMS.API.Controllers
             _unitOfWork = unitOfWork;
             _notificationService = notificationService;
         }
-        [Authorize(Roles = UserRoles.ADMIN )]
+        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.MANAGER)]
         [HttpPost("create-staff-account")]
         public async Task<IActionResult> CreateStaffAccountAsync([FromBody] CreateAccountRequest request)
         {
@@ -85,7 +85,12 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.PURCHASES_STAFF + "," + UserRoles.SALES_STAFF+ "," + UserRoles.WAREHOUSE_STAFF + "," + UserRoles.ACCOUNTANT)]
+        [Authorize(Roles = UserRoles.ADMIN 
+            + "," + UserRoles.PURCHASES_STAFF 
+            + "," + UserRoles.SALES_STAFF
+            + "," + UserRoles.WAREHOUSE_STAFF 
+            + "," + UserRoles.ACCOUNTANT 
+            + "," + UserRoles.MANAGER)]
         [HttpPut("update-staff-account")]
         public async Task<IActionResult> UpdateAccountAsync([FromBody] UpdateAccountRequest request)
         {
@@ -101,7 +106,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        [Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.MANAGER)]
         [HttpPost("suspend-account")]
         public async Task<IActionResult> SuspendAccountAsync(string userId)
         {
@@ -114,7 +119,7 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
-        [Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.MANAGER)]
         [HttpPost("active-account")]
         public async Task<IActionResult> ActiveAccountAsync(string userID)
         {
@@ -142,7 +147,7 @@ namespace PMS.API.Controllers
         [ProducesResponseType(401)]
         [ProducesResponseType(403)]
         [ProducesResponseType(500)]
-        [Authorize(Roles =  UserRoles.MANAGER)]
+        [Authorize(Roles =  UserRoles.MANAGER + "," + UserRoles.MANAGER)]
 
         public async Task<IActionResult> UpdateCustomerStatus(string userId, [FromBody] ManagerResponse data)
         {
@@ -200,7 +205,7 @@ namespace PMS.API.Controllers
         /// <param name="userId"></param>
         /// <returns></returns>
         [HttpDelete("revoke-permission/{userId}")]
-        [Authorize(Roles = UserRoles.ADMIN)]
+        [Authorize(Roles = UserRoles.ADMIN + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> RevokePermission(string userId)
         {
             var user = await _unitOfWork.Users.UserManager.FindByIdAsync(userId);
