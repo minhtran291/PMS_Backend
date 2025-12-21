@@ -1050,14 +1050,15 @@ namespace PMS.Application.Services.SalesOrder
                     ProductId = d.LotProduct.ProductID,
                     ProductName = d.LotProduct.Product.ProductName,
                     d.Quantity,
-                    d.LotProduct.Supplier.Id,
-                    d.LotProduct.Supplier.Name,
+                    SupplierId = d.LotProduct.Supplier.Id,
+                    supplierName = d.LotProduct.Supplier.Name,
                     d.UnitPrice,
                     d.SubTotalPrice,
                     Lot = d.LotProduct == null ? null : new
                     {
                         d.LotProduct.InputDate,
-                        d.LotProduct.ExpiredDate
+                        d.LotProduct.ExpiredDate,
+                        name = d.LotProduct.Supplier.Name
                     }
                 }).ToList();
 
