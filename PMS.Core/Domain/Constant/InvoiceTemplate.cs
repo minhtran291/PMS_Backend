@@ -53,11 +53,9 @@ namespace PMS.Core.Domain.Constant
                     <td style=""text-align:center"">{index}</td>
                     <td>{note.GoodsIssueNoteCode}</td>
                     <td style=""text-align:center"">{note.DeliveryDate:dd-MM-yyyy}</td>
-                    <td style=""text-align:right"">{d.GoodsIssueAmount:N0}</td>
-                    <td style=""text-align:right"">{d.AllocatedDeposit:N0}</td>
-                    <td style=""text-align:right"">{d.PaidRemain:N0}</td>
-                    <td style=""text-align:right"">{d.TotalPaidForNote:N0}</td>
-                    <td style=""text-align:right"">{d.NoteBalance:N0}</td>
+                    <td style=""text-align:center"">{d.GoodsIssueAmount:N0}</td>
+                    <td style=""text-align:center"">{d.AllocatedDeposit:N0}</td>
+                    <td style=""text-align:center"">{d.NoteBalance:N0}</td>
                     <td style=""text-align:center"">{exportIndex}</td>
                 </tr>");
 
@@ -106,11 +104,11 @@ namespace PMS.Core.Domain.Constant
                         position: absolute;
                         width: 100%;
                         height: 100%;
-
-                        object-fit: contain;  
+                        object-fit: cover;  
+                        object-position: center;
                         opacity: 0.15;
                         z-index: 0;
-                        transform: scale(1.0);
+                        transform: scale(1.25);
                     }}
 
                     .wrapper{{
@@ -245,11 +243,9 @@ namespace PMS.Core.Domain.Constant
                                     <th>#</th>
                                     <th>Mã phiếu xuất</th>
                                     <th>Ngày xuất kho</th>
-                                    <th>Giá trị xuất</th>
-                                    <th>Phần cọc phân bổ</th>
-                                    <th>Tiền còn lại đã trả</th>
-                                    <th>Tổng đã thanh toán</th>
-                                    <th>Còn thiếu</th>
+                                    <th>Tổng tiền</th>
+                                    <th>Đã thanh toán</th>
+                                    <th>Chưa thanh toán</th>
                                     <th>Lần xuất hàng</th>
                                 </tr>
                             </thead>
@@ -262,10 +258,6 @@ namespace PMS.Core.Domain.Constant
                             <tr>
                                 <td>Tổng cộng:</td>
                                 <td class=""right"">{invoice.TotalAmount:N0}</td>
-                            </tr>
-                            <tr>
-                                <td>Tổng cọc:</td>
-                                <td class=""right"">{invoice.TotalDeposit:N0}</td>
                             </tr>
                             <tr>
                                 <td>Tổng đã thanh toán:</td>

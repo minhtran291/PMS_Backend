@@ -212,5 +212,25 @@ namespace PMS.API.Controllers
                 data = result.Data
             });
         }
+
+        [HttpGet, Authorize(Roles = UserRoles.WAREHOUSE_STAFF)]
+        [Route("download-goods-issue-note")]
+        public async Task<IActionResult> Download(int ginId)
+        {
+            var result = await _goodsIssueNoteService.DownloadGIN(ginId);
+
+            if (!result.Success)
+                return StatusCode(result.StatusCode, new
+                {
+                    message = result.Message
+                });
+
+            var fileName = $"PhieuXuatKho.pdf";
+
+            return File(
+                result.Data!,
+                "application/pdf",
+                fileName);
+        }
     }
 }

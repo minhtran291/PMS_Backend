@@ -30,7 +30,7 @@ namespace PMS.API.Controllers
         => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
         [HttpGet("get-quotation-info/{quotationId}")]
-        //[Authorize(Roles = UserRoles.CUSTOMER)]
+        [Authorize(Roles = UserRoles.CUSTOMER + "," + UserRoles.MANAGER + "," + UserRoles.SALES_STAFF)]
         public async Task<IActionResult> GetQuotationInfo(int quotationId)
         {
             var result = await _service.GetQuotationInfo(quotationId);
@@ -475,7 +475,7 @@ namespace PMS.API.Controllers
         /// GET: http://localhost:5137/api/SalesOrder/deposit-checks/manual/my
         /// <returns></returns>
         [HttpGet("deposit-checks/manual/my")]
-        [Authorize]
+        [Authorize(Roles = UserRoles.CUSTOMER)]
         public async Task<IActionResult> GetMyManualDepositChecks()
         {
             var userId = GetUserId();
@@ -495,7 +495,7 @@ namespace PMS.API.Controllers
         /// <param name="requestId"></param>
         /// <returns></returns>
         [HttpGet("deposit-checks/manual/{requestId:int}")]
-        [Authorize]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> GetManualDepositCheckDetail(int requestId)
         {
             var userId = GetUserId();
@@ -516,7 +516,7 @@ namespace PMS.API.Controllers
         /// <param name="dto"></param>
         /// <returns></returns>
         [HttpPut("deposit-checks/manual/{requestId:int}")]
-        [Authorize]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> UpdateManualDepositCheck(
             int requestId,
             [FromBody] UpdateSalesOrderDepositCheckRequestDTO dto)
@@ -538,7 +538,7 @@ namespace PMS.API.Controllers
         /// <param name="requestId"></param>
         /// <returns></returns>
         [HttpDelete("deposit-checks/manual/{requestId:int}")]
-        [Authorize]
+        [Authorize(Roles = UserRoles.ACCOUNTANT + "," + UserRoles.CUSTOMER + "," + UserRoles.MANAGER)]
         public async Task<IActionResult> DeleteManualDepositCheck(int requestId)
         {
             var userId = GetUserId();

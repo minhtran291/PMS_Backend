@@ -1026,6 +1026,7 @@ namespace PMS.Application.Services.SalesOrder
                 var order = await _unitOfWork.SalesOrder.Query()
                     .Include(o => o.SalesOrderDetails)
                         .ThenInclude(d => d.LotProduct)
+                            .ThenInclude(a => a.Supplier)
                     .Include(o => o.SalesQuotation)
                         .ThenInclude(q => q.SalesQuotaionDetails)
                             .ThenInclude(qd => qd.TaxPolicy)
@@ -1049,6 +1050,8 @@ namespace PMS.Application.Services.SalesOrder
                     ProductId = d.LotProduct.ProductID,
                     ProductName = d.LotProduct.Product.ProductName,
                     d.Quantity,
+                    d.LotProduct.Supplier.Id,
+                    d.LotProduct.Supplier.Name,
                     d.UnitPrice,
                     d.SubTotalPrice,
                     Lot = d.LotProduct == null ? null : new
