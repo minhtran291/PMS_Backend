@@ -262,7 +262,7 @@ namespace PMS.API.Controllers
             var poList = await _unitOfWork.PurchasingOrder.Query()
                 .Where(p => p.OrderDate.Year == year
                          && (p.Status == PurchasingOrderStatus.paid
-                          || p.Status == PurchasingOrderStatus.deposited))
+                          || p.Status == PurchasingOrderStatus.deposited || p.Status == PurchasingOrderStatus.compeleted))
                 .Include(p => p.PurchasingOrderDetails)
                 .Include(p => p.User)
                 .Include(p=>p.Quotations)
